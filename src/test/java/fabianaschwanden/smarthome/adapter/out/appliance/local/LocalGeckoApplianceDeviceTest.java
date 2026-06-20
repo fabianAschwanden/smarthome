@@ -25,8 +25,8 @@ class LocalGeckoApplianceDeviceTest {
 
     private static final String SPA_JSON = """
             {"current": 32.5, "target": 18.0, "min": 8.3, "max": 41.1, "operation": "Heating",
-             "pumps": {"P1": true, "P2": false}, "lights": {"LI": true},
-             "watercare": "Standard", "online": true}
+             "pumps": {"P1": true, "P2": false, "Waterfall": true}, "lights": {"LI": true},
+             "online": true}
             """;
 
     /** Fake-Client: liefert festes JSON, statt das Netz zu nutzen. */
@@ -40,11 +40,6 @@ class LocalGeckoApplianceDeviceTest {
             @Override
             public Optional<String> controlSpa(String ip, String ident, String name,
                     Integer target, String pumpKey, String lightKey, Boolean on) {
-                return Optional.of(readJson);
-            }
-
-            @Override
-            public Optional<String> controlSpaWaterCare(String ip, String ident, String name, String mode) {
                 return Optional.of(readJson);
             }
         };
@@ -71,7 +66,7 @@ class LocalGeckoApplianceDeviceTest {
                 "whirlpool", "Whirlpool", "Wellness",
                 Set.of(ApplianceFunction.PUMP, ApplianceFunction.HEATER,
                         ApplianceFunction.LIGHT, ApplianceFunction.MASSAGE, ApplianceFunction.FILTER),
-                true, 30, 40, "1.2.3.4", "SPA-IDENT", "P1", "P2", "LI", sidecar);
+                true, 30, 40, "1.2.3.4", "SPA-IDENT", "P1", "P2", "LI", "Waterfall", sidecar);
     }
 
     @Test
@@ -86,7 +81,7 @@ class LocalGeckoApplianceDeviceTest {
         assertEquals(FunctionState.ON, state.functions().get(ApplianceFunction.PUMP));      // P1=true
         assertEquals(FunctionState.OFF, state.functions().get(ApplianceFunction.MASSAGE));  // P2=false
         assertEquals(FunctionState.ON, state.functions().get(ApplianceFunction.LIGHT));     // LI=true
-        assertEquals(FunctionState.ON, state.functions().get(ApplianceFunction.FILTER));    // watercare=Standard
+        assertEquals(FunctionState.ON, state.functions().get(ApplianceFunction.FILTER));    // Waterfall=true
         assertEquals(18, state.temperature().target());   // Gerätewert unverfälscht
         assertEquals(33, state.temperature().current());  // 32.5 gerundet
         // Echte Geräte-Grenzen aus dem Snapshot (8.3/41.1 gerundet), nicht die Config (30/40).
