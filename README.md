@@ -102,7 +102,15 @@ webapp/src/app/features/<slice>/  # Angular-Seiten (Signals, OnPush, native cont
 ```bash
 ./mvnw verify             # Backend-Tests, ArchUnit, Coverage-Gate, Frontend-Build
 cd webapp && npm test     # Frontend-Tests
+cd webapp && npm run format:check   # Prettier (wie in der CI)
 ```
 
 Tests laufen strikt gegen Mocks – ein Hardening-Test stellt sicher, dass im
 `%test`-Profil **nie** echte Geräte angesprochen werden.
+
+**Pre-commit-Hook** (formatiert gestagte Frontend-Dateien automatisch mit Prettier,
+damit der CI-`format:check` nicht bricht) – einmalig pro Klon aktivieren:
+
+```bash
+git config core.hooksPath .githooks
+```
