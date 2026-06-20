@@ -121,7 +121,11 @@ const WEEKDAYS: { key: Weekday; label: string }[] = [
             <div class="space-y-3">
               <label class="block text-sm">
                 <span class="text-[color:var(--ink-soft)]">Uhrzeit</span>
-                <input type="time" [(ngModel)]="time" class="glass mt-1 block rounded-lg px-3 py-2" />
+                <input
+                  type="time"
+                  [(ngModel)]="time"
+                  class="glass mt-1 block rounded-lg px-3 py-2"
+                />
               </label>
               <div class="flex flex-wrap gap-1">
                 @for (d of weekdays; track d.key) {
@@ -153,11 +157,19 @@ const WEEKDAYS: { key: Weekday; label: string }[] = [
             <div class="flex flex-wrap gap-4">
               <label class="block text-sm">
                 <span class="text-[color:var(--ink-soft)]">Von</span>
-                <input type="time" [(ngModel)]="windowStart" class="glass mt-1 block rounded-lg px-3 py-2" />
+                <input
+                  type="time"
+                  [(ngModel)]="windowStart"
+                  class="glass mt-1 block rounded-lg px-3 py-2"
+                />
               </label>
               <label class="block text-sm">
                 <span class="text-[color:var(--ink-soft)]">Bis</span>
-                <input type="time" [(ngModel)]="windowEnd" class="glass mt-1 block rounded-lg px-3 py-2" />
+                <input
+                  type="time"
+                  [(ngModel)]="windowEnd"
+                  class="glass mt-1 block rounded-lg px-3 py-2"
+                />
               </label>
             </div>
           }
@@ -243,7 +255,11 @@ export class SchedulePage {
 
   protected add(): void {
     const t = this.newType();
-    const req: CreateScheduleRequest = { switchId: this.switchId(), type: t, action: this.action() };
+    const req: CreateScheduleRequest = {
+      switchId: this.switchId(),
+      type: t,
+      action: this.action(),
+    };
     if (t === 'SCHEDULE') {
       req.time = this.time;
       req.weekdays = [...this.selectedDays()];

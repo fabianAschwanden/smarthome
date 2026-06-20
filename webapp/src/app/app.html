@@ -1,4 +1,6 @@
-<div class="flex min-h-screen w-full flex-col items-stretch gap-3 p-3 sm:flex-row sm:justify-center sm:gap-4 sm:p-6">
+<div
+  class="flex min-h-screen w-full flex-col items-stretch gap-3 p-3 sm:flex-row sm:justify-center sm:gap-4 sm:p-6"
+>
   <!-- Icon-Rail = Hauptnavigation. Mobil: fixe Bottom-Bar; ab sm: Sidebar links. -->
   <nav
     class="glass-panel fixed inset-x-3 bottom-3 z-20 flex flex-row items-center justify-around gap-2 rounded-[1.5rem] px-2 py-2 sm:static sm:inset-auto sm:flex-col sm:justify-start sm:gap-4 sm:rounded-[2rem] sm:px-3 sm:py-6"
@@ -103,14 +105,10 @@
   </nav>
 
   <!-- Hauptpanel. Unten extra Platz, damit Inhalt nicht hinter der mobilen Bottom-Bar liegt. -->
-  <section
-    class="glass-panel relative flex min-w-0 flex-1 flex-col p-4 pb-24 sm:p-7 sm:pb-7"
-  >
+  <section class="glass-panel relative flex min-w-0 flex-1 flex-col p-4 pb-24 sm:p-7 sm:pb-7">
     <!-- Topbar -->
     <header class="flex items-center justify-between gap-3">
-      <label
-        class="glass hidden max-w-xl flex-1 items-center gap-3 rounded-full px-5 py-3 sm:flex"
-      >
+      <label class="glass hidden max-w-xl flex-1 items-center gap-3 rounded-full px-5 py-3 sm:flex">
         <svg
           class="size-5 shrink-0 opacity-60"
           viewBox="0 0 24 24"
@@ -145,7 +143,11 @@
               stroke-width="1.8"
               aria-hidden="true"
             >
-              <path d="M4 11l8-7 8 7M6 10v9h12v-9M10 19v-5h4v5" stroke-linecap="round" stroke-linejoin="round" />
+              <path
+                d="M4 11l8-7 8 7M6 10v9h12v-9M10 19v-5h4v5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </span>
           <span class="hidden text-sm font-medium sm:inline">Zuhause</span>

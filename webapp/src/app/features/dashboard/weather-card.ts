@@ -40,7 +40,9 @@ const CONDITION_LABEL: Record<WeatherCondition, string> = {
         </header>
 
         @if (w.hours.length) {
-          <div class="mt-4 flex justify-between gap-2 overflow-x-auto border-t border-white/10 pt-3">
+          <div
+            class="mt-4 flex justify-between gap-2 overflow-x-auto border-t border-white/10 pt-3"
+          >
             @for (h of w.hours; track h.label) {
               <div class="flex shrink-0 flex-col items-center gap-1 text-center">
                 <span class="text-xs text-[color:var(--ink-soft)]">{{ h.label }}</span>

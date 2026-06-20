@@ -33,7 +33,16 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
 @Component({
   selector: 'app-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DecimalPipe, PowerToggle, ItemImage, TempDial, BlindMini, EnergyFlow, WeatherCard],
+  imports: [
+    RouterLink,
+    DecimalPipe,
+    PowerToggle,
+    ItemImage,
+    TempDial,
+    BlindMini,
+    EnergyFlow,
+    WeatherCard,
+  ],
   template: `
     <section class="space-y-5">
       <!-- Sicherheits-Alarm: prominent, nur bei aktivem Rauchalarm -->
@@ -143,7 +152,11 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                 <div>
                   <p class="text-xs text-[color:var(--ink-soft)]">Temperatur</p>
                   <p class="mt-0.5 text-3xl font-semibold tabular-nums">
-                    {{ s.online && s.temperature > -100 ? (s.temperature | number: '1.0-1') + '°' : '–' }}
+                    {{
+                      s.online && s.temperature > -100
+                        ? (s.temperature | number: '1.0-1') + '°'
+                        : '–'
+                    }}
                   </p>
                 </div>
                 <div class="text-right">
@@ -195,7 +208,9 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <article class="glass-card space-y-3 p-5">
             <header class="flex items-center justify-between">
               <h3 class="font-medium">Storen</h3>
-              <a routerLink="/covers" class="text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
+              <a
+                routerLink="/covers"
+                class="text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
                 >Alle →</a
               >
             </header>
@@ -207,7 +222,13 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                     <span class="min-w-0 truncate">
                       {{ cv.name }}
                       <span class="text-[color:var(--ink-faint)]">
-                        {{ cv.online ? (cv.position < 0 ? '' : 100 - cv.position + '% zu') : 'offline' }}
+                        {{
+                          cv.online
+                            ? cv.position < 0
+                              ? ''
+                              : 100 - cv.position + '% zu'
+                            : 'offline'
+                        }}
                       </span>
                     </span>
                   </span>
@@ -266,7 +287,10 @@ export class DashboardPage {
   /** Energie-Kennzahl fürs Dashboard: Fronius bevorzugt, sonst erste OK-Quelle. */
   protected readonly energy = computed<PowerReading | undefined>(() => {
     const readings = this.energySvc.snapshot()?.readings ?? [];
-    return readings.find((r) => r.source === 'FRONIUS' && r.status === 'OK') ?? readings.find((r) => r.status === 'OK');
+    return (
+      readings.find((r) => r.source === 'FRONIUS' && r.status === 'OK') ??
+      readings.find((r) => r.status === 'OK')
+    );
   });
 
   /**

@@ -19,7 +19,13 @@ import { AppNotification } from '../core/models/notification';
         [attr.aria-label]="'Nachrichten (' + count() + ')'"
         (click)="toggle()"
       >
-        <svg class="size-5 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <svg
+          class="size-5 opacity-80"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
           <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke-linejoin="round" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" stroke-linecap="round" />
         </svg>

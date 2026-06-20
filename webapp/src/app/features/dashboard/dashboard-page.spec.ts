@@ -23,25 +23,82 @@ describe('DashboardPage', () => {
     httpMock.expectOne('/api/energy/current').flush({
       timestamp: 'x',
       readings: [
-        { source: 'SMARTFOX', timestamp: 'x', gridWatt: -1500, pvWatt: 3900, batteryWatt: null, consumptionWatt: 2500, status: 'OK' },
-        { source: 'FRONIUS', timestamp: 'x', gridWatt: -1600, pvWatt: 4000, batteryWatt: null, consumptionWatt: 2400, status: 'OK' },
+        {
+          source: 'SMARTFOX',
+          timestamp: 'x',
+          gridWatt: -1500,
+          pvWatt: 3900,
+          batteryWatt: null,
+          consumptionWatt: 2500,
+          status: 'OK',
+        },
+        {
+          source: 'FRONIUS',
+          timestamp: 'x',
+          gridWatt: -1600,
+          pvWatt: 4000,
+          batteryWatt: null,
+          consumptionWatt: 2400,
+          status: 'OK',
+        },
       ],
       comparison: null,
     });
     httpMock.expectOne('/api/switches').flush([
-      { id: 'stehlampe', name: 'Stehlampe', room: 'Wohnzimmer', state: 'ON', online: true, critical: false, observedAt: 'x' },
+      {
+        id: 'stehlampe',
+        name: 'Stehlampe',
+        room: 'Wohnzimmer',
+        state: 'ON',
+        online: true,
+        critical: false,
+        observedAt: 'x',
+      },
     ]);
     httpMock.expectOne('/api/climate').flush([
-      { id: 'klima', name: 'Klimaanlage', room: 'Wohnzimmer', power: false, mode: 'AUTO', targetTemp: 22, currentTemp: 21, online: true, observedAt: 'x' },
+      {
+        id: 'klima',
+        name: 'Klimaanlage',
+        room: 'Wohnzimmer',
+        power: false,
+        mode: 'AUTO',
+        targetTemp: 22,
+        currentTemp: 21,
+        online: true,
+        observedAt: 'x',
+      },
     ]);
     httpMock.expectOne('/api/covers').flush([
-      { id: 'store1', name: 'Store 1', room: 'Wohnzimmer', position: 50, online: true, observedAt: 'x' },
+      {
+        id: 'store1',
+        name: 'Store 1',
+        room: 'Wohnzimmer',
+        position: 50,
+        online: true,
+        observedAt: 'x',
+      },
     ]);
     httpMock.expectOne('/api/sensors').flush([
-      { id: 'innen', name: 'Innen', room: 'Wohnzimmer', temperature: 21.5, humidity: 45, online: true, observedAt: 'x' },
+      {
+        id: 'innen',
+        name: 'Innen',
+        room: 'Wohnzimmer',
+        temperature: 21.5,
+        humidity: 45,
+        online: true,
+        observedAt: 'x',
+      },
     ]);
     httpMock.expectOne('/api/safety/smoke').flush([
-      { id: 'rauchmelder', name: 'Rauchmelder', room: 'Wohnzimmer', alarm: 'OK', battery: 100, online: true, observedAt: 'x' },
+      {
+        id: 'rauchmelder',
+        name: 'Rauchmelder',
+        room: 'Wohnzimmer',
+        alarm: 'OK',
+        battery: 100,
+        online: true,
+        observedAt: 'x',
+      },
     ]);
     fixture.detectChanges();
 

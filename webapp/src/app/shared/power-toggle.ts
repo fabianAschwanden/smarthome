@@ -23,7 +23,13 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
       [disabled]="disabled()"
       (click)="toggle()"
     >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.9"
+        aria-hidden="true"
+      >
         <path d="M12 4v8" stroke-linecap="round" />
         <path d="M7.6 7.6a6.5 6.5 0 1 0 8.8 0" stroke-linecap="round" />
       </svg>

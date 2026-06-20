@@ -90,9 +90,7 @@ export class ApplianceService {
     if (current) {
       this.appliancesState.set(
         current.map((a) =>
-          a.id === id && a.temperature
-            ? { ...a, temperature: { ...a.temperature, target } }
-            : a,
+          a.id === id && a.temperature ? { ...a, temperature: { ...a.temperature, target } } : a,
         ),
       );
     }

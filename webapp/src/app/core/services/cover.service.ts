@@ -39,7 +39,9 @@ export class CoverService {
   }
 
   setPosition(id: string, position: number): void {
-    this.http.post<Cover>(`/api/covers/${id}/position`, { position }).subscribe((c) => this.merge(c));
+    this.http
+      .post<Cover>(`/api/covers/${id}/position`, { position })
+      .subscribe((c) => this.merge(c));
   }
 
   private merge(updated: Cover): void {
