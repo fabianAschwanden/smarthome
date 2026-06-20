@@ -1,85 +1,108 @@
 # smarthome
 
-Smart-Home-Anwendung. **Use Case 1: Energieverbrauch visualisieren** – liest Fronius
-(Solar API) und SMARTFOX (`values.xml`), berechnet den Hausverbrauch und stellt beide
-Quellen mit ihrer Differenz gegenüber (Hintergrund/Spec: `docs/energy/SPEC.md`).
+Lokales Smart-Home-Dashboard fürs eigene Heimnetz: Energie, Batterie, Schalter,
+Storen, Wellness-Anlagen, Klimaanlage, Umweltsensor, Rauchmelder, Zeitsteuerung,
+Item-Bilder und Wettervorhersage – auf einem Blick, bedienbar per Browser/iPad.
 
-Aufgesetzt auf dem `app-template`-Blueprint (`docs/blueprint.md`): ein Deployable (BFF),
-Quarkus + Angular via Quinoa, Hexagonal + DDD, erzwungen per ArchUnit.
+Ein Deployable (BFF): **Quarkus** (Java 25) + **Angular** (via Quinoa) in einem
+Artefakt, **Hexagonal + DDD**, erzwungen durch ArchUnit. Geräte werden **rein lokal
+im LAN** angesprochen (keine Hersteller-Cloud nötig). Verbindliche Konventionen:
+[`docs/blueprint.md`](docs/blueprint.md).
 
-## Entwickeln
+## Schnellstart (ohne Hardware)
 
 ```bash
 ./mvnw quarkus:dev        # Backend :8080 + Angular-Dev-Server :4200
 ```
 
-- Dashboard: <http://localhost:8080>  ·  API: <http://localhost:8080/api/energy/current>
-- Im `%dev`/`%test`-Profil sind **Mock-Quellen** aktiv – das Dashboard zeigt sofort
-  Fronius- und SMARTFOX-Werte inkl. Differenz, ganz ohne Hardware.
+- Dashboard: <http://localhost:8080> · API-Beispiel: `/api/energy/current`
 - Swagger-UI: `/q/swagger-ui` · Health: `/q/health`
+- Im `%dev`/`%test`-Profil sind **Mock-Quellen** aktiv – alles läuft sofort ohne
+  Geräte. PostgreSQL kommt über Dev Services (Container-Runtime nötig).
 
-## Lokaler Live-Betrieb gegen echte Geräte im LAN (`%live`)
+## Use Cases
 
-Für Tests am echten SMARTFOX/Fronius im Heimnetz – mit Live-Reload, ohne Login,
-DB über Dev Services (Docker):
+| # | Bereich | Funktion | Spec |
+|---|---------|----------|------|
+| 1 | **Energie** | Fronius (Solar-API) & SMARTFOX gegenübergestellt, Hausverbrauch, Tages-/Relativwerte | [energy](docs/energy/SPEC.md) |
+| 2 | **Batterie** | SMARTFOX-Relais 1: manuell + PV-Überschuss-Automatik | [battery](docs/battery/SPEC.md) |
+| 3 | **Schalter** | Tuya/Smart-Life lokal EIN/AUS (Stehlampe, Palme, Carport, Föhn, Homecinema) | [tuya](docs/tuya/SPEC.md) |
+| 4 | **Zeitsteuerung** | Schedule/Countdown/Random/Inching je Schalter (persistiert) | [schedule](docs/schedule/SPEC.md) |
+| 5 | **Storen** | Tuya-Cover Auf/Ab/Stopp + Position (UI 100 % = zu, Lamellen-Visualisierung) | [cover](docs/cover/SPEC.md) |
+| 6 | **Wellness** | Whirlpool & Schwimmbecken: Pumpe/Heizung/Licht/Massage + Soll-Temperatur | [appliance](docs/appliance/SPEC.md) |
+| 7 | **Klimaanlage** | Midea/NetHome Plus lokal: ein/aus, Modus, Soll-/Ist-Temperatur | [climate](docs/climate/SPEC.md) |
+| 8 | **Umweltsensor** | Tuya-Temp/Feuchte (nur lesend) | [sensor](docs/sensor/SPEC.md) |
+| 9 | **Sicherheit** | Tuya-Rauchmelder: Alarm + Batterie, Nachrichtenzentrale | [safety](docs/safety/SPEC.md) |
+| 10 | **Wetter** | Vorhersage (Open-Meteo, kein API-Key) | [weather](docs/weather/SPEC.md) |
+| – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
+
+**Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind
+über die Glocke oben rechts einsehbar; ein aktiver Alarm lässt sie rot pulsieren.
+
+**Stand der Geräteanbindung:** Energie, Batterie, Schalter, Storen, Klima, Sensor und
+Rauchmelder sind real angebunden. Die **Wellness-Anlagen** (UC 6) laufen real noch als
+`pending` (offline), bis die Steuerschnittstelle feststeht – Mock/Frontend sind fertig.
+
+## Profile
+
+| Profil | Zweck | Geräte | Login |
+|--------|-------|--------|-------|
+| `%dev` / `%test` | Entwicklung/Tests | Mock | aus |
+| `%dev,live` | lokaler Live-Test gegen echte Geräte (Live-Reload, Dev-Services-DB) | echt | aus |
+| `%lan` | Heimbetrieb auf Mini-PC/NAS (docker-compose) | echt | aus |
+| `%prod` / `%fly` | Cloud (Fly.io) | echt | OIDC |
 
 ```bash
-./mvnw quarkus:dev -Dquarkus.profile=dev,live
+./mvnw quarkus:dev -Dquarkus.profile=dev,live   # echte Geräte im LAN testen
 ```
 
-- `%live` schaltet die Adapter von Mock auf **echt** (`smarthome.real-devices=true`)
-  und setzt die Geräte-IPs (SMARTFOX `<smartfox-ip>`, Fronius `<fronius-ip>`).
-- Die Batterie-Seite schaltet dann das **echte** SMARTFOX-Relais 1
-  (`setswrel.cgi?rel=1&state=1` = EIN). Erst „Manuell" wählen, dann EIN/AUS.
-- Fällt ein Gerät aus, bleibt das andere sichtbar (Status `ERROR`).
-- **TODO Fronius:** aktuell nicht im selben WLAN-Segment erreichbar (Router-Routing
-  noch einzurichten) → zeigt bis dahin `ERROR`; SMARTFOX läuft bereits voll.
+Mock vs. echt steuert die Build-Property `smarthome.real-devices`. Geräte-Daten
+(device-ids, local-keys/Token, IPs, Standort) stehen **ausschliesslich** in der
+gitignored `config/application.properties` – Vorlage:
+[`config/application.properties.example`](config/application.properties.example).
+Im eingecheckten Source stehen nur neutrale Platzhalter.
 
-## Produktivbetrieb (Fly.io)
+## Heim-Server (Mini-PC) + iPad als Anzeige
+
+Die App läuft dauerhaft auf einem kleinen Always-on-Linux-Host im LAN; das iPad ist
+nur Client (`http://<server-ip>:8080`). Setup per Docker Compose:
 
 ```bash
-./mvnw verify
-java -Dquarkus.profile=prod \
-     -Denergy.fronius.base-url=http://<fronius-ip> \
-     -Denergy.smartfox.base-url=http://<smartfox-ip> \
-     -jar target/quarkus-app/quarkus-run.jar
+cp config/application.properties.example config/application.properties   # ausfüllen
+cd deploy && cp .env.example .env && docker compose up -d --build
 ```
 
-`%prod` aktiviert ebenfalls die echten Adapter (`smarthome.real-devices=true`),
-zusätzlich OIDC-Login, Security-Header und eine explizite DB-URL.
-Feld-/Vorzeichen-Zuordnung gegen die Anlage prüfen – siehe `docs/energy/SPEC.md` §11.
+Details, Voraussetzungen und Provisioning: [`docs/server/SETUP.md`](docs/server/SETUP.md).
+Hinweis: NETGEAR ReadyNAS hat kein brauchbares Docker → kleiner Mini-PC/Raspberry Pi
+(4 GB+ empfohlen) als Host.
 
-## Struktur (Schicht zuerst, Fachbereich darunter)
+## Architektur
+
+Schicht zuerst, Fachbereich darunter (ein Slice je Use Case):
 
 ```
 src/main/java/fabianaschwanden/smarthome/
-├── domain/model/{energy,battery}        # Records (framework-frei)
-├── domain/port/{in,out}/{energy,battery}  # Use-Case- und Driven-Ports
-├── domain/service/{energy,battery}      # Domain-Services (pur)
-├── application/service/{energy,battery} # Use-Case-Orchestrierung
-└── adapter/
-    ├── in/rest/{energy,battery}         # JAX-RS Resources (+ dto/{energy,battery})
-    └── out/{energy,battery}/...         # Geräte-Adapter (fronius/smartfox/mock)
-webapp/src/app/features/{energy,battery}/   # Angular-Seiten (Signals, OnPush)
+├── domain/model/<slice>          # Records, framework-frei (Invarianten im Compact-Constructor)
+├── domain/port/{in,out}/<slice>  # Use-Case- und Driven-Ports
+├── domain/service/<slice>        # reine Domain-Services
+├── application/service/<slice>   # Use-Case-Orchestrierung
+├── adapter/in/rest/<slice>       # JAX-RS Resources (+ dto/<slice>)
+├── adapter/out/<slice>/{mock,local,...}  # Geräte-Adapter
+└── support/tuya                  # geteiltes Tuya-LAN-Protokoll + Discovery (kein Adapter)
+webapp/src/app/features/<slice>/  # Angular-Seiten (Signals, OnPush, native control flow)
 ```
 
-Use Cases: **1 Energie** (Fronius vs. SMARTFOX), **2 Batteriesteuerung**
-(SMARTFOX-Relais 1, manuell + PV-Überschuss-Automatik; `docs/battery/SPEC.md`),
-**3 Tuya-Schalter** (Smart-Life-Geräte lokal EIN/AUS, Stehlampe/Palmenbeleuchtung;
-`docs/tuya/SPEC.md`), **4 Zeitsteuerung** (Schedule/Countdown/Random/Inching je
-Schalter, persistiert), **5 Storensteuerung** (Tuya-Cover Auf/Ab/Stopp + Position;
-`docs/cover/SPEC.md`), **6 Wellness-Anlagen** (Whirlpool & Schwimmbecken, mehrere
-Funktionen Pumpe/Heizung/Licht/Massage; `docs/appliance/SPEC.md`), **7 Klimaanlage**
-(ein/aus, Modus Kühlen/Heizen/Auto/Lüften, Soll-/Ist-Temperatur; `docs/climate/SPEC.md`).
-Use Cases 6–7 mit noch offener Geräteschnittstelle laufen real als „pending" (offline),
-bis sie angebunden ist. Das Tuya-LAN-Protokoll liegt geteilt in `support.tuya`.
-Der `note`-Durchstich bleibt als generische Referenz (schicht-zuerst, ohne Fachordner).
-
-Der Beispiel-Durchstich `Note` (mit Persistenz/Liquibase) bleibt vorerst als Referenz
-für künftige Use Cases mit Datenbank (z. B. Energie-Historie) und ist unter `/notes` erreichbar.
+- Abhängigkeitsrichtung `adapter → application → domain` (ArchUnit bricht den Build).
+- Liquibase besitzt das Schema (append-only), Hibernate validiert nur.
+- **Sidecar:** Tuya 3.4/3.5 und Midea werden über einen kleinen Python-Dienst
+  (`tools/tuya-sidecar`) gelesen, den der Java-Adapter per HTTP aufruft.
 
 ## Qualität
 
 ```bash
 ./mvnw verify             # Backend-Tests, ArchUnit, Coverage-Gate, Frontend-Build
+cd webapp && npm test     # Frontend-Tests
 ```
+
+Tests laufen strikt gegen Mocks – ein Hardening-Test stellt sicher, dass im
+`%test`-Profil **nie** echte Geräte angesprochen werden.

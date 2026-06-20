@@ -1,0 +1,64 @@
+# Heim-Server-Deployment (Mini-PC / kleiner Linux-Host im LAN). Nur Docker nötig.
+# Start:  cd deploy && cp .env.example .env && nano .env && docker compose up -d --build
+#
+# Hostet Backend (Quarkus inkl. Angular), PostgreSQL und den Tuya/Midea-Sidecar.
+# Das iPad/Tablet öffnet danach nur:  http://<server-ip>:8080
+#
+# WICHTIG – Host-Netzwerk:
+#   Die Tuya-Geräteerkennung nutzt UDP-Broadcasts (Port 6666/6667), die ein
+#   Docker-Bridge-Netz NICHT durchquert. Darum laufen die Container im Host-Netz
+#   (network_mode: host). Das funktioniert auf einem Linux-Host (Mini-PC/Pi).
+#   Auf Docker Desktop (macOS/Windows) ist host-mode nur eingeschränkt – der
+#   echte Betrieb gehört auf den Linux-Host im LAN.
+
+services:
+  db:
+    image: postgres:18
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smarthome
+      POSTGRES_USER: smarthome
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U smarthome']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sidecar:
+    build:
+      context: ../tools/tuya-sidecar
+    image: local/smarthome-sidecar:latest
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8765
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: local/smarthome:latest
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - db
+      - sidecar
+    environment:
+      # Profil 'lan' = LAN-Betrieb: echte Geräte, kein OIDC, DB per Env.
+      QUARKUS_PROFILE: lan
+      DB_URL: jdbc:postgresql://localhost:5432/smarthome
+      DB_USERNAME: smarthome
+      DB_PASSWORD: ${DB_PASSWORD}
+      SMARTHOME_TUYA_SIDECAR_URL: http://localhost:8765
+    # Geräte-IPs, device-ids und local-keys/Token kommen aus der gitignored
+    # config/application.properties (überschreibt application.properties zur Laufzeit).
+    volumes:
+      - ../config:/app/config:ro
+
+volumes:
+  db-data:

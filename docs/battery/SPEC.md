@@ -1,6 +1,6 @@
 # Spec – Use Case 2: Batteriesteuerung (SMARTFOX-Relais 1)
 
-Status: Entwurf v1.0 · Datum: 2026-06-19 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+Status: v1.0 (umgesetzt) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 

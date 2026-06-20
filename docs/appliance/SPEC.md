@@ -1,6 +1,6 @@
 # Spec – Use Case 6: Wellness-Anlagen (Whirlpool & Schwimmbecken)
 
-Status: Entwurf v1.1 · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+Status: v1.2 (Temperatur-Backend umgesetzt) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 
@@ -10,7 +10,7 @@ Whirlpool und Schwimmbecken. Jede Anlage hat eine Teilmenge der Funktionen
 Anlagen zusätzlich mit **Soll-/Ist-Temperatur**.
 
 In Scope: je Funktion EIN/AUS + Zustandsanzeige, Temperatur-Steuerung beheizter
-Anlagen (Frontend vorhanden, Backend-Endpunkt noch offen – siehe §7), Mock-Modus.
+Anlagen (Front- und Backend umgesetzt – siehe §7), Mock-Modus.
 Out of Scope (später): Zeitsteuerung der Anlagen, Szenen, Filter-Laufzeitpläne.
 
 ## 1a. Anlagen im Überblick
@@ -46,7 +46,7 @@ noch SMARTFOX). Die Architektur kapselt sie hinter dem Driven Port
 |---------|---------------------------------------------|----------------------------------------|
 | GET     | `/api/appliances`                           | Liste (id, name, room, online, functions, temperature) |
 | POST    | `/api/appliances/{id}/functions/{function}` | `{ "state": "ON"\|"OFF" }`             |
-| POST    | `/api/appliances/{id}/temperature`          | `{ "target": <°C> }` (nur beheizte Anlagen) — **geplant, §7** |
+| POST    | `/api/appliances/{id}/temperature`          | `{ "target": <°C> }` (nur beheizte Anlagen) |
 
 `{function}` ∈ `PUMP`/`HEATER`/`LIGHT`/`MASSAGE`. 404 bei unbekannter Anlage,
 400 wenn die Anlage die Funktion nicht hat (bzw. keine Heizung für `/temperature`
@@ -89,26 +89,25 @@ Eigener Slice `appliance`: Treiber-Port `ControlAppliances`
 `ApplianceControlService` (`application/service/appliance`), Adapter
 `adapter/in/rest/appliance` und `adapter/out/appliance/{mock,pending}`.
 
-## 7. Temperatur-Steuerung (beheizte Anlagen)
+## 7. Temperatur-Steuerung (beheizte Anlagen) – umgesetzt
 
-Whirlpool und Schwimmbecken haben eine Heizung mit Soll-Temperatur. Das **Frontend
-ist bereits vorbereitet**: `ApplianceTemperature` (target/current/min/max) im Modell,
-`ApplianceService.setTargetTemp(id, °C)` → `POST /api/appliances/{id}/temperature`,
-sowie die Anzeige in der Wellness-Kachel.
+Whirlpool und Schwimmbecken haben eine Heizung mit Soll-Temperatur. Front- und
+Backend sind umgesetzt:
 
-**Backend noch offen:** Der Endpunkt `POST /{id}/temperature`, das Domänenfeld
-`temperature` im `Appliance`-Aggregat und die Ports (`setTargetTemp`) sind noch zu
-implementieren. Geplante Regeln:
-
-- Nur für Anlagen mit `HEATER`-Funktion; sonst 400.
-- Soll-Temp muss in `[temp-min, temp-max]` liegen; sonst 400.
-- Mock hält Soll-Temp im Speicher und simuliert eine Ist-Temperatur; echter Adapter
-  schreibt den passenden Tuya-/Modbus-Datenpunkt.
+- Domäne: Value Object `Temperature` (target/current/min/max, Invarianten im
+  Compact-Constructor) als Feld im `Appliance`-Aggregat (`null` ohne Heizung);
+  Use-Case `ControlAppliances.setTargetTemperature(id, °C)`.
+- REST: `POST /api/appliances/{id}/temperature` mit `{ "target": <°C> }`.
+- Regeln: nur Anlagen mit `HEATER` (sonst `TemperatureNotSupported` → 400);
+  Soll-Temp muss in `[temp-min, temp-max]` liegen (sonst 400).
+- Frontend: `ApplianceTemperature` + `setTargetTemp(id, °C)`, Ring-Dial in der
+  Wellness-Kachel.
+- Mock hält die Soll-Temp und simuliert eine Ist-Temperatur; der echte Adapter
+  schreibt später den passenden Geräte-Datenpunkt.
 
 ## 8. Offene Punkte / TODO
 
-- [ ] **Temperatur-Steuerung im Backend** umsetzen (Domäne + Port + REST), passend
-      zum bereits vorhandenen Frontend (§7).
+- [x] Temperatur-Steuerung im Backend (Domäne + Port + REST) – umgesetzt (§7).
 - [ ] Steuerschnittstelle der realen Anlagen bestimmen (HTTP-API / Modbus / Cloud)
       und echten Adapter implementieren (ersetzt `PendingApplianceDevice`).
 - [ ] Funktionsliste + Min/Max-Temperaturen je Anlage gegen die reale Steuerung verifizieren.
