@@ -1,0 +1,32 @@
+# Multi-Stage: Maven-Build (inkl. Quinoa-Frontend) → minimales JVM-Image
+# Fly.io: fly.toml verweist auf dieses Dockerfile.
+
+# ── Build Stage ───────────────────────────────────────────────────────────────
+FROM eclipse-temurin:25-jdk AS build
+WORKDIR /build
+
+# Dependencies zuerst für Layer-Cache
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN ./mvnw -B dependency:go-offline -q
+
+# Node für Quinoa (Angular-Build)
+RUN apt-get update -qq && apt-get install -y --no-install-recommends nodejs npm && rm -rf /var/lib/apt/lists/*
+
+COPY src/ src/
+COPY webapp/ webapp/
+RUN ./mvnw -B package -DskipTests -q
+
+# ── Runtime Stage ──────────────────────────────────────────────────────────────
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+
+# Quarkus Fast-JAR
+COPY --from=build /build/target/quarkus-app/lib/ ./lib/
+COPY --from=build /build/target/quarkus-app/*.jar ./
+COPY --from=build /build/target/quarkus-app/app/ ./app/
+COPY --from=build /build/target/quarkus-app/quarkus/ ./quarkus/
+
+EXPOSE 8080
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0"
+ENTRYPOINT ["java", "-jar", "quarkus-run.jar"]

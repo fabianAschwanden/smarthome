@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# verify ist das Merge-Gate (Blueprint §11).
+jobs:
+  backend:
+    name: Backend (mvn verify, inkl. Frontend-Build via Quinoa)
+    # TODO Unternehmenskontext: auf self-hosted Runner (ARC) umstellen.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: Build & Verify (Tests, ArchUnit, Coverage-Gate)
+        run: ./mvnw -B verify
+
+  frontend:
+    name: Frontend (Vitest, ESLint, Prettier-Check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test -- --watch=false
+
+  # E2E (Playwright gegen das gebaute Artefakt) bewusst als eigener, nicht-blockierender Job.
+  # Aktivieren, sobald die App einen sinnvollen E2E-Umfang hat.
+  # e2e:
+  #   runs-on: ubuntu-latest
+  #   steps: ...

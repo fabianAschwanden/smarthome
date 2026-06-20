@@ -1,0 +1,78 @@
+# Vorlage für die LOKALE Konfiguration & Secrets.
+#
+#   cp config/application.properties.example config/application.properties
+#   # echte Werte eintragen, dann:
+#   ./mvnw quarkus:dev -Dquarkus.profile=dev,live
+#
+# Die echte Datei config/application.properties ist per .gitignore vom Repo
+# ausgeschlossen. HIER stehen nur Platzhalter – KEINE echten device-ids, keys,
+# IPs oder Standortdaten committen.
+#
+# Bewusst auf %dev/%live gescoped, damit "./mvnw verify" (%test) die Mock-Adapter
+# nutzt und keine echten Geräte anspricht.
+# ------------------------------------------------------------------------------
+
+# Echte Geräte aktivieren (nur Dev/Live):
+%dev.smarthome.real-devices=true
+%live.smarthome.real-devices=true
+
+# --- Energie: SMARTFOX (Referenz + Batterie-Relais) und Fronius (Solar-API) ---
+%dev.smarthome.fronius.enabled=true
+%live.smarthome.fronius.enabled=true
+%dev.energy.fronius.base-url=http://<fronius-ip>
+%live.energy.fronius.base-url=http://<fronius-ip>
+%dev.energy.smartfox.base-url=http://<smartfox-ip>
+%live.energy.smartfox.base-url=http://<smartfox-ip>
+%dev.battery.smartfox.relay-url=http://<smartfox-ip>/setswrel.cgi?rel=1&state={state}
+%live.battery.smartfox.relay-url=http://<smartfox-ip>/setswrel.cgi?rel=1&state={state}
+
+# --- Tuya-Schalter: device-id (Tuya-IoT), local-key (16 Zeichen, geheim), LAN-IP ---
+# [0] Stehlampe, [1] Palmenbeleuchtung, [2] Carport, [3] Föhn, [4] Homecinema
+%dev.tuya.devices[0].device-id=<device-id>
+%dev.tuya.devices[0].local-key=<local-key>
+%dev.tuya.devices[0].address=<lan-ip>
+%dev.tuya.devices[1].device-id=<device-id>
+%dev.tuya.devices[1].local-key=<local-key>
+%dev.tuya.devices[1].address=<lan-ip>
+%dev.tuya.devices[2].device-id=<device-id>
+%dev.tuya.devices[2].local-key=<local-key>
+%dev.tuya.devices[2].address=<lan-ip>
+%dev.tuya.devices[3].device-id=<device-id>
+%dev.tuya.devices[3].local-key=<local-key>
+%dev.tuya.devices[3].address=<lan-ip>
+%dev.tuya.devices[4].device-id=<device-id>
+%dev.tuya.devices[4].local-key=<local-key>
+%dev.tuya.devices[4].address=<lan-ip>
+# local-keys werden auch im %live-Profil benötigt:
+%live.tuya.devices[0].local-key=<local-key>
+%live.tuya.devices[1].local-key=<local-key>
+
+# --- Storen (Tuya-Cover): state-dp ist geräteabhängig (hier dp 2) ---
+%dev.cover.devices[0].device-id=<device-id>
+%dev.cover.devices[0].local-key=<local-key>
+%dev.cover.devices[0].address=<lan-ip>
+%dev.cover.devices[0].state-dp=2
+%dev.cover.devices[1].device-id=<device-id>
+%dev.cover.devices[1].local-key=<local-key>
+%dev.cover.devices[1].address=<lan-ip>
+%dev.cover.devices[1].state-dp=2
+
+# --- Innensensor (Temp/Feuchte, Protokoll 3.4; IP via Discovery) ---
+%dev.sensor.devices[0].device-id=<device-id>
+%dev.sensor.devices[0].local-key=<local-key>
+%dev.sensor.devices[0].version=3.4
+
+# --- Rauchmelder (nur lesend; IP via Discovery) ---
+%dev.safety.smoke[0].device-id=<device-id>
+%dev.safety.smoke[0].local-key=<local-key>
+
+# --- Klimaanlage (Midea / NetHome Plus, V3 token/key) ---
+climate.devices[0].device-id=<numerische-midea-id>
+climate.devices[0].token=<token>
+climate.devices[0].key=<key>
+climate.devices[0].address=<lan-ip>
+
+# --- Wetter-Standort (ortsbezogen) ---
+weather.location=<Ortsname>
+weather.latitude=<lat>
+weather.longitude=<lon>

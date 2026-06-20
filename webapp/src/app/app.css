@@ -1,0 +1,29 @@
+/* Icon-Rail-Buttons der App-Shell. Glass-Tokens kommen aus styles.css (:root). */
+.rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  color: var(--ink-soft);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.rail-btn svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.rail-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+}
+
+.rail-btn-active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 22px -10px rgba(33, 69, 106, 0.9);
+}

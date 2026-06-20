@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Migrationen sind append-only und unveränderlich: jede Änderung = neue Datei + include. -->
+    <include file="db/changelog/changes/0001-create-note.xml"/>
+    <include file="db/changelog/changes/0002-create-switch-schedule.xml"/>
+    <include file="db/changelog/changes/0003-create-item-image.xml"/>
+    <include file="db/changelog/changes/0004-drop-note.xml"/>
+
+</databaseChangeLog>
