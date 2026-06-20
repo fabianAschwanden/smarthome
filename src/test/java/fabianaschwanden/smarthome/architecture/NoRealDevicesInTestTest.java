@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -59,6 +60,7 @@ class NoRealDevicesInTestTest {
     private static void assertOnlyMock(List<?> factories, String label) {
         assertFalse(factories.isEmpty(), label + ": keine Factory aktiv");
         for (Object factory : factories) {
+            assertNotNull(factory, label + ": Factory-Liste enthält null");
             String name = factory.getClass().getName();
             assertTrue(name.contains(".mock."),
                     label + "-Factory im Test ist kein Mock: " + name

@@ -1,6 +1,6 @@
 # Spec – Use Case 3: Tuya / Smart-Life-Schalter (lokal)
 
-Status: Entwurf v1.0 · Datum: 2026-06-19 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+Status: v1.0 (umgesetzt) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 
@@ -106,15 +106,19 @@ Session-Key-Handshake) – Version je Gerät konfigurierbar.
 - Nur **eine** TCP-Verbindung gleichzeitig: Während die App pollt, schlägt ein
   paralleler Diagnose-Connect fehl. Für Probes die App kurz stoppen.
 
-## 7. Offene Punkte / TODO
+## 7. Stand & offene Punkte
 
-- [ ] **Echter LAN-Adapter:** Tuya-LAN-Protokoll (3.3/3.4) in reinem Java
-      implementieren (AES-ECB/GCM, Handshake/Session-Key, Befehl `7` = set,
-      `10`/`13` = status). Es gibt keine gepflegte Java-Bibliothek; Referenz ist
-      `tinytuya` (Python). Vorerst Skelett mit dokumentiertem TODO.
-- [ ] `device-id` / `local-key` / `version` der realen Geräte beschaffen (§2.1).
-- [ ] Protokollversion je Gerät bestätigen (3.3 vs 3.4/3.5 – Krypto unterscheidet sich).
-- [ ] `dp`-ID des Schalt-Datenpunkts verifizieren (meist `1`).
+- [x] **Echter LAN-Adapter umgesetzt:** Tuya-LAN-Protokoll **3.3** in reinem Java
+      (`support.tuya`, AES-ECB/CRC32, Befehle set/status). **3.4/3.5**
+      (Session-Key-Handshake) über den Python-**Sidecar** (`tools/tuya-sidecar`,
+      `tinytuya`), den der Java-Adapter per HTTP aufruft.
+- [x] **Auto-Discovery:** `TuyaDiscovery` hört UDP-Broadcasts (6666/6667) und löst
+      gewanderte DHCP-IPs auf (device-id → aktuelle IP).
+- [x] Fünf Schalter real angebunden (Stehlampe, Palmenbeleuchtung, Carport, Föhn,
+      Homecinema); kritische Schalter (WLAN-versorgend) mit Bestätigung vor AUS.
+- Geräte-Daten (`device-id`/`local-key`/`version`/IP) liegen nur in gitignored
+  `config/` (§2.1) – nie im Repo.
+- [ ] `dp`-ID bzw. Protokollversion bei neuen Geräten verifizieren (meist `dp 1`, v3.3).
 
 ## 8. Nächste Schritte
 

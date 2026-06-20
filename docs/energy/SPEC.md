@@ -1,6 +1,6 @@
 # Spec – Use Case 1: Energieverbrauch visualisieren
 
-Status: Entwurf v1.1 · Datum: 2026-06-19 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+Status: v1.1 (umgesetzt) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 

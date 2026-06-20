@@ -1,6 +1,6 @@
 # Spec – Use Case 5: Storensteuerung (Tuya-Cover, lokal)
 
-Status: Entwurf v1.0 · Datum: 2026-06-19 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+Status: v1.1 (umgesetzt; UI 100 % = zu) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 
@@ -24,8 +24,15 @@ in `support.tuya` (v3.3/v3.4). Standard-Datenpunkte einer Tuya-Store:
 Manche Geräte nutzen abweichende dps (z. B. 101). Pro Gerät konfigurierbar; gegen
 die reale Store verifizieren (tinytuya `status` zeigt die belegten dps).
 
-**Positionskonvention (App):** `0` = geschlossen, `100` = offen, `-1` = unbekannt.
-(Tuya-intern variiert die Richtung gerätespezifisch – ggf. invertieren.)
+**Positionskonvention:**
+- **REST/Domäne (Geräteskala):** die rohe Tuya-Position über `cover.devices[i].position`
+  bzw. den `state-dp`. `-1` = unbekannt.
+- **UI (`webapp`):** zeigt „% geschlossen" mit **`100` = ganz zu, `0` = offen**. Die
+  Spiegelung passiert in der Frontend-Komponente (`100 − Geräteposition`), inkl.
+  Slider, Status-Text und Lamellen-Visualisierung. Beim Setzen wird zurückgerechnet.
+- Welcher dp die echte Ist-Position trägt, ist gerätespezifisch (`state-dp`); bei
+  der realen Store verifizieren – manche Module melden über einen anderen dp einen
+  konstanten Wert statt der Position.
 
 ## 3. API (REST)
 

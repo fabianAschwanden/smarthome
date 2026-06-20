@@ -22,6 +22,9 @@ webapp/playwright-report/
 .DS_Store
 .env
 
+# Deploy-Secrets (Heim-Server) – nur deploy/.env.example wird eingecheckt
+deploy/.env
+
 # Lokale Secrets (Tuya local-keys etc.) – nur die .example-Vorlage wird eingecheckt
 config/application.properties
 
