@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Pre-commit: formatiert gestagte Frontend-Dateien mit Prettier (wie CI format:check)
+# und staged sie neu. So bleibt der Commit immer CI-konform.
+#
+# Aktivieren (einmalig pro Klon):  git config core.hooksPath .githooks
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+PRETTIER="$ROOT/webapp/node_modules/.bin/prettier"
+
+# Prettier nicht installiert (z. B. frischer Klon ohne npm install) -> Hook überspringen,
+# nicht den Commit blockieren. Der CI-format:check fängt es notfalls.
+if [ ! -x "$PRETTIER" ]; then
+  echo "pre-commit: Prettier nicht gefunden ($PRETTIER) – überspringe Formatierung."
+  exit 0
+fi
+
+# Gestagte Dateien unter webapp/src bzw. webapp/e2e mit ts/html/css.
+# (Newline-getrennt; kompatibel auch mit der alten Bash 3.2 auf macOS – kein mapfile.)
+FILES="$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -E '^webapp/(src|e2e)/.*\.(ts|html|css)$' || true)"
+
+if [ -z "$FILES" ]; then
+  exit 0
+fi
+
+echo "pre-commit: formatiere gestagte Frontend-Datei(en) mit Prettier…"
+# Prettier läuft mit cwd webapp (findet dort die Config); Pfade relativ dazu.
+REL="$(printf '%s\n' "$FILES" | sed 's#^webapp/##')"
+( cd "$ROOT/webapp" && printf '%s\n' "$REL" | xargs "$PRETTIER" --write >/dev/null )
+
+# Neu stagen, damit die Formatierung im Commit landet.
+printf '%s\n' "$FILES" | xargs git add --
