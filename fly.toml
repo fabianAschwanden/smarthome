@@ -1,0 +1,44 @@
+# Fly.io App-Konfiguration
+# Vorgabe aus dem Template; nach init.sh anpassen:
+#   - app: <app-name> (muss mit `flyctl apps create <app-name>` registriert werden)
+#   - primary_region: Region nach Bedarf (ams = Amsterdam, fra = Frankfurt)
+#
+# Datenbank: Neon PostgreSQL (serverless, free tier)
+# Secrets via flyctl: DB_URL, OIDC_AUTH_SERVER_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET
+# (siehe README — Abschnitt "Fly.io Deployment")
+
+app = "smarthome"
+primary_region = "ams"
+
+[build]
+  dockerfile = "src/main/docker/Dockerfile.jvm"
+
+[env]
+  # Quarkus-Profil: aktiviert Neon-DB-Config, Prod-Auth, Security-Header
+  QUARKUS_PROFILE = "prod,fly"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "15s"
+    method = "GET"
+    path = "/q/health/live"
+    port = 8080
+    timeout = "5s"
+    type = "http"

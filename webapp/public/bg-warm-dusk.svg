@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141b27" />
+      <stop offset="0.45" stop-color="#283142" />
+      <stop offset="0.8" stop-color="#5d4c3c" />
+      <stop offset="1" stop-color="#b07c54" />
+    </linearGradient>
+    <radialGradient id="vig" cx="50%" cy="42%" r="80%">
+      <stop offset="0.55" stop-color="#0a0e16" stop-opacity="0" />
+      <stop offset="1" stop-color="#070a11" stop-opacity="0.6" />
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="70" />
+    </filter>
+  </defs>
+  <rect width="1440" height="900" fill="url(#base)" />
+  <g filter="url(#soft)">
+    <circle cx="1190" cy="560" r="300" fill="#e6a35c" opacity="0.5" />
+    <circle cx="1320" cy="780" r="180" fill="#f0b878" opacity="0.4" />
+    <circle cx="210" cy="170" r="260" fill="#2b4263" opacity="0.55" />
+    <circle cx="560" cy="300" r="170" fill="#3a5a7a" opacity="0.3" />
+    <circle cx="720" cy="900" r="320" fill="#10161f" opacity="0.55" />
+  </g>
+  <rect width="1440" height="900" fill="url(#vig)" />
+</svg>

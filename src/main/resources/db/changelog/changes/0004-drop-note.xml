@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Beispiel-Durchstich 'Note' entfernt: Tabelle aus 0001 wird abgebaut
+         (append-only: 0001 bleibt im Verlauf, hier eine neue Drop-Migration). -->
+    <changeSet id="0004-drop-note" author="smarthome">
+        <dropTable tableName="note"/>
+    </changeSet>
+
+</databaseChangeLog>

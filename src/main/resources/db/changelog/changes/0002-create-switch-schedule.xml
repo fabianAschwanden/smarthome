@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 4: Zeitsteuerung der Schalter (ein Tisch deckt alle Typen ab). -->
+    <changeSet id="0002-create-switch-schedule" author="smarthome">
+        <createTable tableName="switch_schedule">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="switch_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action" type="varchar(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="at_time" type="time"/>
+            <column name="weekdays" type="varchar(128)"/>
+            <column name="fire_at" type="timestamp with time zone"/>
+            <column name="window_start" type="time"/>
+            <column name="window_end" type="time"/>
+            <column name="pulse_seconds" type="integer"/>
+        </createTable>
+        <createIndex tableName="switch_schedule" indexName="idx_switch_schedule_switch_id">
+            <column name="switch_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

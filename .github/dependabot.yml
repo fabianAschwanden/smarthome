@@ -1,0 +1,41 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      quarkus:
+        patterns:
+          - "io.quarkus*"
+      maven-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: "/webapp"
+    schedule:
+      interval: weekly
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+    # Framework-Majors hängen zusammen (Angular + CLI + angular-eslint + TypeScript-Peer-Range)
+    # und werden bewusst gemeinsam via `ng update` gehoben — nicht als Einzel-PRs.
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "angular-eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

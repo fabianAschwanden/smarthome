@@ -1,0 +1,28 @@
+name: Deploy
+
+# Deployment-Fluss (Blueprint §11): Tag → flyctl deploy (Fly.io baut das Image remote).
+# Neon PostgreSQL ist permanent; Liquibase migriert beim App-Start automatisch.
+#
+# Voraussetzung: FLY_API_TOKEN als GitHub-Secret hinterlegt.
+# Secret setzen: flyctl tokens create deploy -a <app-name> → GitHub Settings → Secrets
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    concurrency: deploy-${{ github.ref }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # flyctl deploy baut das Image auf Fly-Build-Maschinen (kein lokales Docker nötig),
+      # pusst es in die Fly-interne Registry und deployt rolling.
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --wait-timeout 120

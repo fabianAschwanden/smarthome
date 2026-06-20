@@ -1,0 +1,29 @@
+# Maven / Quarkus
+target/
+*.log
+
+# Node
+node_modules/
+webapp/dist/
+webapp/out-tsc/
+webapp/test-results/
+webapp/playwright-report/
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+.settings/
+.project
+.classpath
+
+# OS / sonstiges
+.DS_Store
+.env
+
+# Lokale Secrets (Tuya local-keys etc.) – nur die .example-Vorlage wird eingecheckt
+config/application.properties
+
+# Python venv für Tuya-Diagnose (tinytuya)
+.tuya-venv/
