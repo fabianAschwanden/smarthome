@@ -17,6 +17,7 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
       class="power-orb"
       [class.is-on]="on()"
       [class.power-orb-sm]="size() === 'sm'"
+      [class.power-orb-lg]="size() === 'lg'"
       [attr.aria-pressed]="on()"
       [attr.aria-label]="label()"
       [disabled]="disabled()"
@@ -33,8 +34,8 @@ export class PowerToggle {
   /** Zustand (zwei-Wege via [(on)]). */
   readonly on = model(false);
 
-  /** Grösse: 'md' (Standard) oder 'sm' für dichte Bereiche. */
-  readonly size = input<'md' | 'sm'>('md');
+  /** Grösse: 'sm' (dicht), 'md' (Standard) oder 'lg' (Touch/Dashboard). */
+  readonly size = input<'sm' | 'md' | 'lg'>('md');
 
   /** Barrierefreie Beschriftung des Buttons. */
   readonly label = input('Ein/Aus');

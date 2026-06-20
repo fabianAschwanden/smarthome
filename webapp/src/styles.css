@@ -155,6 +155,15 @@ body {
   width: 1.05rem;
   height: 1.05rem;
 }
+/* Grosse Variante (Touch-Bedienung auf dem Dashboard) */
+.power-orb.power-orb-lg {
+  width: 3.75rem;
+  height: 3.75rem;
+}
+.power-orb.power-orb-lg svg {
+  width: 1.7rem;
+  height: 1.7rem;
+}
 
 /* --- Segmented control (Modi / Tabs) --- */
 .seg {

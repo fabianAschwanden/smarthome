@@ -73,6 +73,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
               <app-power-toggle
                 [on]="s.state === 'ON'"
                 [disabled]="!s.online"
+                size="lg"
                 [label]="s.name"
                 (onChange)="switchToggle(s.id, $event)"
               />
@@ -94,6 +95,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
               <app-power-toggle
                 [on]="s.state === 'ON'"
                 [disabled]="!s.online"
+                size="lg"
                 [label]="s.name"
                 (onChange)="switchToggle(s.id, $event)"
               />
@@ -165,7 +167,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                 <app-power-toggle
                   [on]="c.power"
                   [disabled]="!c.online"
-                  size="sm"
+                  size="lg"
                   label="Klima ein/aus"
                   (onChange)="climatePower($event)"
                 />
@@ -209,11 +211,11 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       </span>
                     </span>
                   </span>
-                  <div class="flex shrink-0 gap-1">
+                  <div class="flex shrink-0 gap-2">
                     <button
                       type="button"
                       [disabled]="!cv.online"
-                      class="glass size-8 rounded-lg text-sm disabled:opacity-40"
+                      class="glass size-12 rounded-xl text-lg disabled:opacity-40"
                       (click)="coverCmd(cv.id, 'OPEN')"
                       aria-label="Auf"
                     >
@@ -222,7 +224,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                     <button
                       type="button"
                       [disabled]="!cv.online"
-                      class="glass size-8 rounded-lg text-sm disabled:opacity-40"
+                      class="glass size-12 rounded-xl text-lg disabled:opacity-40"
                       (click)="coverCmd(cv.id, 'STOP')"
                       aria-label="Stopp"
                     >
@@ -231,7 +233,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                     <button
                       type="button"
                       [disabled]="!cv.online"
-                      class="glass size-8 rounded-lg text-sm disabled:opacity-40"
+                      class="glass size-12 rounded-xl text-lg disabled:opacity-40"
                       (click)="coverCmd(cv.id, 'CLOSE')"
                       aria-label="Ab"
                     >
