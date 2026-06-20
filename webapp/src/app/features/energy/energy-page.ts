@@ -97,9 +97,7 @@ import { ItemImage } from '../../shared/item-image';
 
         <!-- Differenz der Quellen -->
         @if (snap.comparison; as cmp) {
-          <article
-            class="glass-card border-l-4 border-l-[color:var(--accent)] p-5"
-          >
+          <article class="glass-card border-l-4 border-l-[color:var(--accent)] p-5">
             <h3 class="font-medium">Differenz {{ cmp.first }} ↔ {{ cmp.second }}</h3>
             <div class="mt-3 grid gap-3 text-sm sm:grid-cols-3">
               <div>

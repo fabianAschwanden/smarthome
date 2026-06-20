@@ -35,116 +35,120 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                 <app-item-image [itemId]="a.id" [label]="a.name" />
               </div>
               <div class="flex min-w-0 flex-1 flex-col gap-4">
-              <header class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="text-lg font-semibold">{{ a.name }}</h3>
-                  <p class="text-sm text-[color:var(--ink-soft)]">
-                    {{ a.online ? 'Online' : 'Offline' }}
-                    @if (a.room) {
-                      · {{ a.room }}
-                    }
-                  </p>
-                </div>
-                <span
-                  class="size-2.5 shrink-0 rounded-full"
-                  [class]="a.online ? 'bg-emerald-400' : 'bg-red-400'"
-                ></span>
-              </header>
-
-              <!-- Temperatur (nur bei beheizten Anlagen) -->
-              @if (a.temperature; as t) {
-                <div>
-                  <app-temp-dial
-                    [target]="t.target"
-                    [current]="t.current"
-                    [min]="t.min"
-                    [max]="t.max"
-                    label="Wassertemperatur"
-                    emphasis="current"
-                  />
-                  <div class="mt-3 flex items-center justify-center gap-5">
-                    <span class="text-sm text-[color:var(--ink-soft)] tabular-nums">{{ t.max }}°</span>
-                    <button
-                      type="button"
-                      [disabled]="!a.online || t.target >= t.max"
-                      class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
-                      (click)="changeTemp(a, 1)"
-                      aria-label="Wärmer"
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      [disabled]="!a.online || t.target <= t.min"
-                      class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
-                      (click)="changeTemp(a, -1)"
-                      aria-label="Kälter"
-                    >
-                      −
-                    </button>
-                    <span class="text-sm text-[color:var(--ink-soft)] tabular-nums">{{ t.min }}°</span>
-                  </div>
-                </div>
-              }
-
-              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                @for (fn of functionsOf(a); track fn.key) {
-                  <button
-                    type="button"
-                    [disabled]="!a.online"
-                    class="tile-toggle"
-                    [class.tile-toggle-active]="fn.on"
-                    [attr.aria-pressed]="fn.on"
-                    [attr.aria-label]="fn.label"
-                    (click)="onFunction(a.id, fn.key, !fn.on)"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                      @switch (fn.key) {
-                        @case ('PUMP') {
-                          <path
-                            d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"
-                            stroke-linejoin="round"
-                          />
-                        }
-                        @case ('HEATER') {
-                          <path
-                            d="M12 3c1.6 2.6 4 4.2 4 7.2a4 4 0 0 1-8 0c0-1.3.6-2.2 1.4-3.2.3 1.1.9 1.6 1.4 1.9C10.4 8 11 6 12 3z"
-                            stroke-linejoin="round"
-                          />
-                        }
-                        @case ('LIGHT') {
-                          <path
-                            d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.3 11c.5.4.8 1 .8 1.6h5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        }
-                        @case ('MASSAGE') {
-                          <path
-                            d="M4 8c2-2.5 4-2.5 6 0s4 2.5 6 0M4 12c2-2.5 4-2.5 6 0s4 2.5 6 0M4 16c2-2.5 4-2.5 6 0s4 2.5 6 0"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        }
-                        @case ('FILTER') {
-                          <path
-                            d="M4 5h16l-6 7v6l-4 2v-8z"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        }
+                <header class="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 class="text-lg font-semibold">{{ a.name }}</h3>
+                    <p class="text-sm text-[color:var(--ink-soft)]">
+                      {{ a.online ? 'Online' : 'Offline' }}
+                      @if (a.room) {
+                        · {{ a.room }}
                       }
-                    </svg>
-                    <span class="text-xs">{{ fn.label }}</span>
-                  </button>
-                }
-              </div>
+                    </p>
+                  </div>
+                  <span
+                    class="size-2.5 shrink-0 rounded-full"
+                    [class]="a.online ? 'bg-emerald-400' : 'bg-red-400'"
+                  ></span>
+                </header>
 
-              @if (!a.online) {
-                <p class="text-xs text-amber-300/90">
-                  ⚠ Nicht erreichbar – Steuerschnittstelle noch nicht angebunden.
-                </p>
-              }
+                <!-- Temperatur (nur bei beheizten Anlagen) -->
+                @if (a.temperature; as t) {
+                  <div>
+                    <app-temp-dial
+                      [target]="t.target"
+                      [current]="t.current"
+                      [min]="t.min"
+                      [max]="t.max"
+                      label="Wassertemperatur"
+                      emphasis="current"
+                    />
+                    <div class="mt-3 flex items-center justify-center gap-5">
+                      <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
+                        >{{ t.max }}°</span
+                      >
+                      <button
+                        type="button"
+                        [disabled]="!a.online || t.target >= t.max"
+                        class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
+                        (click)="changeTemp(a, 1)"
+                        aria-label="Wärmer"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        [disabled]="!a.online || t.target <= t.min"
+                        class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
+                        (click)="changeTemp(a, -1)"
+                        aria-label="Kälter"
+                      >
+                        −
+                      </button>
+                      <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
+                        >{{ t.min }}°</span
+                      >
+                    </div>
+                  </div>
+                }
+
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  @for (fn of functionsOf(a); track fn.key) {
+                    <button
+                      type="button"
+                      [disabled]="!a.online"
+                      class="tile-toggle"
+                      [class.tile-toggle-active]="fn.on"
+                      [attr.aria-pressed]="fn.on"
+                      [attr.aria-label]="fn.label"
+                      (click)="onFunction(a.id, fn.key, !fn.on)"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                        @switch (fn.key) {
+                          @case ('PUMP') {
+                            <path
+                              d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"
+                              stroke-linejoin="round"
+                            />
+                          }
+                          @case ('HEATER') {
+                            <path
+                              d="M12 3c1.6 2.6 4 4.2 4 7.2a4 4 0 0 1-8 0c0-1.3.6-2.2 1.4-3.2.3 1.1.9 1.6 1.4 1.9C10.4 8 11 6 12 3z"
+                              stroke-linejoin="round"
+                            />
+                          }
+                          @case ('LIGHT') {
+                            <path
+                              d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.3 11c.5.4.8 1 .8 1.6h5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          }
+                          @case ('MASSAGE') {
+                            <path
+                              d="M4 8c2-2.5 4-2.5 6 0s4 2.5 6 0M4 12c2-2.5 4-2.5 6 0s4 2.5 6 0M4 16c2-2.5 4-2.5 6 0s4 2.5 6 0"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          }
+                          @case ('FILTER') {
+                            <path
+                              d="M4 5h16l-6 7v6l-4 2v-8z"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          }
+                        }
+                      </svg>
+                      <span class="text-xs">{{ fn.label }}</span>
+                    </button>
+                  }
+                </div>
+
+                @if (!a.online) {
+                  <p class="text-xs text-amber-300/90">
+                    ⚠ Nicht erreichbar – Steuerschnittstelle noch nicht angebunden.
+                  </p>
+                }
               </div>
             </article>
           }

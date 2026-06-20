@@ -31,15 +31,30 @@ import { PowerReading } from '../../core/models/energy';
                   [attr.stroke-dasharray]="pvFill() + ' 100'"
                 />
               </svg>
-              <svg class="flow-icon flow-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <svg
+                class="flow-icon flow-icon-sun"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                aria-hidden="true"
+              >
                 <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke-linecap="round" />
+                <path
+                  d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+                  stroke-linecap="round"
+                />
               </svg>
             </div>
           </div>
 
           <!-- Verbindungslinien -->
-          <svg class="flow-lines" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true">
+          <svg
+            class="flow-lines"
+            viewBox="0 0 300 90"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
             <path d="M150 0 V40" />
             <path d="M150 45 L55 85" />
             <path d="M150 45 L245 85" />
@@ -54,8 +69,19 @@ import { PowerReading } from '../../core/models/energy';
           <div class="flow-bottom">
             <div class="flow-leg">
               <div class="flow-node flow-node-grid">
-                <svg class="flow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                  <path d="M7 22l2-9M17 22l-2-9M9 13h6M6 22h12M12 2v4M9 6l-3 7M15 6l3 7M9 6h6" stroke-linecap="round" stroke-linejoin="round" />
+                <svg
+                  class="flow-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M7 22l2-9M17 22l-2-9M9 13h6M6 22h12M12 2v4M9 6l-3 7M15 6l3 7M9 6h6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <p class="flow-value flow-value-sm">{{ wattOrKw(absGrid(r)) }}</p>
@@ -63,8 +89,19 @@ import { PowerReading } from '../../core/models/energy';
             </div>
             <div class="flow-leg">
               <div class="flow-node flow-node-home">
-                <svg class="flow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                  <path d="M4 11l8-7 8 7M6 10v9h12v-9M10 19v-5h4v5" stroke-linecap="round" stroke-linejoin="round" />
+                <svg
+                  class="flow-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 11l8-7 8 7M6 10v9h12v-9M10 19v-5h4v5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <p class="flow-value flow-value-sm">{{ kw(r.consumptionWatt) }}</p>
@@ -83,11 +120,22 @@ import { PowerReading } from '../../core/models/energy';
                 [class.battery-charging]="batteryStatus() === 'charging'"
                 [class.battery-off]="batteryStatus() === 'off'"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  aria-hidden="true"
+                >
                   <rect x="3" y="8" width="16" height="9" rx="2" />
                   <path d="M21 11v3" stroke-linecap="round" />
                   @if (batteryStatus() === 'charging') {
-                    <path class="battery-bolt" d="M12 9.5l-2 3h2.4l-1.4 3 3.6-4h-2.2z" fill="currentColor" stroke="none" />
+                    <path
+                      class="battery-bolt"
+                      d="M12 9.5l-2 3h2.4l-1.4 3 3.6-4h-2.2z"
+                      fill="currentColor"
+                      stroke="none"
+                    />
                   }
                 </svg>
               </span>
@@ -107,7 +155,12 @@ import { PowerReading } from '../../core/models/energy';
             <span class="text-sm text-[color:var(--ink-soft)]">Tagesertrag</span>
             <span class="text-lg font-semibold">{{ kwh(r.daily?.productionWhToday) }}</span>
           </div>
-          <div class="bar"><div class="bar-fill bar-fill-blue" [style.width.%]="r.daily?.selfConsumptionPercent ?? 0"></div></div>
+          <div class="bar">
+            <div
+              class="bar-fill bar-fill-blue"
+              [style.width.%]="r.daily?.selfConsumptionPercent ?? 0"
+            ></div>
+          </div>
           <div class="flex justify-between text-xs text-[color:var(--ink-soft)]">
             <span>Eigennutzung</span>
             <span>{{ pct(r.daily?.selfConsumptionPercent) }}</span>
@@ -124,7 +177,12 @@ import { PowerReading } from '../../core/models/energy';
             <span class="text-sm text-[color:var(--ink-soft)]">Aktuell</span>
             <span class="text-lg font-semibold">{{ kw(r.consumptionWatt) }}</span>
           </div>
-          <div class="bar"><div class="bar-fill bar-fill-amber" [style.width.%]="r.daily?.autonomyPercent ?? 0"></div></div>
+          <div class="bar">
+            <div
+              class="bar-fill bar-fill-amber"
+              [style.width.%]="r.daily?.autonomyPercent ?? 0"
+            ></div>
+          </div>
           <div class="flex justify-between text-xs text-[color:var(--ink-soft)]">
             <span>Selbstversorgung</span>
             <span>{{ pct(r.daily?.autonomyPercent) }}</span>

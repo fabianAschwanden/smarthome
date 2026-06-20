@@ -28,50 +28,51 @@ import { ItemImage } from '../../shared/item-image';
                 <app-item-image [itemId]="s.id" [label]="s.name" />
               </div>
               <div class="flex min-w-0 flex-1 flex-col gap-3">
-              <header class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="font-medium">{{ s.name }}</h3>
-                  <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
-                    {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
-                    @if (s.room) {
-                      · {{ s.room }}
-                    }
-                  </p>
-                </div>
-                <app-power-toggle
-                  [on]="s.state === 'ON'"
-                  [disabled]="!s.online"
-                  [label]="s.name"
-                  (onChange)="onSwitch(s, $event)"
-                />
-              </header>
+                <header class="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 class="font-medium">{{ s.name }}</h3>
+                    <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                      {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
+                      @if (s.room) {
+                        · {{ s.room }}
+                      }
+                    </p>
+                  </div>
+                  <app-power-toggle
+                    [on]="s.state === 'ON'"
+                    [disabled]="!s.online"
+                    [label]="s.name"
+                    (onChange)="onSwitch(s, $event)"
+                  />
+                </header>
 
-              @if (s.critical) {
-                <p class="flex items-center gap-1.5 text-xs text-amber-300/90">
-                  ⚠ Kritisch – AUS versorgt auch das WLAN; vor dem Ausschalten kommt eine Rückfrage.
-                </p>
-              }
-              @if (!s.online) {
-                <p class="text-xs text-amber-300/90">
-                  ⚠ Nicht erreichbar – local-key/IP prüfen (docs/tuya/SPEC.md).
-                </p>
-              }
-              <a
-                [routerLink]="['/switch', s.id, 'schedule']"
-                class="inline-flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-              >
-                <svg
-                  class="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
+                @if (s.critical) {
+                  <p class="flex items-center gap-1.5 text-xs text-amber-300/90">
+                    ⚠ Kritisch – AUS versorgt auch das WLAN; vor dem Ausschalten kommt eine
+                    Rückfrage.
+                  </p>
+                }
+                @if (!s.online) {
+                  <p class="text-xs text-amber-300/90">
+                    ⚠ Nicht erreichbar – local-key/IP prüfen (docs/tuya/SPEC.md).
+                  </p>
+                }
+                <a
+                  [routerLink]="['/switch', s.id, 'schedule']"
+                  class="inline-flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
                 >
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                Zeitsteuerung
-              </a>
+                  <svg
+                    class="size-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  Zeitsteuerung
+                </a>
               </div>
             </article>
           }

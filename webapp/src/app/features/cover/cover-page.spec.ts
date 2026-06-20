@@ -21,7 +21,14 @@ describe('CoverPage', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const list: Cover[] = [
-      { id: 'store1', name: 'Store 1', room: 'Wohnzimmer', position: 60, online: true, observedAt: 'x' },
+      {
+        id: 'store1',
+        name: 'Store 1',
+        room: 'Wohnzimmer',
+        position: 60,
+        online: true,
+        observedAt: 'x',
+      },
     ];
     httpMock.expectOne('/api/covers').flush(list);
     fixture.detectChanges();
