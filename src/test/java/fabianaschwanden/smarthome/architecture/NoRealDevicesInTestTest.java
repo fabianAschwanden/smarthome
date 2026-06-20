@@ -1,5 +1,6 @@
 package fabianaschwanden.smarthome.architecture;
 
+import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDeviceFactory;
 import fabianaschwanden.smarthome.domain.port.out.climate.ClimateDeviceFactory;
 import fabianaschwanden.smarthome.domain.port.out.cover.CoverDeviceFactory;
 import fabianaschwanden.smarthome.domain.port.out.sensor.SensorDeviceFactory;
@@ -48,6 +49,10 @@ class NoRealDevicesInTestTest {
     @All
     List<ClimateDeviceFactory> climateFactories;
 
+    @Inject
+    @All
+    List<ApplianceDeviceFactory> applianceFactories;
+
     @Test
     void nurMockAdapterImTest() {
         assertOnlyMock(switchFactories, "Switch");
@@ -55,6 +60,7 @@ class NoRealDevicesInTestTest {
         assertOnlyMock(sensorFactories, "Sensor");
         assertOnlyMock(smokeFactories, "SmokeDetector");
         assertOnlyMock(climateFactories, "Climate");
+        assertOnlyMock(applianceFactories, "Appliance");
     }
 
     private static void assertOnlyMock(List<?> factories, String label) {

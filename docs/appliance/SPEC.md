@@ -1,6 +1,6 @@
 # Spec – Use Case 6: Wellness-Anlagen (Whirlpool & Schwimmbecken)
 
-Status: v1.2 (Temperatur-Backend umgesetzt) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
+Status: v1.3 (Gecko in.touch2 angebunden) · Datum: 2026-06-20 · Plattform: Java 25 / Quarkus (Hexagonal + DDD)
 
 ## 1. Zweck & Scope
 
@@ -28,17 +28,28 @@ Out of Scope (später): Zeitsteuerung der Anlagen, Szenen, Filter-Laufzeitpläne
 Konkrete Min/Max-Temperaturen je Anlage sind konfigurierbar (§4) und gegen die
 reale Steuerung zu verifizieren.
 
-## 2. Anbindung: noch offen
+## 2. Anbindung: Gecko in.touch2 (lokal)
 
-Die echte Steuerschnittstelle der Anlagen steht **noch nicht fest** (weder Tuya
-noch SMARTFOX). Die Architektur kapselt sie hinter dem Driven Port
-`ApplianceDevice`; bis die Schnittstelle bekannt ist:
+Die Anlagen werden über die **Gecko in.touch2**-Steuerung (WLAN) angebunden – lokal
+im LAN über die Python-Lib **geckolib**, gekapselt im **Sidecar**
+(`tools/tuya-sidecar`, Endpunkte `/spa/read` und `/spa/control`), den der
+Java-Adapter per HTTP aufruft (gleiches Muster wie Midea-Klima). Discovery findet
+die Spas per Broadcast; der `gecko-ident` aus der Config wählt das richtige Gerät.
 
-- `%dev`/`%test` ohne echte Geräte: **Mock** (in-memory, alle Funktionen schaltbar).
-- Echtbetrieb (`smarthome.real-devices=true`): **PendingApplianceDevice** – meldet
-  die Funktionen (UI zeigt sie), gilt aber als **offline** und lehnt Befehle mit
-  503 ab (keine stille Vortäuschung). Wird durch den echten Adapter ersetzt,
-  sobald die Schnittstelle (HTTP/Modbus/Cloud) feststeht.
+- `%dev`/`%test`: **Mock** (in-memory, alle Funktionen schaltbar).
+- Echtbetrieb (`smarthome.real-devices=true`): **LocalGeckoApplianceDevice**
+  (`adapter/out/appliance/local`), wenn `address` + `gecko-ident` gesetzt sind;
+  sonst **PendingApplianceDevice** (offline, 503).
+
+**Funktions-Mapping** (Config, gerätespezifisch): PUMP→`pump-key`,
+MASSAGE→`massage-key`, LIGHT→`light-key`, HEATER über die Wasser-Soll-Temperatur.
+
+> Gecko-Verbindungen sind langsam (Discovery + Aufbau ~30–60 s). Der Adapter cacht
+> den Zustand (TTL 30 s) und liest das Spa im Hintergrund nach – `readState()`
+> blockiert nie die REST-Antwort. Steuerbefehle übernehmen ihre Antwort als Cache.
+>
+> Voraussetzung am Gerät: die **RF-Strecke** des in.touch2 (Funk zum Spa-Pack) muss
+> aktiv sein – sonst meldet geckolib `RF_ERROR` und das Spa bleibt offline.
 
 ## 3. API (REST)
 
@@ -87,7 +98,8 @@ Eigener Slice `appliance`: Treiber-Port `ControlAppliances`
 (`domain/port/in/appliance`), getriebener Port `ApplianceDevice` +
 `ApplianceDeviceFactory` (`domain/port/out/appliance`), Application-Service
 `ApplianceControlService` (`application/service/appliance`), Adapter
-`adapter/in/rest/appliance` und `adapter/out/appliance/{mock,pending}`.
+`adapter/in/rest/appliance` und `adapter/out/appliance/{mock,local,pending}`
+(`local` = Gecko über den geteilten `support.tuya.TuyaSidecarClient`).
 
 ## 7. Temperatur-Steuerung (beheizte Anlagen) – umgesetzt
 
@@ -108,6 +120,6 @@ Backend sind umgesetzt:
 ## 8. Offene Punkte / TODO
 
 - [x] Temperatur-Steuerung im Backend (Domäne + Port + REST) – umgesetzt (§7).
-- [ ] Steuerschnittstelle der realen Anlagen bestimmen (HTTP-API / Modbus / Cloud)
-      und echten Adapter implementieren (ersetzt `PendingApplianceDevice`).
-- [ ] Funktionsliste + Min/Max-Temperaturen je Anlage gegen die reale Steuerung verifizieren.
+- [x] Echter Adapter (Gecko in.touch2 via Sidecar/geckolib) – `LocalGeckoApplianceDevice`.
+- [x] Funktions-Mapping (P1/P2/LI) am echten Spa verifiziert (Live-Test 2026-06-20).
+- [ ] Min/Max-Temperaturen je Anlage final festlegen (Gerät meldet Soll teils ausserhalb).
