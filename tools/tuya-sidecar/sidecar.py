@@ -159,6 +159,8 @@ def _gecko_snapshot(facade) -> dict:
     return {
         "current": _num(getattr(wh, "current_temperature", None)),
         "target": _num(getattr(wh, "target_temperature", None)),
+        "min": _num(getattr(wh, "min_temp", None)),
+        "max": _num(getattr(wh, "max_temp", None)),
         "operation": getattr(wh, "current_operation", None),
         "pumps": {p.key: (p.mode != "OFF") for p in facade.pumps},
         "lights": {l.key: bool(l.is_on) for l in facade.lights},

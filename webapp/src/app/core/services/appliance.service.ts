@@ -23,6 +23,9 @@ export class ApplianceService {
   /** Laufende Schaltbefehle je Anlage/Funktion: "id:FN" -> erwarteter Zustand. */
   private readonly pending = new Map<string, FunctionState>();
 
+  /** Laufende Soll-Temperatur-Befehle je Anlage: id -> erwartete Soll-Temperatur. */
+  private readonly pendingTemp = new Map<string, number>();
+
   private readonly intervalMs = 3000;
 
   constructor() {
@@ -56,9 +59,17 @@ export class ApplianceService {
 
   /** Soll-Temperatur einer beheizten Anlage setzen (°C). */
   setTargetTemp(id: string, target: number): void {
-    this.http
-      .post<Appliance>(`/api/appliances/${id}/temperature`, { target })
-      .subscribe((updated) => this.merge(updated));
+    // Optimistisch (Gecko-Befehl ist langsam, sonst springt der Wert zurück).
+    this.pendingTemp.set(id, target);
+    this.patchTarget(id, target);
+
+    this.http.post<Appliance>(`/api/appliances/${id}/temperature`, { target }).subscribe({
+      next: (updated) => {
+        this.pendingTemp.delete(id);
+        this.merge(updated);
+      },
+      error: () => this.pendingTemp.delete(id),
+    });
   }
 
   /** Setzt eine Funktion im lokalen Signal sofort (optimistisch). */
@@ -73,7 +84,21 @@ export class ApplianceService {
     }
   }
 
-  /** Überschreibt im Anlagen-Stand alle Funktionen, für die noch ein Befehl läuft. */
+  /** Setzt die Soll-Temperatur im lokalen Signal sofort (optimistisch). */
+  private patchTarget(id: string, target: number): void {
+    const current = this.appliancesState();
+    if (current) {
+      this.appliancesState.set(
+        current.map((a) =>
+          a.id === id && a.temperature
+            ? { ...a, temperature: { ...a.temperature, target } }
+            : a,
+        ),
+      );
+    }
+  }
+
+  /** Überschreibt im Anlagen-Stand alle Funktionen/Soll-Temp, für die noch ein Befehl läuft. */
   private applyPending(a: Appliance): Appliance {
     let functions = a.functions;
     for (const [key, state] of this.pending) {
@@ -82,7 +107,12 @@ export class ApplianceService {
         functions = { ...functions, [fn]: state };
       }
     }
-    return functions === a.functions ? a : { ...a, functions };
+    let result = functions === a.functions ? a : { ...a, functions };
+    const t = this.pendingTemp.get(a.id);
+    if (t !== undefined && result.temperature) {
+      result = { ...result, temperature: { ...result.temperature, target: t } };
+    }
+    return result;
   }
 
   private merge(updated: Appliance): void {
