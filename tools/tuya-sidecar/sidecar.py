@@ -24,6 +24,9 @@ from urllib.parse import urlparse, parse_qs
 import tinytuya
 
 PORT = int(os.environ.get("PORT", "8765"))
+# Standard: nur localhost (sicher beim lokalen Start). Im Container HOST=0.0.0.0 setzen,
+# damit das Backend (anderer Container/Host) den Sidecar erreicht.
+HOST = os.environ.get("HOST", "127.0.0.1")
 TIMEOUT = float(os.environ.get("TUYA_TIMEOUT", "4"))
 
 
@@ -132,6 +135,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"Tuya-Sidecar läuft auf http://127.0.0.1:{PORT}  (GET /read?id=&key=&ip=&version=)")
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    print(f"Tuya-Sidecar läuft auf http://{HOST}:{PORT}  (GET /read?id=&key=&ip=&version=)")
     server.serve_forever()

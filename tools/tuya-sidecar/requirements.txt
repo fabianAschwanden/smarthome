@@ -1,0 +1,4 @@
+# Abhängigkeiten des Tuya/Midea-Sidecars (siehe sidecar.py).
+# Versionen gepinnt auf den lokal getesteten Stand.
+tinytuya==1.18.1
+msmart-ng==2026.4.1
