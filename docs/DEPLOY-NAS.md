@@ -8,6 +8,22 @@ Rechner muss laufen.
 > Das iPad selbst kann die App **nicht hosten** (kein Java/PostgreSQL/Python im
 > Hintergrund). Es braucht ein Always-on-Gerät als Server.
 
+## Welcher Server? (NETGEAR-ReadyNAS-Hinweis)
+
+NETGEAR **ReadyNAS** hat **kein offizielles/brauchbares Docker** und meist eine zu
+schwache CPU für JVM + PostgreSQL. Empfehlung: **NAS bleibt Storage**, ein kleiner
+separater Always-on-Host fährt die App. Bewährt und sparsam:
+
+- **Raspberry Pi 4 oder 5** (64-bit Raspberry Pi OS), ~5–7 W, oder
+- ein beliebiger **Mini-PC** (Intel NUC o.ä.) mit Linux.
+
+Das untenstehende `docker-compose.yml` läuft auf beidem unverändert. Auf dem
+Raspberry Pi (ARM64) gibt es alle Basis-Images (Java/Python/Postgres) nativ.
+
+> **Tipp Raspberry Pi:** Der App-Image-Build (Maven + Angular) ist auf dem Pi
+> langsam und RAM-hungrig. Besser auf einem Mac/PC **für ARM64 vorbauen** und das
+> Image auf den Pi übertragen – siehe Abschnitt „Image extern für ARM bauen".
+
 ## Was läuft im Container-Verbund (docker-compose.yml)
 
 | Service   | Aufgabe                                           |
@@ -65,6 +81,26 @@ docker compose restart app    # nur App neu starten
 docker compose down           # alles stoppen (DB-Daten bleiben im Volume)
 docker compose up -d --build  # nach git pull aktualisieren
 ```
+
+## Image extern für ARM bauen (Raspberry Pi)
+
+Wenn der Build auf dem Pi zu langsam ist: das App-Image auf dem Mac/PC für ARM64
+bauen und auf den Pi übertragen.
+
+```bash
+# Auf dem Mac/PC (Docker mit buildx):
+docker buildx build --platform linux/arm64 \
+  -f src/main/docker/Dockerfile.jvm -t smarthome-app:arm64 --load .
+docker buildx build --platform linux/arm64 \
+  -t smarthome-sidecar:arm64 ./tools/tuya-sidecar
+
+# Auf den Pi übertragen (oder via privater Registry):
+docker save smarthome-app:arm64 smarthome-sidecar:arm64 | ssh pi@<pi-ip> docker load
+```
+
+Auf dem Pi dann ein `docker-compose.yml`, das diese Images per `image:` nutzt
+statt `build:`. Alternativ einfach `docker compose up -d --build` direkt auf dem
+Pi laufen lassen (dauert beim ersten Mal länger, ist aber am einfachsten).
 
 ## Sicherheit
 
