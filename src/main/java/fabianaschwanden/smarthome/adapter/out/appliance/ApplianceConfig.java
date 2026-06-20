@@ -55,6 +55,9 @@ public interface ApplianceConfig {
         /** Gecko-Key des Lichts für die Funktion LIGHT (z. B. {@code LI}). */
         Optional<String> lightKey();
 
+        /** Gecko-Key der Filter-/Umwälzpumpe für die Funktion FILTER (z. B. {@code P1}). */
+        Optional<String> filterKey();
+
         /** Vollständig für den echten Gecko-Adapter konfiguriert (IP + Identifier). */
         default boolean geckoReady() {
             return address().filter(s -> !s.isBlank()).isPresent()

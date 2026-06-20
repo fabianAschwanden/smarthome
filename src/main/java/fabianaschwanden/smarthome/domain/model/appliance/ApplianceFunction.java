@@ -5,5 +5,6 @@ public enum ApplianceFunction {
     PUMP,
     HEATER,
     LIGHT,
-    MASSAGE
+    MASSAGE,
+    FILTER
 }
