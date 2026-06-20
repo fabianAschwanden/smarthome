@@ -20,9 +20,20 @@ separater Always-on-Host fährt die App. Bewährt und sparsam:
 Das untenstehende `docker-compose.yml` läuft auf beidem unverändert. Auf dem
 Raspberry Pi (ARM64) gibt es alle Basis-Images (Java/Python/Postgres) nativ.
 
+### RAM-Empfehlung (Raspberry Pi)
+
+Im Betrieb laufen gleichzeitig: JVM (~250–400 MB) + PostgreSQL (~100–150 MB) +
+Sidecar (~50 MB) + OS (~200 MB) ≈ **0,7 GB**.
+
+| Pi-Variante | Eignung |
+|-------------|---------|
+| **1 GB** | Nur „App hosten, iPad als Anzeige" – **knapp**, läuft aber mit JVM-Heap-Limit + Swap. Image **extern bauen** (1 GB reicht für den Maven/Angular-Build **nicht**). Chromium-Kiosk auf demselben Pi: **zu wenig RAM**. |
+| **4 GB+** (empfohlen) | Entspannt: App + DB + Sidecar, dazu optional Chromium-Kiosk am TV, und Bauen direkt auf dem Pi möglich. |
+
 > **Tipp Raspberry Pi:** Der App-Image-Build (Maven + Angular) ist auf dem Pi
-> langsam und RAM-hungrig. Besser auf einem Mac/PC **für ARM64 vorbauen** und das
-> Image auf den Pi übertragen – siehe Abschnitt „Image extern für ARM bauen".
+> langsam und RAM-hungrig (auf 1 GB scheitert er meist). Besser auf einem Mac/PC
+> **für ARM64 vorbauen** und das Image auf den Pi übertragen – siehe Abschnitt
+> „Image extern für ARM bauen".
 
 ## Was läuft im Container-Verbund (docker-compose.yml)
 
