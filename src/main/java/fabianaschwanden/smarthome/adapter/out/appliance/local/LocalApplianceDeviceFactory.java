@@ -47,7 +47,7 @@ public class LocalApplianceDeviceFactory implements ApplianceDeviceFactory {
                     d.id(), d.name(), d.room(), functions, d.heated(), d.tempMin(), d.tempMax(),
                     d.address().orElseThrow(), d.geckoIdent().orElseThrow(),
                     d.pumpKey().orElse(null), d.massageKey().orElse(null), d.lightKey().orElse(null),
-                    sidecar);
+                    d.filterKey().orElse(null), sidecar);
         }
         LOG.warnf("Anlage '%s': Gecko unvollständig konfiguriert – bleibt offline", d.name());
         return new PendingApplianceDevice(d.id(), d.name(), d.room(), functions, d.heated());

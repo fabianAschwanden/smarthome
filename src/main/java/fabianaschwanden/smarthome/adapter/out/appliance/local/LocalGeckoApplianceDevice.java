@@ -28,10 +28,6 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
 
     private static final Logger LOG = Logger.getLogger(LocalGeckoApplianceDevice.class);
 
-    /** Filterung wird auf den Gecko-WaterCare-Modus abgebildet: EIN/AUS. */
-    private static final String WATERCARE_ON = "Standard";
-    private static final String WATERCARE_OFF = "Super Energy Saving";
-
     private final String id;
     private final String name;
     private final String room;
@@ -44,6 +40,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     private final String pumpKey;
     private final String massageKey;
     private final String lightKey;
+    private final String filterKey;
     private final TuyaSidecarClient sidecar;
 
     /**
@@ -61,7 +58,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     public LocalGeckoApplianceDevice(
             String id, String name, String room, Set<ApplianceFunction> functions,
             boolean heated, int tempMin, int tempMax, String ip, String ident,
-            String pumpKey, String massageKey, String lightKey,
+            String pumpKey, String massageKey, String lightKey, String filterKey,
             TuyaSidecarClient sidecar) {
         this.id = id;
         this.name = name;
@@ -75,6 +72,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         this.pumpKey = pumpKey;
         this.massageKey = massageKey;
         this.lightKey = lightKey;
+        this.filterKey = filterKey;
         this.sidecar = sidecar;
     }
 
@@ -110,9 +108,8 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
             case PUMP -> sidecar.controlSpa(ip, ident, name, null, pumpKey, null, on).orElse(null);
             case MASSAGE -> sidecar.controlSpa(ip, ident, name, null, massageKey, null, on).orElse(null);
             case LIGHT -> sidecar.controlSpa(ip, ident, name, null, null, lightKey, on).orElse(null);
-            // Filterung = Gecko-WaterCare-Modus: EIN -> Standard, AUS -> Away From Home.
-            case FILTER -> sidecar.controlSpaWaterCare(ip, ident, name,
-                    on ? WATERCARE_ON : WATERCARE_OFF).orElse(null);
+            // Filterung = Filter-/Umwälzpumpe (z. B. Waterfall am Schwimmbereich).
+            case FILTER -> sidecar.controlSpa(ip, ident, name, null, filterKey, null, on).orElse(null);
             case HEATER -> throw new ApplianceUnavailable(
                     "Heizung wird über die Soll-Temperatur gesteuert, nicht ein/aus");
         };
@@ -173,11 +170,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
             states.put(ApplianceFunction.MASSAGE, fromBool(parseKeyBool(json, "pumps", massageKey)));
         }
         if (functions.contains(ApplianceFunction.FILTER)) {
-            // Filterung = WaterCare-Modus: nur der Aus-Modus (Super Energy Saving) gilt
-            // als AUS, jeder andere Modus (Standard/Weekender/...) als gefiltert = EIN.
-            String wc = parseString(json, "watercare");
-            boolean filterOn = wc != null && !WATERCARE_OFF.equalsIgnoreCase(wc);
-            states.put(ApplianceFunction.FILTER, fromBool(filterOn));
+            states.put(ApplianceFunction.FILTER, fromBool(parseKeyBool(json, "pumps", filterKey)));
         }
         if (functions.contains(ApplianceFunction.LIGHT)) {
             states.put(ApplianceFunction.LIGHT, fromBool(parseKeyBool(json, "lights", lightKey)));
@@ -222,10 +215,6 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         return m.find() ? Double.valueOf(m.group(1)) : null;
     }
 
-    private static String parseString(String json, String field) {
-        Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*\"([^\"]*)\"").matcher(json);
-        return m.find() ? m.group(1) : null;
-    }
 
     /** Liest {@code "<group>": { ... "<key>": true|false ... }} (z. B. pumps/lights). */
     private static Boolean parseKeyBool(String json, String group, String key) {
