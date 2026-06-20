@@ -126,7 +126,32 @@ async def _gecko_facade(man, ip, ident, name):
         await _asyncio.wait_for(man.wait_for_facade(), timeout=60)
     except _asyncio.TimeoutError:
         pass
-    return man.facade
+    # WaterCare-Modus wird kurz nach dem Facade-Aufbau asynchron nachgeladen.
+    facade = man.facade
+    if facade is not None:
+        for _ in range(10):
+            wc = getattr(facade, "water_care", None)
+            if wc is not None and getattr(wc, "state", None) not in (None, "Unknown"):
+                break
+            await _asyncio.sleep(0.5)
+    return facade
+
+
+def _watercare_mode(facade):
+    """Aktueller WaterCare-Modus als Name (z. B. 'Standard'); None wenn unbekannt."""
+    wc = getattr(facade, "water_care", None)
+    if wc is None:
+        return None
+    # geckolib füllt 'state' (Name) erst kurz nach dem Connect -> 'state' bevorzugen,
+    # auf den Modus-Index ('mode') zurückfallen.
+    state = getattr(wc, "state", None)
+    if state and state != "Unknown":
+        return state
+    idx = getattr(wc, "mode", None)
+    modes = getattr(wc, "modes", None) or []
+    if isinstance(idx, int) and 0 <= idx < len(modes):
+        return modes[idx]
+    return None
 
 
 def _gecko_snapshot(facade) -> dict:
@@ -137,6 +162,7 @@ def _gecko_snapshot(facade) -> dict:
         "operation": getattr(wh, "current_operation", None),
         "pumps": {p.key: (p.mode != "OFF") for p in facade.pumps},
         "lights": {l.key: bool(l.is_on) for l in facade.lights},
+        "watercare": _watercare_mode(facade),
         "online": True,
     }
 
@@ -211,6 +237,8 @@ def spa_control(q) -> dict:
             for l in facade.lights:
                 if l.key == q["light"][0]:
                     await (l.async_turn_on() if on else l.async_turn_off())
+        if "watercare" in q:  # watercare=<Modusname>, z. B. 'Standard'
+            await facade.water_care.async_set_mode(q["watercare"][0])
 
     return _gecko_run(q["ip"][0], q.get("ident", [None])[0], q.get("name", ["Spa"])[0], action)
 

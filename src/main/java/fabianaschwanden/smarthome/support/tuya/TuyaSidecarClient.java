@@ -115,6 +115,15 @@ public class TuyaSidecarClient {
         return get(url.toString(), GECKO_TIMEOUT);
     }
 
+    /**
+     * Setzt den Gecko-WaterCare-Modus (Filter-/Umwälzprogramm), z. B. {@code Standard}
+     * oder {@code Away From Home}. Liefert den resultierenden Zustand; {@code empty} bei Fehler.
+     */
+    public Optional<String> controlSpaWaterCare(String ip, String ident, String name, String mode) {
+        return get("/spa/control?ip=" + enc(ip) + "&ident=" + enc(ident) + "&name=" + enc(name)
+                + "&watercare=" + enc(mode), GECKO_TIMEOUT);
+    }
+
     /** Gecko: Discovery + Verbindungsaufbau dauern ~30–60 s -> grosszügiges Timeout. */
     private static final Duration GECKO_TIMEOUT = Duration.ofSeconds(120);
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(20);
