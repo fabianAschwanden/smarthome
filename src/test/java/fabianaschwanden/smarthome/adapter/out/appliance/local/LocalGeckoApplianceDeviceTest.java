@@ -65,7 +65,7 @@ class LocalGeckoApplianceDeviceTest {
                 "whirlpool", "Whirlpool", "Wellness",
                 Set.of(ApplianceFunction.PUMP, ApplianceFunction.HEATER,
                         ApplianceFunction.LIGHT, ApplianceFunction.MASSAGE),
-                true, 30, 40, "1.2.3.4", "SPA-IDENT", "P1", "P2", "LI", sidecar);
+                true, 30, 40, "1.2.3.4", "SPA-IDENT", "P1", "P2", "LI", "P1", sidecar);
     }
 
     @Test

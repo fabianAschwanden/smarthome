@@ -9,6 +9,7 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
   HEATER: 'Heizung',
   LIGHT: 'Licht',
   MASSAGE: 'Massage',
+  FILTER: 'Filterung',
 };
 
 /**
@@ -58,7 +59,8 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                     [current]="t.current"
                     [min]="t.min"
                     [max]="t.max"
-                    label="Solltemperatur"
+                    label="Wassertemperatur"
+                    emphasis="current"
                   />
                   <div class="mt-3 flex items-center justify-center gap-5">
                     <span class="text-sm text-[color:var(--ink-soft)] tabular-nums">{{ t.max }}°</span>
@@ -120,6 +122,13 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                         @case ('MASSAGE') {
                           <path
                             d="M4 8c2-2.5 4-2.5 6 0s4 2.5 6 0M4 12c2-2.5 4-2.5 6 0s4 2.5 6 0M4 16c2-2.5 4-2.5 6 0s4 2.5 6 0"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        }
+                        @case ('FILTER') {
+                          <path
+                            d="M4 5h16l-6 7v6l-4 2v-8z"
                             stroke-linecap="round"
                             stroke-linejoin="round"
                           />

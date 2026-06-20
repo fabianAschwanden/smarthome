@@ -1,5 +1,5 @@
 /** Spiegelt die REST-DTOs des Backends (publizierte Sprache). */
-export type ApplianceFunction = 'PUMP' | 'HEATER' | 'LIGHT' | 'MASSAGE';
+export type ApplianceFunction = 'PUMP' | 'HEATER' | 'LIGHT' | 'MASSAGE' | 'FILTER';
 export type FunctionState = 'ON' | 'OFF';
 
 /** Temperatur-Steuerung einer beheizten Anlage (Whirlpool/Schwimmbecken). */

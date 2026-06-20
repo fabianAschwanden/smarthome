@@ -40,6 +40,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     private final String pumpKey;
     private final String massageKey;
     private final String lightKey;
+    private final String filterKey;
     private final TuyaSidecarClient sidecar;
 
     /**
@@ -57,7 +58,8 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     public LocalGeckoApplianceDevice(
             String id, String name, String room, Set<ApplianceFunction> functions,
             boolean heated, int tempMin, int tempMax, String ip, String ident,
-            String pumpKey, String massageKey, String lightKey, TuyaSidecarClient sidecar) {
+            String pumpKey, String massageKey, String lightKey, String filterKey,
+            TuyaSidecarClient sidecar) {
         this.id = id;
         this.name = name;
         this.room = room;
@@ -70,6 +72,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         this.pumpKey = pumpKey;
         this.massageKey = massageKey;
         this.lightKey = lightKey;
+        this.filterKey = filterKey;
         this.sidecar = sidecar;
     }
 
@@ -104,6 +107,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         String body = switch (function) {
             case PUMP -> sidecar.controlSpa(ip, ident, name, null, pumpKey, null, on).orElse(null);
             case MASSAGE -> sidecar.controlSpa(ip, ident, name, null, massageKey, null, on).orElse(null);
+            case FILTER -> sidecar.controlSpa(ip, ident, name, null, filterKey, null, on).orElse(null);
             case LIGHT -> sidecar.controlSpa(ip, ident, name, null, null, lightKey, on).orElse(null);
             case HEATER -> throw new ApplianceUnavailable(
                     "Heizung wird über die Soll-Temperatur gesteuert, nicht ein/aus");
@@ -163,6 +167,9 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         }
         if (functions.contains(ApplianceFunction.MASSAGE)) {
             states.put(ApplianceFunction.MASSAGE, fromBool(parseKeyBool(json, "pumps", massageKey)));
+        }
+        if (functions.contains(ApplianceFunction.FILTER)) {
+            states.put(ApplianceFunction.FILTER, fromBool(parseKeyBool(json, "pumps", filterKey)));
         }
         if (functions.contains(ApplianceFunction.LIGHT)) {
             states.put(ApplianceFunction.LIGHT, fromBool(parseKeyBool(json, "lights", lightKey)));
