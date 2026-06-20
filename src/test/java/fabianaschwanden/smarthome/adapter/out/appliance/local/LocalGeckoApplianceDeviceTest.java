@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LocalGeckoApplianceDeviceTest {
 
     private static final String SPA_JSON = """
-            {"current": 32.5, "target": 18.0, "operation": "Heating",
+            {"current": 32.5, "target": 18.0, "min": 8.3, "max": 41.1, "operation": "Heating",
              "pumps": {"P1": true, "P2": false}, "lights": {"LI": true},
              "watercare": "Standard", "online": true}
             """;
@@ -89,9 +89,9 @@ class LocalGeckoApplianceDeviceTest {
         assertEquals(FunctionState.ON, state.functions().get(ApplianceFunction.FILTER));    // watercare=Standard
         assertEquals(18, state.temperature().target());   // Gerätewert unverfälscht
         assertEquals(33, state.temperature().current());  // 32.5 gerundet
-        // Soll 18 < konfiguriertes min 30 -> min wird auf den gemeldeten Wert geweitet.
-        assertEquals(18, state.temperature().min());
-        assertEquals(40, state.temperature().max());
+        // Echte Geräte-Grenzen aus dem Snapshot (8.3/41.1 gerundet), nicht die Config (30/40).
+        assertEquals(8, state.temperature().min());
+        assertEquals(41, state.temperature().max());
     }
 
     @Test

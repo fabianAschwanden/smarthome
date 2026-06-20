@@ -189,12 +189,13 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
         if (heated) {
             int target = round(parseNumber(json, "target"), tempMin);
             int current = round(parseNumber(json, "current"), Temperature.UNKNOWN);
-            // Soll-/Ist-Werte des Geräts so übernehmen wie gemeldet; die Min/Max sind nur
-            // der Steuerbereich, nicht die Schranke für angezeigte Ist-Gerätewerte. Damit
-            // die Temperature-Invariante (target in [min,max]) hält, wird min/max bei Bedarf
-            // auf den gemeldeten Wert geweitet.
-            int min = Math.min(tempMin, target);
-            int max = Math.max(tempMax, target);
+            // Echten Stellbereich des Spas verwenden (vom Gerät gemeldet); Fallback auf
+            // die konfigurierten Grenzen. Bei Bedarf auf den Soll-Wert weiten, damit die
+            // Temperature-Invariante (target in [min,max]) hält.
+            int min = round(parseNumber(json, "min"), tempMin);
+            int max = round(parseNumber(json, "max"), tempMax);
+            min = Math.min(min, target);
+            max = Math.max(max, target);
             temp = new Temperature(target, current, min, max);
         }
         return Optional.of(new State(states, temp));
