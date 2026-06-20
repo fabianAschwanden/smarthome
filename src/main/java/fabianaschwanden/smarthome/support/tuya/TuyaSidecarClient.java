@@ -84,12 +84,51 @@ public class TuyaSidecarClient {
         return get(url.toString());
     }
 
+    /**
+     * Liest den Zustand eines Gecko-Spas (in.touch2) über geckolib; {@code empty} bei Fehler.
+     * JSON: {@code {"current":..,"target":..,"operation":..,"pumps":{key:bool},"lights":{key:bool},"online":true}}.
+     */
+    public Optional<String> readSpa(String ip, String ident, String name) {
+        return get("/spa/read?ip=" + enc(ip) + "&ident=" + enc(ident) + "&name=" + enc(name),
+                GECKO_TIMEOUT);
+    }
+
+    /**
+     * Steuert ein Gecko-Spa: Soll-Temperatur, Pumpe oder Licht (je per key). Nur die
+     * übergebenen Parameter wirken. Liefert den resultierenden Zustand; {@code empty} bei Fehler.
+     */
+    public Optional<String> controlSpa(
+            String ip, String ident, String name,
+            Integer target, String pumpKey, String lightKey, Boolean on) {
+        StringBuilder url = new StringBuilder("/spa/control?ip=").append(enc(ip))
+                .append("&ident=").append(enc(ident))
+                .append("&name=").append(enc(name));
+        if (target != null) {
+            url.append("&target=").append(target);
+        }
+        if (pumpKey != null) {
+            url.append("&pump=").append(enc(pumpKey)).append("&on=").append(Boolean.TRUE.equals(on));
+        }
+        if (lightKey != null) {
+            url.append("&light=").append(enc(lightKey)).append("&on=").append(Boolean.TRUE.equals(on));
+        }
+        return get(url.toString(), GECKO_TIMEOUT);
+    }
+
+    /** Gecko: Discovery + Verbindungsaufbau dauern ~30–60 s -> grosszügiges Timeout. */
+    private static final Duration GECKO_TIMEOUT = Duration.ofSeconds(120);
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(20);
+
     private Optional<String> get(String pathAndQuery) {
+        return get(pathAndQuery, DEFAULT_TIMEOUT);
+    }
+
+    private Optional<String> get(String pathAndQuery, Duration timeout) {
         try {
-            // Grosszügig: der Sidecar wiederholt Midea-Aufrufe bei Single-Session-Resets
-            // intern mehrfach mit Pause – das Backend darf nicht vorher aufgeben.
+            // Grosszügig: der Sidecar wiederholt Geräte-Aufrufe intern (Resets/Handshake) –
+            // das Backend darf nicht vorher aufgeben.
             HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + pathAndQuery))
-                    .timeout(Duration.ofSeconds(20))
+                    .timeout(timeout)
                     .GET()
                     .build();
             HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());

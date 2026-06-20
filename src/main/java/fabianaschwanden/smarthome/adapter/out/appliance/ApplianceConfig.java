@@ -35,11 +35,31 @@ public interface ApplianceConfig {
         @WithDefault("40")
         int tempMax();
 
-        /** Optionale Adresse der Steuerung (für den späteren echten Adapter). */
+        /** LAN-IP der Gecko in.touch2-Steuerung (für den echten Gecko-Adapter). */
         Optional<String> address();
 
         /** Optionales Geheimnis/Token (nur per config/Env, nie ins Repo). */
         Optional<String> secret();
+
+        // --- Gecko (in.touch2) Mapping: welcher Spa-Key gehört zu welcher Funktion ---
+
+        /** Gecko-Spa-Identifier (z. B. {@code SPA68:27:...}); aus der Discovery. */
+        Optional<String> geckoIdent();
+
+        /** Gecko-Key der Pumpe für die Funktion PUMP (z. B. {@code P1}). */
+        Optional<String> pumpKey();
+
+        /** Gecko-Key der Pumpe für die Funktion MASSAGE (z. B. {@code P2}). */
+        Optional<String> massageKey();
+
+        /** Gecko-Key des Lichts für die Funktion LIGHT (z. B. {@code LI}). */
+        Optional<String> lightKey();
+
+        /** Vollständig für den echten Gecko-Adapter konfiguriert (IP + Identifier). */
+        default boolean geckoReady() {
+            return address().filter(s -> !s.isBlank()).isPresent()
+                    && geckoIdent().filter(s -> !s.isBlank()).isPresent();
+        }
 
         default boolean heated() {
             return functions().contains(ApplianceFunction.HEATER);

@@ -103,6 +103,118 @@ def climate_control(q) -> dict:
     return _run_with_retry(run)
 
 
+# ---------------------------------------------------------------------------
+# Gecko in.touch2 (Pool / Whirlpool) über geckolib.
+# ---------------------------------------------------------------------------
+
+async def _gecko_facade(man, ip, ident, name):
+    """Verbindet mit einem Spa und liefert die Facade (oder None)."""
+    import asyncio as _asyncio
+    await man.async_set_spa_info(ip, ident, name)
+    # Discovery liefert den Descriptor; gezielt per IP verbinden.
+    descriptors = await man.async_locate_spas(spa_address=ip)
+    target = None
+    for d in descriptors or []:
+        if ident and d.identifier_as_string == ident:
+            target = d
+            break
+        target = target or d
+    if target is None:
+        return None
+    await man.async_connect_to_spa(target)
+    try:
+        await _asyncio.wait_for(man.wait_for_facade(), timeout=60)
+    except _asyncio.TimeoutError:
+        pass
+    return man.facade
+
+
+def _gecko_snapshot(facade) -> dict:
+    wh = facade.water_heater
+    return {
+        "current": _num(getattr(wh, "current_temperature", None)),
+        "target": _num(getattr(wh, "target_temperature", None)),
+        "operation": getattr(wh, "current_operation", None),
+        "pumps": {p.key: (p.mode != "OFF") for p in facade.pumps},
+        "lights": {l.key: bool(l.is_on) for l in facade.lights},
+        "online": True,
+    }
+
+
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+# geckolib hält internen Modul-/Objekt-Zustand, der an SEINEN Event-Loop gebunden
+# ist. Darum betreibt der Sidecar EINEN langlebigen Loop in einem Hintergrund-Thread;
+# alle Gecko-Aufrufe laufen über genau diesen Loop (run_coroutine_threadsafe).
+import asyncio as _aio
+import threading as _threading
+
+_gecko_loop = None
+_gecko_lock = _threading.Lock()
+
+
+def _ensure_gecko_loop():
+    global _gecko_loop
+    if _gecko_loop is None:
+        _gecko_loop = _aio.new_event_loop()
+        t = _threading.Thread(target=_gecko_loop.run_forever, name="gecko-loop", daemon=True)
+        t.start()
+    return _gecko_loop
+
+
+def _gecko_run(ip, ident, name, action):
+    """Baut einen SpaMan, verbindet, führt action(facade) aus und liefert den Snapshot."""
+    import uuid
+    from geckolib import GeckoAsyncSpaMan, GeckoSpaEvent
+
+    class _Man(GeckoAsyncSpaMan):
+        async def handle_event(self, event: GeckoSpaEvent, **kwargs) -> None:
+            pass
+
+    async def run():
+        async with _Man(str(uuid.uuid4())) as man:
+            facade = await _gecko_facade(man, ip, ident, name)
+            if not facade:
+                raise RuntimeError("Spa nicht erreichbar (keine Facade)")
+            if action:
+                await action(facade)
+            return _gecko_snapshot(facade)
+
+    # Gecko-Aufrufe serialisieren (ein Spa-Protokoll zur Zeit) und über den festen Loop fahren.
+    with _gecko_lock:
+        loop = _ensure_gecko_loop()
+        return _aio.run_coroutine_threadsafe(run(), loop).result(timeout=120)
+
+
+def spa_read(q) -> dict:
+    """Liest den Zustand eines Gecko-Spas (Temperatur, Pumpen, Lichter)."""
+    return _gecko_run(q["ip"][0], q.get("ident", [None])[0], q.get("name", ["Spa"])[0], None)
+
+
+def spa_control(q) -> dict:
+    """Setzt Soll-Temperatur / schaltet eine Pumpe oder ein Licht (per key)."""
+    async def action(facade):
+        if "target" in q:
+            await facade.water_heater.async_set_target_temperature(float(q["target"][0]))
+        if "pump" in q:  # pump=<key>, on=true|false
+            on = q.get("on", ["true"])[0].lower() == "true"
+            for p in facade.pumps:
+                if p.key == q["pump"][0]:
+                    await (p.async_turn_on() if on else p.async_turn_off())
+        if "light" in q:  # light=<key>, on=true|false
+            on = q.get("on", ["true"])[0].lower() == "true"
+            for l in facade.lights:
+                if l.key == q["light"][0]:
+                    await (l.async_turn_on() if on else l.async_turn_off())
+
+    return _gecko_run(q["ip"][0], q.get("ident", [None])[0], q.get("name", ["Spa"])[0], action)
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         parsed = urlparse(self.path)
@@ -115,6 +227,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, climate_read(q))
             elif parsed.path == "/climate/control":
                 self._send(200, climate_control(q))
+            elif parsed.path == "/spa/read":
+                self._send(200, spa_read(q))
+            elif parsed.path == "/spa/control":
+                self._send(200, spa_control(q))
             else:
                 self._send(404, {"error": "unknown path"})
         except KeyError as e:
