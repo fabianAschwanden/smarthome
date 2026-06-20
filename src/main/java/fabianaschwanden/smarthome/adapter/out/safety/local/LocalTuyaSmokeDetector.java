@@ -29,10 +29,12 @@ public class LocalTuyaSmokeDetector implements SmokeDetectorDevice {
     private static final int TIMEOUT_MS = 4000;
     /**
      * Rauchmelder schlafen (Deep Sleep) und antworten kaum auf aktive dp_query, senden
-     * aber periodisch UDP-Broadcasts. Wer innerhalb dieses Fensters einen Broadcast
-     * gesendet hat, gilt als erreichbar (Alarm dann OK, Batterie unbekannt).
+     * aber periodisch UDP-Broadcasts. Hat sich der Melder einmal gemeldet, gilt er als
+     * erreichbar und bleibt es, bis die letzte Sichtung älter als dieses Fenster ist –
+     * also erst nach deutlich über einer Stunde Stille wieder offline (Alarm dann OK,
+     * Batterie unbekannt). Bewusst grosszügig, da Broadcasts unregelmässig kommen.
      */
-    private static final Duration SEEN_WINDOW = Duration.ofMinutes(30);
+    private static final Duration SEEN_WINDOW = Duration.ofMinutes(65);
 
     private final String id;
     private final String name;
