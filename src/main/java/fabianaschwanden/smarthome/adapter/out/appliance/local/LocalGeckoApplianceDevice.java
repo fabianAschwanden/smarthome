@@ -30,7 +30,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
 
     /** Filterung wird auf den Gecko-WaterCare-Modus abgebildet: EIN/AUS. */
     private static final String WATERCARE_ON = "Standard";
-    private static final String WATERCARE_OFF = "Away From Home";
+    private static final String WATERCARE_OFF = "Super Energy Saving";
 
     private final String id;
     private final String name;
@@ -173,7 +173,8 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
             states.put(ApplianceFunction.MASSAGE, fromBool(parseKeyBool(json, "pumps", massageKey)));
         }
         if (functions.contains(ApplianceFunction.FILTER)) {
-            // Filterung = WaterCare-Modus: alles ausser "Away From Home" gilt als EIN.
+            // Filterung = WaterCare-Modus: nur der Aus-Modus (Super Energy Saving) gilt
+            // als AUS, jeder andere Modus (Standard/Weekender/...) als gefiltert = EIN.
             String wc = parseString(json, "watercare");
             boolean filterOn = wc != null && !WATERCARE_OFF.equalsIgnoreCase(wc);
             states.put(ApplianceFunction.FILTER, fromBool(filterOn));
