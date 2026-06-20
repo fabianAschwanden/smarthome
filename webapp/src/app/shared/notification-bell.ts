@@ -35,8 +35,14 @@ import { AppNotification } from '../core/models/notification';
       </button>
 
       @if (open()) {
-        <!-- Klick ausserhalb schliesst das Panel -->
-        <div class="fixed inset-0 z-30" (click)="open.set(false)"></div>
+        <!-- Klick/Esc ausserhalb schliesst das Panel (echter Button = fokussier-/tastaturbar) -->
+        <button
+          type="button"
+          class="fixed inset-0 z-30 cursor-default"
+          aria-label="Nachrichten schliessen"
+          (click)="open.set(false)"
+          (keydown.escape)="open.set(false)"
+        ></button>
         <div class="notif-panel glass-panel z-40">
           <header class="flex items-center justify-between px-4 py-3">
             <h3 class="font-semibold">Nachrichten</h3>
