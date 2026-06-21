@@ -28,6 +28,10 @@ PORT = int(os.environ.get("PORT", "8765"))
 # damit das Backend (anderer Container/Host) den Sidecar erreicht.
 HOST = os.environ.get("HOST", "127.0.0.1")
 TIMEOUT = float(os.environ.get("TUYA_TIMEOUT", "4"))
+# Harte Obergrenze für einen kompletten Gecko-Connect (Facade-Aufbau + Aktion).
+# Schützt die UI: ein per Funk (RF) gestörtes Spa liefert dann zügig 503 statt zu
+# hängen und nachfolgende Abfragen zu blockieren.
+GECKO_TIMEOUT = float(os.environ.get("GECKO_TIMEOUT", "25"))
 
 
 def read_device(device_id: str, local_key: str, ip: str, version: str) -> dict:
@@ -123,7 +127,9 @@ async def _gecko_facade(man, ip, ident, name):
         return None
     await man.async_connect_to_spa(target)
     try:
-        await _asyncio.wait_for(man.wait_for_facade(), timeout=60)
+        # Knapp unter dem Gesamt-Timeout (GECKO_TIMEOUT) bleiben, damit der äussere
+        # wait_for greift und eine aussagekräftige Fehlermeldung liefert.
+        await _asyncio.wait_for(man.wait_for_facade(), timeout=max(GECKO_TIMEOUT - 5, 5))
     except _asyncio.TimeoutError:
         pass
     # WaterCare-Modus wird kurz nach dem Facade-Aufbau asynchron nachgeladen.
@@ -205,18 +211,32 @@ def _gecko_run(ip, ident, name, action):
             pass
 
     async def run():
-        async with _Man(str(uuid.uuid4())) as man:
-            facade = await _gecko_facade(man, ip, ident, name)
-            if not facade:
-                raise RuntimeError("Spa nicht erreichbar (keine Facade)")
-            if action:
-                await action(facade)
-            return _gecko_snapshot(facade)
+        # Timeout INNERHALB der Coroutine: bei Überschreitung bricht der Connect
+        # selbst ab, der SpaMan wird über 'async with' sauber geschlossen und der
+        # Lock zuverlässig freigegeben – ein hängendes Spa blockiert so nicht die
+        # folgenden Abfragen (z. B. das zweite Spa).
+        async def _do():
+            async with _Man(str(uuid.uuid4())) as man:
+                facade = await _gecko_facade(man, ip, ident, name)
+                if not facade:
+                    raise RuntimeError("Spa nicht erreichbar (keine Facade)")
+                if action:
+                    await action(facade)
+                return _gecko_snapshot(facade)
+
+        try:
+            return await _aio.wait_for(_do(), timeout=GECKO_TIMEOUT)
+        except _aio.TimeoutError:
+            raise RuntimeError(
+                f"Spa '{name}' ({ip}) antwortet nicht innerhalb {GECKO_TIMEOUT:.0f}s "
+                f"(Gecko-Verbindung/RF prüfen)"
+            )
 
     # Gecko-Aufrufe serialisieren (ein Spa-Protokoll zur Zeit) und über den festen Loop fahren.
+    # Äusseres Result-Timeout etwas grösser als der innere Connect-Timeout, als Sicherheitsnetz.
     with _gecko_lock:
         loop = _ensure_gecko_loop()
-        return _aio.run_coroutine_threadsafe(run(), loop).result(timeout=120)
+        return _aio.run_coroutine_threadsafe(run(), loop).result(timeout=GECKO_TIMEOUT + 10)
 
 
 def spa_read(q) -> dict:

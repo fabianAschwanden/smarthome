@@ -115,8 +115,10 @@ public class TuyaSidecarClient {
         return get(url.toString(), GECKO_TIMEOUT);
     }
 
-    /** Gecko: Discovery + Verbindungsaufbau dauern ~30–60 s -> grosszügiges Timeout. */
-    private static final Duration GECKO_TIMEOUT = Duration.ofSeconds(120);
+    // Gecko: Der Sidecar begrenzt einen Connect selbst (GECKO_TIMEOUT, Default 25 s,
+    // plus 10 s Sicherheitsnetz -> max ~35 s) und liefert dann sauber 503. Das
+    // Backend wartet knapp darüber, statt bei einer RF-Störung 2 min zu blockieren.
+    private static final Duration GECKO_TIMEOUT = Duration.ofSeconds(45);
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(20);
 
     private Optional<String> get(String pathAndQuery) {
