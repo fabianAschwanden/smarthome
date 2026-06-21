@@ -57,6 +57,21 @@ import { ItemImage } from '../../shared/item-image';
                     ⚠ Nicht erreichbar – local-key/IP prüfen (docs/tuya/SPEC.md).
                   </p>
                 }
+                @if (s.hint) {
+                  <p class="flex items-center gap-1.5 text-xs text-[color:var(--ink-soft)]">
+                    <svg
+                      class="size-3.5 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 11v5M12 8h.01" stroke-linecap="round" />
+                    </svg>
+                    {{ s.hint }}
+                  </p>
+                }
                 <a
                   [routerLink]="['/switch', s.id, 'schedule']"
                   class="inline-flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"

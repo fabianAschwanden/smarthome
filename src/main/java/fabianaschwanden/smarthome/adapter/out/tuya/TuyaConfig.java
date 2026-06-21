@@ -56,6 +56,14 @@ public interface TuyaConfig {
         @WithDefault("false")
         boolean critical();
 
+        /** Optionaler Bedien-Hinweis zum Schalter (wird in der UI angezeigt). */
+        Optional<String> hint();
+
+        /** Hinweis-Text oder leerer String, wenn keiner gesetzt ist. */
+        default String hintOrEmpty() {
+            return hint().filter(h -> !h.isBlank()).orElse("");
+        }
+
         default Optional<String> localKeyIfPresent() {
             return localKey().filter(k -> !k.isBlank());
         }

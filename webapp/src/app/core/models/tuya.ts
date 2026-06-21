@@ -9,5 +9,7 @@ export interface TuyaSwitch {
   online: boolean;
   /** Kritischer Schalter (z. B. Homecinema = WLAN): AUS erfordert Bestätigung. */
   critical: boolean;
+  /** Optionaler Bedien-Hinweis; leer, wenn keiner gesetzt ist. */
+  hint: string;
   observedAt: string;
 }

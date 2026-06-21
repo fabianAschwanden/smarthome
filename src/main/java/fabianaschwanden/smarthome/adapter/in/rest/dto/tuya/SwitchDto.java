@@ -10,11 +10,12 @@ public record SwitchDto(
         String state,
         boolean online,
         boolean critical,
+        String hint,
         String observedAt) {
 
     public static SwitchDto from(TuyaSwitch sw) {
         return new SwitchDto(
-                sw.id(), sw.name(), sw.room(), sw.state().name(), sw.online(), sw.critical(),
+                sw.id(), sw.name(), sw.room(), sw.state().name(), sw.online(), sw.critical(), sw.hint(),
                 sw.observedAt().toString());
     }
 }

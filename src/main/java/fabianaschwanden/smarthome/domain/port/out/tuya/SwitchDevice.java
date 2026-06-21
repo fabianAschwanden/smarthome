@@ -23,6 +23,11 @@ public interface SwitchDevice {
     /** Kritischer Schalter: AUS erfordert Bestätigung (versorgt z. B. das WLAN). */
     boolean critical();
 
+    /** Optionaler Hinweis zum Schalter (Bedien-Notiz); leer, wenn keiner gesetzt ist. */
+    default String hint() {
+        return "";
+    }
+
     /** Schaltet das Gerät auf den gewünschten Zustand. */
     void apply(SwitchState state);
 

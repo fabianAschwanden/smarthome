@@ -95,7 +95,7 @@ class ScheduleSchedulerTest {
     private static final class NoopSwitches implements ControlSwitches {
         @Override public List<TuyaSwitch> list() { return List.of(); }
         @Override public TuyaSwitch switchTo(String id, SwitchState state, boolean confirmed) {
-            return TuyaSwitch.online(id, id, "", state, false, Instant.now());
+            return TuyaSwitch.online(id, id, "", state, false, "", Instant.now());
         }
     }
 }

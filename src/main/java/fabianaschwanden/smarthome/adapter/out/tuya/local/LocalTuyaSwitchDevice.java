@@ -41,6 +41,7 @@ public class LocalTuyaSwitchDevice implements SwitchDevice {
     private final String version;
     private final int dp;
     private final boolean critical;
+    private final String hint;
     private final boolean v34;
     private final TuyaProtocol protocol33;
     private final TuyaDiscovery discovery;
@@ -48,7 +49,8 @@ public class LocalTuyaSwitchDevice implements SwitchDevice {
 
     public LocalTuyaSwitchDevice(
             String id, String name, String room, String deviceId,
-            String localKey, String address, String version, int dp, boolean critical, TuyaDiscovery discovery) {
+            String localKey, String address, String version, int dp, boolean critical, String hint,
+            TuyaDiscovery discovery) {
         this.id = id;
         this.name = name;
         this.room = room;
@@ -58,6 +60,7 @@ public class LocalTuyaSwitchDevice implements SwitchDevice {
         this.version = version;
         this.dp = dp;
         this.critical = critical;
+        this.hint = hint;
         this.v34 = version != null && (version.startsWith("3.4") || version.startsWith("3.5"));
         this.protocol33 = v34 ? null : new TuyaProtocol(localKey);
         this.discovery = discovery;
@@ -86,6 +89,11 @@ public class LocalTuyaSwitchDevice implements SwitchDevice {
     @Override
     public boolean critical() {
         return critical;
+    }
+
+    @Override
+    public String hint() {
+        return hint;
     }
 
     @Override

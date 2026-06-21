@@ -25,7 +25,7 @@ public class MockSwitchDeviceFactory implements SwitchDeviceFactory {
     @Override
     public List<SwitchDevice> devices() {
         return config.devices().stream()
-                .map(d -> (SwitchDevice) new MockSwitchDevice(d.id(), d.name(), d.room(), d.critical()))
+                .map(d -> (SwitchDevice) new MockSwitchDevice(d.id(), d.name(), d.room(), d.critical(), d.hintOrEmpty()))
                 .toList();
     }
 }

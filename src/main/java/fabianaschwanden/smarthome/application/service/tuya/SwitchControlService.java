@@ -69,10 +69,11 @@ public class SwitchControlService implements ControlSwitches {
         if (current.isPresent()) {
             lastKnown.put(device.id(), current.get());
             return TuyaSwitch.online(
-                    device.id(), device.name(), device.room(), current.get(), device.critical(), clock.instant());
+                    device.id(), device.name(), device.room(), current.get(), device.critical(), device.hint(),
+                    clock.instant());
         }
         SwitchState known = lastKnown.getOrDefault(device.id(), SwitchState.OFF);
         return TuyaSwitch.offline(
-                device.id(), device.name(), device.room(), known, device.critical(), clock.instant());
+                device.id(), device.name(), device.room(), known, device.critical(), device.hint(), clock.instant());
     }
 }

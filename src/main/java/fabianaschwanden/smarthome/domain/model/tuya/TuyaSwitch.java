@@ -19,6 +19,7 @@ public record TuyaSwitch(
         SwitchState state,
         boolean online,
         boolean critical,
+        String hint,
         Instant observedAt) {
 
     public TuyaSwitch {
@@ -31,6 +32,9 @@ public record TuyaSwitch(
         if (room == null) {
             room = "";
         }
+        if (hint == null) {
+            hint = "";
+        }
         if (state == null) {
             throw new IllegalArgumentException("state darf nicht null sein");
         }
@@ -39,13 +43,14 @@ public record TuyaSwitch(
         }
     }
 
-    public static TuyaSwitch online(String id, String name, String room, SwitchState state, boolean critical, Instant at) {
-        return new TuyaSwitch(id, name, room, state, true, critical, at);
+    public static TuyaSwitch online(
+            String id, String name, String room, SwitchState state, boolean critical, String hint, Instant at) {
+        return new TuyaSwitch(id, name, room, state, true, critical, hint, at);
     }
 
     /** Gerät nicht erreichbar; {@code lastKnown} ist der zuletzt bekannte Zustand. */
     public static TuyaSwitch offline(
-            String id, String name, String room, SwitchState lastKnown, boolean critical, Instant at) {
-        return new TuyaSwitch(id, name, room, lastKnown, false, critical, at);
+            String id, String name, String room, SwitchState lastKnown, boolean critical, String hint, Instant at) {
+        return new TuyaSwitch(id, name, room, lastKnown, false, critical, hint, at);
     }
 }

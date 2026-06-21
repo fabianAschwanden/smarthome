@@ -19,13 +19,15 @@ public class MockSwitchDevice implements SwitchDevice {
     private final String name;
     private final String room;
     private final boolean critical;
+    private final String hint;
     private volatile SwitchState state = SwitchState.OFF;
 
-    public MockSwitchDevice(String id, String name, String room, boolean critical) {
+    public MockSwitchDevice(String id, String name, String room, boolean critical, String hint) {
         this.id = id;
         this.name = name;
         this.room = room;
         this.critical = critical;
+        this.hint = hint;
     }
 
     @Override
@@ -46,6 +48,11 @@ public class MockSwitchDevice implements SwitchDevice {
     @Override
     public boolean critical() {
         return critical;
+    }
+
+    @Override
+    public String hint() {
+        return hint;
     }
 
     @Override

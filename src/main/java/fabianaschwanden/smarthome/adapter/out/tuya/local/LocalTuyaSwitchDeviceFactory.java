@@ -44,6 +44,6 @@ public class LocalTuyaSwitchDeviceFactory implements SwitchDeviceFactory {
         }
         return new LocalTuyaSwitchDevice(
                 d.id(), d.name(), d.room(), d.deviceId(),
-                key.get(), d.addressOrDiscovery(), d.version(), d.dp(), d.critical(), discovery);
+                key.get(), d.addressOrDiscovery(), d.version(), d.dp(), d.critical(), d.hintOrEmpty(), discovery);
     }
 }
