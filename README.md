@@ -2,7 +2,7 @@
 
 Lokales Smart-Home-Dashboard fürs eigene Heimnetz: Energie, Batterie, Schalter,
 Storen, Wellness-Anlagen, Klimaanlage, Umweltsensor, Rauchmelder, Zeitsteuerung,
-Item-Bilder und Wettervorhersage – auf einem Blick, bedienbar per Browser/iPad.
+Kameras, Item-Bilder und Wettervorhersage – auf einem Blick, bedienbar per Browser/iPad.
 
 Ein Deployable (BFF): **Quarkus** (Java 25) + **Angular** (via Quinoa) in einem
 Artefakt, **Hexagonal + DDD**, erzwungen durch ArchUnit. Geräte werden **rein lokal
@@ -34,14 +34,35 @@ im LAN** angesprochen (keine Hersteller-Cloud nötig). Verbindliche Konventionen
 | 8 | **Umweltsensor** | Tuya-Temp/Feuchte (nur lesend) | [sensor](docs/sensor/SPEC.md) |
 | 9 | **Sicherheit** | Tuya-Rauchmelder: Alarm + Batterie, Nachrichtenzentrale | [safety](docs/safety/SPEC.md) |
 | 10 | **Wetter** | Vorhersage (Open-Meteo, kein API-Key) | [weather](docs/weather/SPEC.md) |
+| 11 | **Kameras** | Live-Stream im Dashboard (RTSP→WebRTC über go2rtc) | [camera](docs/camera/SPEC.md) |
 | – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
 
 **Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind
 über die Glocke oben rechts einsehbar; ein aktiver Alarm lässt sie rot pulsieren.
 
-**Stand der Geräteanbindung:** Energie, Batterie, Schalter, Storen, Klima, Sensor und
-Rauchmelder sind real angebunden. Die **Wellness-Anlagen** (UC 6) laufen real noch als
-`pending` (offline), bis die Steuerschnittstelle feststeht – Mock/Frontend sind fertig.
+## Unterstützte Plattformen & Protokolle
+
+Alle Geräte werden **lokal im LAN** angesprochen – keine Hersteller-Cloud nötig. Jede
+Anbindung steckt hinter einem Driven-Port; per Build-Property `smarthome.real-devices`
+wird zwischen echtem Adapter und Mock umgeschaltet.
+
+| Plattform / Hersteller | Geräte | Anbindung (lokal) | Use Case |
+|------------------------|--------|-------------------|----------|
+| **Tuya / Smart Life** | Schalter, Storen, Umweltsensor, Rauchmelder | Tuya-LAN-Protokoll **3.3** nativ in Java (`support/tuya`); **3.4/3.5** über den Sidecar (tinytuya) | 3, 5, 8, 9 |
+| **Gecko in.touch2** | Whirlpool & Schwimmbecken (Pumpe/Heizung/Licht/Massage) | WLAN-Steuerung über den Sidecar (geckolib) | 6 |
+| **Midea / NetHome Plus** | Klimaanlagen | Midea-LAN-Protokoll (V3 token/key) über den Sidecar (msmart-ng) | 7 |
+| **Fronius** | PV-Wechselrichter | Solar API (HTTP/JSON) direkt | 1 |
+| **SMARTFOX** | Energiemessung + Relais (Batterieladung) | HTTP (`values.xml` / `setswrel.cgi`) direkt | 1, 2 |
+| **RTSP-Kameras** (Tuya/Hankvision-OEM) | IP-Kameras | RTSP (H.265) → WebRTC über das **go2rtc**-Gateway; H.264-Transkodierung für den Browser | 11 |
+| **Open-Meteo** | Wettervorhersage | HTTP/JSON, **kein API-Key** | 10 |
+
+Der **Sidecar** (`tools/tuya-sidecar`, Python) bündelt die Bibliotheken, für die es
+keine brauchbare Java-Variante gibt (Tuya 3.4/3.5, Gecko, Midea); der Java-Adapter ruft
+ihn per HTTP. Tuya 3.3 spricht Java direkt.
+
+**Stand der Geräteanbindung:** Energie, Batterie, Schalter, Storen, Klima, Sensor,
+Rauchmelder, Wellness und Kamera sind real angebunden. Geräte ohne vollständige
+Konfiguration bleiben automatisch `pending` (offline) und fallen nicht auf Mock zurück.
 
 ## Profile
 
@@ -101,8 +122,9 @@ webapp/src/app/features/<slice>/  # Angular-Seiten (Signals, OnPush, native cont
 
 - Abhängigkeitsrichtung `adapter → application → domain` (ArchUnit bricht den Build).
 - Liquibase besitzt das Schema (append-only), Hibernate validiert nur.
-- **Sidecar:** Tuya 3.4/3.5 und Midea werden über einen kleinen Python-Dienst
-  (`tools/tuya-sidecar`) gelesen, den der Java-Adapter per HTTP aufruft.
+- **Sidecar:** Tuya 3.4/3.5, Gecko (Wellness) und Midea (Klima) werden über einen
+  kleinen Python-Dienst (`tools/tuya-sidecar`) angebunden, den der Java-Adapter per HTTP
+  aufruft. Tuya 3.3 spricht Java direkt; Kameras laufen über das separate go2rtc-Gateway.
 
 ## Qualität
 
