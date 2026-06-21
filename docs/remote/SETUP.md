@@ -52,16 +52,22 @@ Kernpunkte:
 
 - Heim-Server-Deployment läuft bereits (siehe `docs/server/SETUP.md`, Profil `lan`).
 - Fly.io-Account + `flyctl`.
-- Ein OIDC-Provider (Keycloak/Authentik self-hosted oder Auth0/Google) mit einem
-  Client für die Remote-App (Redirect-URI = die Fly-URL `/oauth2/callback`).
+- Ein Google-Konto (Login erfolgt per **Google**; kein eigener IdP-Server nötig).
 
-## 1. OIDC-Client anlegen
+## 1. Google-OAuth-Client anlegen
 
-Beim IdP einen Client/Anwendung anlegen:
+In der [Google Cloud Console](https://console.cloud.google.com/):
 
-- Typ: Web / Authorization Code (PKCE empfohlen).
-- Redirect-URI: `https://<deine-fly-app>.fly.dev/oauth2/callback`
-- Notiere: `issuer-url`, `client-id`, `client-secret`.
+1. Projekt wählen/anlegen → **APIs & Services → OAuth consent screen**:
+   User Type *External*, App-Name vergeben. Im *Testing*-Modus deine Google-Adresse
+   unter *Test users* eintragen (dann ist keine Google-Verifizierung nötig).
+2. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
+   - Application type: **Web application**
+   - Authorized redirect URI: `https://<deine-fly-app>.fly.dev/oauth2/callback`
+3. Notiere **Client ID** (`…apps.googleusercontent.com`) und **Client secret**.
+
+Zugriff wird auf die in `ALLOWED_EMAILS` erlaubten Google-Konten beschränkt
+(siehe §4) – sonst könnte sich jedes Google-Konto einloggen.
 
 ## 2. Heim-Server: keine Änderung nötig
 
@@ -100,11 +106,16 @@ Siehe `deploy/fly-remote/` (eigene Fly-App, nur Proxy):
 cd deploy/fly-remote
 flyctl launch --no-deploy --copy-config        # App anlegen
 flyctl secrets set \
-  OIDC_ISSUER_URL=… OIDC_CLIENT_ID=… OIDC_CLIENT_SECRET=… \
+  OIDC_CLIENT_ID=<google-client-id>.apps.googleusercontent.com \
+  OIDC_CLIENT_SECRET=<google-client-secret> \
   COOKIE_SECRET=$(openssl rand -base64 32) \
-  UPSTREAM=http://[<HEIM-SERVER-6PN-IP>]:8080
+  UPSTREAM=http://[<HEIM-SERVER-6PN-IP>]:8080 \
+  ALLOWED_EMAILS=du@gmail.com
 flyctl deploy
 ```
+
+(Login per Google; `ALLOWED_EMAILS` = deine erlaubte(n) Google-Adresse(n),
+kommagetrennt. Details siehe `deploy/fly-remote/README.md`.)
 
 `UPSTREAM` zeigt auf den Heim-Server über das 6PN-Netz (die `fdaa:…`-WireGuard-IP
 des Heim-Servers, Port 8080). Der Proxy erreicht ihn, weil beide im selben Fly-6PN
@@ -122,7 +133,8 @@ sind.
 - Der Remote-Port bindet nur auf das WireGuard-Interface → selbst im LAN nicht
   erreichbar.
 - TLS terminiert Fly (automatische Zertifikate). Cookies signiert (oauth2-proxy).
-- Optional: oauth2-proxy auf erlaubte E-Mail-Domains/Gruppen einschränken.
+- Zugriff ist über `ALLOWED_EMAILS` auf die erlaubten Google-Konten beschränkt; der
+  Proxy startet nicht ohne eine solche Beschränkung (sonst käme jedes Google-Konto rein).
 
 ## Alternative ohne Fly (kurz)
 
