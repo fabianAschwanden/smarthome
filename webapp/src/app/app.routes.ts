@@ -33,4 +33,8 @@ export const routes: Routes = [
     path: 'climate',
     loadComponent: () => import('./features/climate/climate-page').then((m) => m.ClimatePage),
   },
+  {
+    path: 'cameras',
+    loadComponent: () => import('./features/camera/camera-page').then((m) => m.CameraPage),
+  },
 ];

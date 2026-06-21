@@ -1,0 +1,21 @@
+# go2rtc – Stream-Gateway: wandelt Kamera-RTSP (auch H.265) in browser-taugliches
+# WebRTC/MSE. Vorlage – echte Datei: deploy/go2rtc/go2rtc.yaml (gitignored, enthält
+# die Kamera-IP).
+#
+#   cp deploy/go2rtc/go2rtc.example.yaml deploy/go2rtc/go2rtc.yaml
+#   # rtsp-URL der Kamera eintragen (siehe docs/camera/SPEC.md)
+#
+# Der Stream-Name (hier "garten") muss zu camera.devices[i].stream in der
+# App-Config passen.
+
+streams:
+  garten:
+    - rtsp://<kamera-ip>:554/mpeg4   # Tuya/Hankvision-Cam, H.265, kein Auth
+
+api:
+  listen: ":1984"        # HTTP-API + WebRTC-Signaling + eingebetteter Player
+
+webrtc:
+  listen: ":8555"        # WebRTC (TCP); im LAN/6PN erreichbar
+  # candidates:          # bei Bedarf feste Kandidaten (NAT) ergänzen
+  #   - <server-ip>:8555

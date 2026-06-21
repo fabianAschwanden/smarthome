@@ -1,0 +1,68 @@
+# Spec – Use Case 11: Kameras (Live-Stream)
+
+Status: v1.0 (Tuya/Hankvision-Cam angebunden) · Datum: 2026-06-21 · Plattform: Java 25 / Quarkus (app-template: Hexagonal + DDD)
+
+## 1. Zweck & Scope
+
+Live-Bild einer (oder mehrerer) IP-Kamera(s) im Dashboard anzeigen.
+
+In Scope: Kamera-Metadaten (Name/Raum/Stream-Name) liefern, Live-Stream im Browser
+darstellen, Mehrkamera-fähig.
+Out of Scope (später): Aufnahme/Archiv, PTZ-Steuerung, Bewegungs-Events,
+Zwei-Wege-Audio.
+
+## 2. Anbindung: RTSP → WebRTC über go2rtc
+
+Die reale Kamera ist eine **Tuya/Hankvision-OEM-Cam**. Sie liefert lokal im LAN einen
+**RTSP-Stream** (H.265/HEVC, 1920×1080, ~15 fps, kein Auth) unter
+`rtsp://<kamera-ip>:554/mpeg4`. Browser können H.265-RTSP nicht direkt abspielen,
+darum läuft ein **Gateway**:
+
+- **go2rtc** (`alexxit/go2rtc`) zieht den RTSP-Stream und stellt ihn als
+  **WebRTC** (Fallback MSE/MJPEG) bereit. API/Player auf Port `1984`, WebRTC auf `8555`.
+- Config (mit Kamera-IP/RTSP-URL) liegt **gitignored** in
+  `deploy/go2rtc/go2rtc.yaml` (Vorlage: `deploy/go2rtc/go2rtc.example.yaml`).
+- Im Deployment (`deploy/docker-compose.yml`) ist go2rtc ein eigener Service im
+  Host-Netz, auf demselben Host wie die App.
+
+Verifiziert: go2rtc lieferte ein Live-Frame (JPEG 1920×1080) von der realen Kamera.
+
+## 3. Architektur (Hexagonal)
+
+- `domain/model/camera/Camera` – record `(id, name, room, stream)`; Invarianten
+  (id/name/stream nicht leer) im Compact-Constructor. `stream` = go2rtc-Stream-Name.
+- `domain/port/in/camera/ViewCameras` – Use-Case-Interface (`List<Camera> list()`).
+- `application/service/camera/CameraViewService` – mappt Config → Domäne.
+- `adapter/out/camera/CameraConfig` – `@ConfigMapping(prefix="camera")`,
+  Liste `camera.devices[i]` mit `id/name/room/stream`.
+- `adapter/in/rest/camera/CameraResource` – `GET /api/cameras` → `List<CameraDto>`.
+
+## 4. Sicherheit / Datenschutz
+
+- **Die API liefert NIE die RTSP-URL oder die Kamera-IP** – nur Name, Raum und den
+  go2rtc-Stream-Namen. Die IP bleibt ausschliesslich in der gitignored go2rtc-Config.
+- Das Repo ist öffentlich: keine IPs/URLs/Tokens einchecken.
+- Der Browser erreicht go2rtc auf demselben Host wie die App (`<host>:1984`); die
+  Player-URL wird im Frontend aus `window.location.hostname` abgeleitet (kein Hardcoding).
+
+## 5. Frontend
+
+- `core/models/camera.ts`, `core/services/camera.service.ts` (einmaliger Abruf,
+  Metadaten sind statisch).
+- `features/camera/camera-page.ts` – je Kamera eine Kachel mit eingebettetem
+  go2rtc-Player (`<iframe src="<host>:1984/stream.html?src=<stream>&mode=webrtc">`).
+- Route `/cameras` + Nav-Eintrag (Kamera-Icon).
+
+## 6. Konfiguration
+
+`application.properties` (Stream-Name aus Env überschreibbar):
+
+```
+camera.devices[0].id=garten
+camera.devices[0].name=Garten
+camera.devices[0].room=Garten
+camera.devices[0].stream=${CAMERA_STREAM_GARTEN:garten}
+```
+
+`deploy/go2rtc/go2rtc.yaml` (gitignored): mappt den Stream-Namen `garten` auf die
+echte `rtsp://...`-URL.

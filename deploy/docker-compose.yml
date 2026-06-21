@@ -38,6 +38,15 @@ services:
       HOST: 0.0.0.0
       PORT: 8765
 
+  # Stream-Gateway: wandelt Kamera-RTSP (H.265) in browser-taugliches WebRTC.
+  # Config (mit Kamera-IP) liegt gitignored in deploy/go2rtc/go2rtc.yaml.
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml:ro
+
   app:
     build:
       context: ..

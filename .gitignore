@@ -32,5 +32,8 @@ home.conf
 # Lokale Secrets (Tuya local-keys etc.) – nur die .example-Vorlage wird eingecheckt
 config/application.properties
 
+# go2rtc-Config enthält die Kamera-IP/RTSP-URL – nur die .example wird eingecheckt
+deploy/go2rtc/go2rtc.yaml
+
 # Python venv für Tuya-Diagnose (tinytuya)
 .tuya-venv/
