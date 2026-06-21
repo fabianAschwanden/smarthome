@@ -7,9 +7,21 @@
   height: 2.75rem;
   border-radius: 1rem;
   color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   transition:
     background 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease,
+    transform 0.07s ease,
+    box-shadow 0.07s ease;
+}
+
+/* Taster-Feedback: beim Drücken einsinken (rail-btn ist teils <a>, daher hier
+   explizit – die globale button-Regel greift bei Links nicht). */
+.rail-btn:active {
+  transform: scale(0.9);
+  filter: brightness(0.92);
 }
 
 .rail-btn svg {
