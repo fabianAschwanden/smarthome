@@ -76,3 +76,9 @@ climate.devices[0].address=<lan-ip>
 weather.location=<Ortsname>
 weather.latitude=<lat>
 weather.longitude=<lon>
+
+# --- Kameras (Use Case 11) – Live-Stream über das go2rtc-Gateway ---
+# Das Backend kennt NUR den Stream-Namen, nie die RTSP-URL/IP. Die echte RTSP-URL
+# gehört in die gitignored go2rtc-Config (deploy/go2rtc/go2rtc.yaml), nicht hierher.
+# Der Stream-Name muss dort und hier identisch sein:
+camera.devices[0].stream=<stream-name>
