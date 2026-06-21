@@ -38,7 +38,9 @@ services:
       HOST: 0.0.0.0
       PORT: 8765
 
-  # Stream-Gateway: wandelt Kamera-RTSP (H.265) in browser-taugliches WebRTC.
+  # Stream-Gateway: wandelt Kamera-RTSP (H.265) in browser-taugliches MP4/H.264
+  # (bzw. WebRTC im LAN). Die App proxyt /go2rtc/* an localhost:1984 (host-Netz),
+  # damit der Kamera-Stream über Port 8080 läuft – auch remote durch den Fly-Tunnel.
   # Config (mit Kamera-IP) liegt gitignored in deploy/go2rtc/go2rtc.yaml.
   go2rtc:
     image: alexxit/go2rtc:latest

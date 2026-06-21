@@ -46,8 +46,13 @@ Verifiziert: go2rtc lieferte ein Live-Frame (JPEG 1920×1080) von der realen Kam
 - **Die API liefert NIE die RTSP-URL oder die Kamera-IP** – nur Name, Raum und den
   go2rtc-Stream-Namen. Die IP bleibt ausschliesslich in der gitignored go2rtc-Config.
 - Das Repo ist öffentlich: keine IPs/URLs/Tokens einchecken.
-- Der Browser erreicht go2rtc auf demselben Host wie die App (`<host>:1984`); die
-  Player-URL wird im Frontend aus `window.location.hostname` abgeleitet (kein Hardcoding).
+- **Zugriff über dieselbe Origin (remote-tauglich):** Das Backend proxyt `/go2rtc/*`
+  an den go2rtc-Dienst (`localhost:1984`, siehe `adapter/in/gateway/Go2rtcProxy`). Das
+  Frontend lädt den Stream als fragmentiertes **MP4/H.264** über den relativen Pfad
+  `/go2rtc/api/stream.mp4?src=<stream>&video=h264` in ein `<video>`-Element – reines
+  HTTP (kein WebSocket/UDP). So läuft der Kamera-Stream über Port 8080 und ist auch
+  **remote** erreichbar (Fly-Login-Proxy + WireGuard, wo nur 8080 durchgeht); ein
+  direkter Zugriff auf `:1984` wäre von aussen schwarz. Im LAN funktioniert beides.
 
 ## 5. Frontend
 
