@@ -20,6 +20,10 @@ darum läuft ein **Gateway**:
 
 - **go2rtc** (`alexxit/go2rtc`) zieht den RTSP-Stream und stellt ihn als
   **WebRTC** (Fallback MSE/MJPEG) bereit. API/Player auf Port `1984`, WebRTC auf `8555`.
+- **Wichtig – H.265-Transkodierung:** Browser-WebRTC kann **kein H.265** dekodieren.
+  Darum bietet go2rtc den Stream zusätzlich via `ffmpeg:<stream>#video=h264`
+  (ffmpeg ist im Image enthalten) als H.264 an. Ohne diese Zeile bleibt der Player im
+  Browser auf „Loading" stehen, obwohl der Snapshot (`/api/frame.jpeg`) funktioniert.
 - Config (mit Kamera-IP/RTSP-URL) liegt **gitignored** in
   `deploy/go2rtc/go2rtc.yaml` (Vorlage: `deploy/go2rtc/go2rtc.example.yaml`).
 - Im Deployment (`deploy/docker-compose.yml`) ist go2rtc ein eigener Service im

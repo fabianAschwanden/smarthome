@@ -11,11 +11,15 @@
 streams:
   garten:
     - rtsp://<kamera-ip>:554/mpeg4   # Tuya/Hankvision-Cam, H.265, kein Auth
+    # Browser-WebRTC kann H.265 NICHT dekodieren -> zusätzlich nach H.264 transkodieren
+    # (ffmpeg ist im go2rtc-Image enthalten). Ohne diese Zeile bleibt der Player im
+    # Browser auf "Loading" stehen. '#hardware' nur, wenn HW-Encoding verfügbar ist.
+    - ffmpeg:garten#video=h264
 
 api:
   listen: ":1984"        # HTTP-API + WebRTC-Signaling + eingebetteter Player
 
 webrtc:
   listen: ":8555"        # WebRTC (TCP); im LAN/6PN erreichbar
-  # candidates:          # bei Bedarf feste Kandidaten (NAT) ergänzen
-  #   - <server-ip>:8555
+  # candidates:          # feste Kandidaten ergänzen, wenn der Browser die intern
+  #   - <server-ip>:8555 # angekündigte Docker-IP (172.x) nicht erreichen kann

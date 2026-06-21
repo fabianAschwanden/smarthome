@@ -59,7 +59,9 @@ export class CameraPage {
   );
 
   protected playerUrl(cam: Camera): SafeResourceUrl {
-    const url = `${this.base()}/stream.html?src=${encodeURIComponent(cam.stream)}&mode=webrtc`;
+    // Ohne festen mode: der go2rtc-Player wählt selbst WebRTC und fällt bei
+    // Bedarf auf MSE/MP4 zurück (robuster, falls WebRTC im Netz scheitert).
+    const url = `${this.base()}/stream.html?src=${encodeURIComponent(cam.stream)}`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 }
