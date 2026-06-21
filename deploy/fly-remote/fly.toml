@@ -1,0 +1,26 @@
+# Fly-App: öffentlicher Login-Proxy für den Remote-Zugang (siehe docs/remote/SETUP.md).
+# Nur dieser Dienst ist im Internet erreichbar; er erzwingt OIDC-Login (oauth2-proxy)
+# und reicht authentifizierte Requests über das Fly-6PN an den Heim-Server (:8080) weiter.
+#
+# App-Name anpassen und deployen:
+#   flyctl launch --no-deploy --copy-config
+#   flyctl secrets set OIDC_ISSUER_URL=… OIDC_CLIENT_ID=… OIDC_CLIENT_SECRET=… \
+#                      COOKIE_SECRET=$(openssl rand -base64 32) UPSTREAM=http://[<6pn-ip>]:8080
+#   flyctl deploy
+
+app = "smarthome-remote"
+primary_region = "zrh"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 4180          # oauth2-proxy Standard-Port
+  force_https = true
+  auto_stop_machines = "stop"   # spart Kosten: schläft bei Inaktivität, startet bei Request
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

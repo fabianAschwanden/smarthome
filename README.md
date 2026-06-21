@@ -76,6 +76,13 @@ Details, Voraussetzungen und Provisioning: [`docs/server/SETUP.md`](docs/server/
 Hinweis: NETGEAR ReadyNAS hat kein brauchbares Docker → kleiner Mini-PC/Raspberry Pi
 (4 GB+ empfohlen) als Host.
 
+### Sicherer Zugriff von ausserhalb (Remote)
+
+Von unterwegs **mit Login**, **ohne** offenen Router-Port: Ein Fly.io-Login-Proxy
+(oauth2-proxy/OIDC) ist öffentlich und erreicht den Heim-Server über eine ausgehende
+WireGuard-Verbindung (Fly 6PN). Das Heimnetz bleibt geschlossen.
+Setup: [`docs/remote/SETUP.md`](docs/remote/SETUP.md) · Proxy: [`deploy/fly-remote/`](deploy/fly-remote/).
+
 ## Architektur
 
 Schicht zuerst, Fachbereich darunter (ein Slice je Use Case):

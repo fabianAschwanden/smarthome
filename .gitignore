@@ -22,8 +22,12 @@ webapp/playwright-report/
 .DS_Store
 .env
 
-# Deploy-Secrets (Heim-Server) – nur deploy/.env.example wird eingecheckt
+# Deploy-Secrets (Heim-Server / Fly) – nur die .env.example werden eingecheckt
 deploy/.env
+deploy/**/.env
+# WireGuard-Peer-Config (enthält private keys) – nie ins Repo
+*.conf
+home.conf
 
 # Lokale Secrets (Tuya local-keys etc.) – nur die .example-Vorlage wird eingecheckt
 config/application.properties
