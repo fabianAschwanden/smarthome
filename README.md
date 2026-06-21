@@ -34,6 +34,21 @@ die Glocke oben rechts ist die Nachrichtenzentrale für Geräte-Meldungen.
 - Im `%dev`/`%test`-Profil sind **Mock-Quellen** aktiv – alles läuft sofort ohne
   Geräte. PostgreSQL kommt über Dev Services (Container-Runtime nötig).
 
+## Lokaler Start mit echten Geräten
+
+`scripts/dev.sh` fährt alle Begleitdienste hoch und startet Quarkus dev – Strg+C
+beendet und räumt wieder auf:
+
+```bash
+bash scripts/dev.sh          # Sidecar (:8765) + go2rtc (:1984) + Quarkus (dev,live)
+bash scripts/dev.sh --mock   # nur Quarkus mit Mocks (ohne Begleitdienste)
+```
+
+- **Sidecar** (Python venv): Tuya 3.4/3.5, Gecko, Midea – einmalig anlegen:
+  `python3 -m venv .tuya-venv && .tuya-venv/bin/pip install -r tools/tuya-sidecar/requirements.txt`
+- **go2rtc** (Docker): Kamera-Gateway, braucht `deploy/go2rtc/go2rtc.yaml` (siehe Kameras).
+- Schon laufende Dienste werden erkannt und nicht doppelt gestartet.
+
 ## Use Cases
 
 | # | Bereich | Funktion | Spec |
