@@ -37,3 +37,5 @@ deploy/go2rtc/go2rtc.yaml
 
 # Python venv für Tuya-Diagnose (tinytuya)
 .tuya-venv/
+__pycache__/
+*.pyc
