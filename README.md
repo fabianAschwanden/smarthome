@@ -9,6 +9,20 @@ Artefakt, **Hexagonal + DDD**, erzwungen durch ArchUnit. Geräte werden **rein l
 im LAN** angesprochen (keine Hersteller-Cloud nötig). Verbindliche Konventionen:
 [`docs/blueprint.md`](docs/blueprint.md).
 
+## Oberfläche
+
+Ein ruhiges, durchgängiges **Glassmorphism**-Design: halbtransparente Karten über
+einem dezenten Hintergrund, grosse Touch-Ziele und Ring-Dials für Temperaturen –
+gebaut für die Bedienung am iPad oder Smartphone. Drückbare Elemente sinken beim
+Antippen wie ein echter Taster ein. Eine Bottom-Bar führt durch die Bereiche
+(Übersicht, Energie, Batterie, Schalter, Storen, Wellness, Klima, Kameras, Wetter);
+die Glocke oben rechts ist die Nachrichtenzentrale für Geräte-Meldungen.
+
+| Übersicht | Klima & Storen | Wellness |
+|:---:|:---:|:---:|
+| ![Dashboard – Energiefluss, Erzeugung/Verbrauch, Wetter](docs/screenshots/dashboard.jpg) | ![Innensensor, Klimaanlage mit Ring-Dial, Storen-Steuerung](docs/screenshots/climate.jpg) | ![Whirlpool – Wassertemperatur, Pumpe/Heizung/Licht/Massage/Filterung](docs/screenshots/wellness.jpg) |
+| Energiefluss (Erzeugung · Bezug · Haus), Tagesertrag & Selbstversorgung, Wetter | Umweltsensor, Klima-Ring-Dial mit Soll/Ist, Storen mit Auf/Stopp/Zu | Wellness-Anlage: Wassertemperatur-Dial, Funktionen als Taster |
+
 ## Schnellstart (ohne Hardware)
 
 ```bash
