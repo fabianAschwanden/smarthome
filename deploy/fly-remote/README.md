@@ -26,7 +26,7 @@ Login via **Google** (oauth2-proxy `google`-Provider). Zugriff ist auf die in
    flyctl secrets set \
      OIDC_CLIENT_ID=<google-client-id>.apps.googleusercontent.com \
      OIDC_CLIENT_SECRET=<google-client-secret> \
-     COOKIE_SECRET=$(openssl rand -base64 32) \
+     COOKIE_SECRET=$(openssl rand -hex 16) \
      UPSTREAM=http://[<heim-server-6pn-ip>]:8080 \
      ALLOWED_EMAILS=du@gmail.com
    flyctl deploy
@@ -40,7 +40,7 @@ Login via **Google** (oauth2-proxy `google`-Provider). Zugriff ist auf die in
 |--------|---------|-----------|
 | `OIDC_CLIENT_ID` | ja | Google OAuth Client-ID |
 | `OIDC_CLIENT_SECRET` | ja | Google OAuth Client-Secret |
-| `COOKIE_SECRET` | ja | 32-Byte-Zufall (`openssl rand -base64 32`) |
+| `COOKIE_SECRET` | ja | Cookie-Schlüssel. **Genau 16/24/32 Zeichen** – `openssl rand -hex 16` ergibt 32 Zeichen. (`base64 32` ergibt 44 Zeichen → oauth2-proxy startet nicht!) |
 | `UPSTREAM` | ja | Heim-Server über 6PN, z. B. `http://[fdaa:…]:8080` |
 | `ALLOWED_EMAILS` | ja* | erlaubte Google-Adressen (kommagetrennt) |
 | `ALLOWED_EMAIL_DOMAINS` | ja* | alternativ: erlaubte Workspace-Domain |

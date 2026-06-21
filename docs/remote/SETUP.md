@@ -108,7 +108,7 @@ flyctl launch --no-deploy --copy-config        # App anlegen
 flyctl secrets set \
   OIDC_CLIENT_ID=<google-client-id>.apps.googleusercontent.com \
   OIDC_CLIENT_SECRET=<google-client-secret> \
-  COOKIE_SECRET=$(openssl rand -base64 32) \
+  COOKIE_SECRET=$(openssl rand -hex 16) \   # genau 32 Zeichen; base64 ergäbe 44 -> Fehler
   UPSTREAM=http://[<HEIM-SERVER-6PN-IP>]:8080 \
   ALLOWED_EMAILS=du@gmail.com
 flyctl deploy

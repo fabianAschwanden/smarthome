@@ -33,7 +33,15 @@ fi
 # Zugriff einschränken. Bei Google ohne Filter könnte sich JEDES Google-Konto einloggen,
 # darum: entweder erlaubte Adressen (ALLOWED_EMAILS) ODER eine Domain. Mind. eines setzen.
 if [ -n "${ALLOWED_EMAILS:-}" ]; then
-  printf '%s\n' "$ALLOWED_EMAILS" | tr ',' '\n' > /tmp/emails.txt
+  # Kommagetrennte Liste -> eine Adresse pro Zeile (POSIX-sh, ohne 'tr').
+  : > /tmp/emails.txt
+  rest="$ALLOWED_EMAILS"
+  while [ -n "$rest" ]; do
+    case "$rest" in
+      *,*) printf '%s\n' "${rest%%,*}" >> /tmp/emails.txt; rest="${rest#*,}" ;;
+      *)   printf '%s\n' "$rest" >> /tmp/emails.txt; rest="" ;;
+    esac
+  done
   set -- "$@" --authenticated-emails-file=/tmp/emails.txt
   # email-domain=* nötig, sonst überschreibt der Default die Adressliste nicht korrekt.
   set -- "$@" --email-domain="*"

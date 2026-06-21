@@ -9,7 +9,7 @@
 #   flyctl deploy
 
 app = "smarthome-remote"
-primary_region = "zrh"
+primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"
