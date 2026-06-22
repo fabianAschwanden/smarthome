@@ -30,6 +30,7 @@ describe('SwitchPage', () => {
         state: 'ON',
         online: true,
         critical: false,
+        hint: '',
         observedAt: '2026-06-19T12:00:00Z',
       },
       {
@@ -39,6 +40,7 @@ describe('SwitchPage', () => {
         state: 'OFF',
         online: false,
         critical: false,
+        hint: '',
         observedAt: '2026-06-19T12:00:00Z',
       },
     ];
