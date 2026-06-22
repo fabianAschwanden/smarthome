@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.domain.model.climate.Climate;
 import fabianaschwanden.smarthome.domain.model.climate.ClimateMode;
 import fabianaschwanden.smarthome.domain.port.in.climate.ClimateNotFound;
 import fabianaschwanden.smarthome.domain.port.out.climate.ClimateDevice;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 class ClimateControlServiceTest {
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-06-19T12:00:00Z"), ZoneOffset.UTC);

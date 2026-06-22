@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.application.service.safety;
 import fabianaschwanden.smarthome.domain.model.safety.AlarmState;
 import fabianaschwanden.smarthome.domain.model.safety.SmokeDetector;
 import fabianaschwanden.smarthome.domain.port.out.safety.SmokeDetectorDevice;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 class SafetyServiceTest {
 
     /** Steuerbare Uhr, damit das 5-Minuten-Fenster deterministisch testbar ist. */
@@ -69,6 +71,18 @@ class SafetyServiceTest {
         SmokeDetector d = service.smokeDetectors().get(0);
         assertFalse(d.online(), "nach >5 Min ohne Kontakt offline");
         assertEquals(80, d.battery(), "letzter bekannter Wert bleibt erhalten");
+    }
+
+    @Test
+    void alarmZustandWirdGemeldet() {
+        FakeSmoke s = new FakeSmoke(AlarmState.ALARM, 70);
+        SafetyService service = new SafetyService(List.of(s), new MovableClock());
+
+        SmokeDetector d = service.smokeDetectors().get(0);
+
+        assertTrue(d.online());
+        assertEquals(AlarmState.ALARM, d.alarm());
+        assertEquals(70, d.battery());
     }
 
     @Test

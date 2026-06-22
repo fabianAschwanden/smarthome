@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.application.service.weather;
 import fabianaschwanden.smarthome.domain.model.weather.WeatherCondition;
 import fabianaschwanden.smarthome.domain.model.weather.WeatherForecast;
 import fabianaschwanden.smarthome.domain.port.out.weather.WeatherGateway;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Cache-Verhalten des Wetter-Service (ohne externe Quelle). */
+@QuarkusTest
 class WeatherServiceTest {
 
     private static WeatherForecast sample() {

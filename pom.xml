@@ -24,7 +24,7 @@
     <jacoco-plugin.version>0.8.15</jacoco-plugin.version>
 
     <!-- Coverage-Gate (Blueprint §2 Test & Qualität) -->
-    <jacoco.min-line-coverage>0.50</jacoco.min-line-coverage>
+    <jacoco.min-line-coverage>0.70</jacoco.min-line-coverage>
 
     <skipITs>true</skipITs>
   </properties>

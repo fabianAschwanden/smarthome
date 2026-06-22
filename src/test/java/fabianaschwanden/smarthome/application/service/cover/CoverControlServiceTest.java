@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.domain.model.cover.Cover;
 import fabianaschwanden.smarthome.domain.model.cover.CoverCommand;
 import fabianaschwanden.smarthome.domain.port.in.cover.CoverNotFound;
 import fabianaschwanden.smarthome.domain.port.out.cover.CoverDevice;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 class CoverControlServiceTest {
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-06-19T12:00:00Z"), ZoneOffset.UTC);

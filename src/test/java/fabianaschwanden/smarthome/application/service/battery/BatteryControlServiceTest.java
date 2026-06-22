@@ -9,6 +9,7 @@ import fabianaschwanden.smarthome.domain.model.energy.EnergySnapshot;
 import fabianaschwanden.smarthome.domain.model.energy.PowerReading;
 import fabianaschwanden.smarthome.domain.model.energy.PowerSource;
 import fabianaschwanden.smarthome.domain.port.in.energy.CurrentEnergyQuery;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@QuarkusTest
 class BatteryControlServiceTest {
 
     private final Instant now = Instant.parse("2026-06-19T12:00:00Z");

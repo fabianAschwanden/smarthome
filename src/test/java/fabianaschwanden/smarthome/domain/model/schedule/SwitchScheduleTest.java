@@ -1,6 +1,7 @@
 package fabianaschwanden.smarthome.domain.model.schedule;
 
 import fabianaschwanden.smarthome.domain.model.tuya.SwitchState;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 class SwitchScheduleTest {
 
     private final UUID id = UUID.randomUUID();

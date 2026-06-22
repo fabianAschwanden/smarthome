@@ -5,6 +5,7 @@ import fabianaschwanden.smarthome.domain.model.tuya.TuyaSwitch;
 import fabianaschwanden.smarthome.domain.port.in.tuya.CriticalConfirmationRequired;
 import fabianaschwanden.smarthome.domain.port.in.tuya.SwitchNotFound;
 import fabianaschwanden.smarthome.domain.port.out.tuya.SwitchDevice;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 class SwitchControlServiceTest {
 
     private final Instant now = Instant.parse("2026-06-19T12:00:00Z");

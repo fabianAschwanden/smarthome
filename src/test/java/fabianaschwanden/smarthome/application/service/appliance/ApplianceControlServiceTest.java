@@ -8,6 +8,7 @@ import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceNotFound;
 import fabianaschwanden.smarthome.domain.port.in.appliance.FunctionNotSupported;
 import fabianaschwanden.smarthome.domain.port.in.appliance.TemperatureNotSupported;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@QuarkusTest
 class ApplianceControlServiceTest {
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-06-19T12:00:00Z"), ZoneOffset.UTC);
@@ -80,6 +82,17 @@ class ApplianceControlServiceTest {
 
         assertEquals(36, result.temperature().target());
         assertEquals(36, wp.target);
+    }
+
+    @Test
+    void sollTemperaturAusserhalbDesBereichsWirdAbgelehnt() {
+        FakeAppliance wp = new FakeAppliance("whirlpool", EnumSet.of(ApplianceFunction.HEATER), true);
+        ApplianceControlService service = new ApplianceControlService(List.of(wp), clock);
+
+        // Erst lesen, damit der bekannte Temperaturbereich (30..40) gefüllt ist.
+        service.list();
+
+        assertThrows(IllegalArgumentException.class, () -> service.setTargetTemperature("whirlpool", 99));
     }
 
     @Test

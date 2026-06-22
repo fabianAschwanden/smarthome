@@ -1,11 +1,13 @@
 package fabianaschwanden.smarthome.domain.service.battery;
 
 import fabianaschwanden.smarthome.domain.model.battery.RelayState;
+import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@QuarkusTest
 class SurplusChargePolicyTest {
 
     private final SurplusChargePolicy policy = new SurplusChargePolicy(1500, 300);

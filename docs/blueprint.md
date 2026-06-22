@@ -55,8 +55,18 @@ Plain SPA, keine PWA.
 | Architektur-Invarianten | ArchUnit |
 | Frontend Unit/Component | Vitest |
 | Frontend E2E / BDD | Playwright (+ Cucumber.js) |
-| Coverage-Gate | JaCoCo (`jacoco:check`) |
+| Coverage-Gate | JaCoCo (`jacoco:check`), min. **0.70** Line-Coverage |
 | Auth-Tests | `quarkus-test-security` (Identitäten stubben), `quarkus-test-keycloak-server` (Real-OIDC-Smoke-Test) |
+
+> **Coverage zählt nur aus `@QuarkusTest`-Läufen.** Das Gate misst `jacoco-quarkus.exec`
+> (quarkus-jacoco) – reine JUnit-Tests OHNE `@QuarkusTest` werden NICHT erfasst, selbst
+> wenn sie Logik gründlich testen. Darum tragen ALLE Backend-Tests `@QuarkusTest`
+> (Ausnahme: `HexagonalArchitectureTest`, ArchUnit braucht keinen Container).
+> Geräte-Adapter mit echtem I/O werden direkt instanziiert und gegen einen lokalen
+> Fake-Server getestet (`com.sun.net.httpserver.HttpServer` für HTTP, kein echtes Gerät) –
+> Muster: `FroniusEnergySourceTest`. So zählt ihr Parsing/Mapping zur Coverage, ohne die
+> `@IfBuildProperty(real-devices)`-Aktivierung (Build-Zeit, per Test-Profil nicht umschaltbar)
+> zu benötigen.
 
 ### Build, Lieferung, Betrieb
 
