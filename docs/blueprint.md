@@ -65,8 +65,8 @@ Plain SPA, keine PWA.
 | Build | Maven (mvnw) + npm (über Quinoa) |
 | Container | Multi-Stage `Dockerfile.jvm` (`eclipse-temurin:25`); `quarkus-container-image-docker` |
 | CI | GitHub Actions (ubuntu-latest) |
-| Release | Tag (`v*`) → `flyctl deploy --remote-only` → Rolling-Deploy auf Fly.io |
-| Deployment | Fly.io (Shared-CPU, 512 MB); Datenbank: Neon PostgreSQL (serverless) |
+| Release | Tag (`v*`) → GitHub Actions baut App- + Sidecar-Image und pusht nach ghcr.io |
+| Deployment | Heim-Server (Linux-Host im LAN) via docker-compose, zieht die ghcr-Images; Remote-Zugang über Fly-Login-Proxy + WireGuard |
 | Dependency-Updates | Dependabot |
 
 ## 3. Architektur: Hexagonal (Ports & Adapters) + DDD Tactical Design
@@ -173,7 +173,7 @@ Unit (Domäne + Application Services, Ports gemockt, kein Container) · `@Quarku
 
 ## 11. CI/CD & Betrieb
 
-CI (build + verify) auf jeden PR, verify als Merge-Gate · Release: Tag `v*` → `flyctl deploy --remote-only` auf Fly.io (Rolling-Deploy, HTTPS automatisch, kein eigenes Container-Registry) · Datenbank: Neon PostgreSQL (serverless free tier), Secrets via `flyctl secrets set` · Dependabot hebt Maven/npm/Actions-Versionen; Framework-Majors (Angular, TypeScript) werden manuell via `ng update` gehoben · CI-Diagnose: erst klären ob Failure PR-eigen oder flaky, statt blind re-runnen.
+CI (build + verify) auf jeden PR, verify als Merge-Gate · Release: Tag `v*` → GitHub Actions (`release.yml`) baut App- + Sidecar-Image und pusht versioniert nach ghcr.io · Deployment: Heim-Server zieht die Images per docker-compose (`docker-compose.release.yml` / `scripts/server-update.sh`), Datenbank lokal als Postgres-Container · Remote-Zugang über Fly-Login-Proxy (`deploy/fly-remote/`, manuell deployt) + WireGuard · Dependabot hebt Maven/npm/Actions-Versionen; Framework-Majors (Angular, TypeScript) werden manuell via `ng update` gehoben · CI-Diagnose: erst klären ob Failure PR-eigen oder flaky, statt blind re-runnen.
 
 ## 12. Clean Code & Naming
 
@@ -190,4 +190,4 @@ Single Responsibility · Dependency Inversion · KISS/YAGNI · DRY erst ab 3+ Vo
 7. OIDC BFF + Rollen-Mapping-Augmentor; Auth Dev/Test aus, Prod an
 8. Profile `%dev`/`%test`/`%prod` (+ IdP)
 9. Test-Schichten: Unit, `@QuarkusTest`, BDD Tag-Routing, Vitest, Coverage-Gate
-10. CI, Release-Pipeline (deploy.yml, FLY_API_TOKEN-Secret), Fly.io-App + Neon-DB, Dependabot
+10. CI, Release-Pipeline (release.yml → ghcr.io-Images), Heim-Server-Deployment (docker-compose), Fly-Login-Proxy für Remote, Dependabot
