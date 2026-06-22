@@ -1,6 +1,7 @@
-# Tuya/Midea-Sidecar – kleiner Python-HTTP-Dienst (siehe sidecar.py).
-# Liest Tuya-3.4/3.5- und Midea/NetHome-Plus-Geräte im LAN; vom Quarkus-Backend genutzt.
-FROM python:3.12-slim
+# Tuya/Midea/Gecko-Sidecar – kleiner Python-HTTP-Dienst (siehe sidecar.py).
+# Liest Tuya-3.4/3.5-, Midea/NetHome-Plus- und Gecko-Geräte im LAN; vom Backend genutzt.
+# Python 3.13+ nötig: geckolib 1.0.x verlangt >=3.13.
+FROM python:3.13-slim
 
 WORKDIR /app
 COPY requirements.txt ./
