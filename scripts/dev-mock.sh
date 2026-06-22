@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# Lokaler Entwicklungs-Start: fährt alle Begleitdienste hoch und startet Quarkus dev.
+# Lokaler Entwicklungs-Start im MOCK-Modus – läuft ohne Heimnetz/Geräte.
 #
-#   bash scripts/dev.sh            # echte Geräte (Profil dev,live) – Standard
-#   bash scripts/dev.sh --mock     # nur Mocks (Profil dev), ohne Sidecar/go2rtc
+#   bash scripts/dev-mock.sh          # nur Mocks (Standard) – kein Sidecar/go2rtc
+#   bash scripts/dev-mock.sh --real   # echte Geräte (Profil dev,live) + Sidecar + go2rtc
 #
-# Startet:
-#   - Tuya/Gecko/Midea-Sidecar (Python venv) auf :8765
-#   - go2rtc-Kamera-Gateway (Docker) auf :1984/:8555  (falls Config vorhanden)
-#   - Quarkus dev (Backend :8080 + Angular-Dev-Server :4200) im Vordergrund
+# Mock-Modus (Standard):
+#   Quarkus dev (Backend :8080 + Angular-Dev-Server :4200), Profil dev, aber mit
+#   erzwungenem smarthome.real-devices=false und neutralisierten Geräte-URLs –
+#   damit eine lokale config/application.properties (die %dev evtl. auf echte
+#   Geräte stellt) NICHT durchschlägt und nichts ins LAN funkt.
 #
-# Strg+C beendet Quarkus und räumt Sidecar + go2rtc wieder auf.
+# --real: zusätzlich Sidecar (:8765) und go2rtc-Gateway (:1984/:8555) für den
+#   Betrieb im Heimnetz. Strg+C beendet Quarkus und räumt die Dienste wieder auf.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$HERE"
 
-MOCK=0
-[[ "${1:-}" == "--mock" ]] && MOCK=1
+REAL=0
+[[ "${1:-}" == "--real" ]] && REAL=1
 
 VENV_PY="$HERE/.tuya-venv/bin/python"
 SIDECAR="$HERE/tools/tuya-sidecar/sidecar.py"
@@ -38,17 +40,28 @@ cleanup() {
     echo "    go2rtc-Container gestoppt."
   fi
 }
-trap cleanup EXIT INT TERM
 
-# Hält einen Port schon ein Dienst belegt? (dann nicht doppelt starten)
+# Hält ein Dienst den Port schon? (dann nicht doppelt starten)
 port_busy() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 
-if [[ $MOCK -eq 1 ]]; then
-  echo "==> Mock-Modus: nur Quarkus (Profil dev), keine Begleitdienste."
-  exec ./mvnw quarkus:dev -Dquarkus.profile=dev
+# --- MOCK (Standard) -------------------------------------------------------
+if [[ $REAL -eq 0 ]]; then
+  echo "==> Mock-Modus: Quarkus dev ohne echte Geräte (kein Heimnetz nötig)."
+  echo "    Strg+C beendet."
+  echo
+  # real-devices und Geräte-URLs hart auf Mock/ungültig zwingen – sticht eine
+  # lokale config/application.properties, die %dev auf echte Geräte stellen würde.
+  exec ./mvnw quarkus:dev -Dquarkus.profile=dev \
+    -Dsmarthome.real-devices=false \
+    -Dsmarthome.fronius.enabled=false \
+    -Denergy.fronius.base-url=http://fronius.invalid \
+    -Denergy.smartfox.base-url=http://smartfox.invalid \
+    -Dbattery.smartfox.relay-url=http://smartfox.invalid/setswrel.cgi
 fi
 
-# --- 1) Sidecar (Tuya 3.4/3.5, Gecko, Midea) -------------------------------
+# --- REAL: Begleitdienste + echte Geräte -----------------------------------
+trap cleanup EXIT INT TERM
+
 echo "==> 1/3 Sidecar (:8765)"
 if port_busy 8765; then
   echo "    Port 8765 bereits belegt – nutze laufenden Sidecar."
@@ -62,7 +75,6 @@ else
   echo "          venv anlegen:  python3 -m venv .tuya-venv && .tuya-venv/bin/pip install -r tools/tuya-sidecar/requirements.txt"
 fi
 
-# --- 2) go2rtc-Kamera-Gateway (Docker) -------------------------------------
 echo "==> 2/3 go2rtc-Kamera-Gateway (:1984/:8555)"
 if port_busy 1984; then
   echo "    Port 1984 bereits belegt – nutze laufendes go2rtc."
@@ -80,8 +92,7 @@ else
   echo "    go2rtc-Container gestartet."
 fi
 
-# --- 3) Quarkus dev (Vordergrund) ------------------------------------------
-echo "==> 3/3 Quarkus dev (Backend :8080, Angular :4200) – Profil dev,live"
+echo "==> 3/3 Quarkus dev (Backend :8080, Angular :4200) – Profil dev,live (echte Geräte)"
 echo "    Strg+C beendet alles."
 echo
 ./mvnw quarkus:dev -Dquarkus.profile=dev,live

@@ -34,20 +34,24 @@ die Glocke oben rechts ist die Nachrichtenzentrale für Geräte-Meldungen.
 - Im `%dev`/`%test`-Profil sind **Mock-Quellen** aktiv – alles läuft sofort ohne
   Geräte. PostgreSQL kommt über Dev Services (Container-Runtime nötig).
 
-## Lokaler Start mit echten Geräten
+## Lokaler Start
 
-`scripts/dev.sh` fährt alle Begleitdienste hoch und startet Quarkus dev – Strg+C
-beendet und räumt wieder auf:
+`scripts/dev-mock.sh` startet Quarkus dev – im Mock-Modus (Standard) ganz ohne
+Heimnetz, oder mit echten Geräten samt Begleitdiensten. Strg+C beendet alles.
 
 ```bash
-bash scripts/dev.sh          # Sidecar (:8765) + go2rtc (:1984) + Quarkus (dev,live)
-bash scripts/dev.sh --mock   # nur Quarkus mit Mocks (ohne Begleitdienste)
+bash scripts/dev-mock.sh          # nur Mocks – läuft überall, kein Heimnetz nötig
+bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Geräte (dev,live)
 ```
 
-- **Sidecar** (Python venv): Tuya 3.4/3.5, Gecko, Midea – einmalig anlegen:
+- **Mock (Standard):** erzwingt `smarthome.real-devices=false` und neutralisiert die
+  Geräte-URLs – sticht auch eine lokale `config/application.properties`, die `%dev`
+  auf echte Geräte stellen würde. So funkt unterwegs nichts ins (nicht erreichbare) LAN.
+- **`--real`** (im Heimnetz): startet zusätzlich den **Sidecar** (Python venv: Tuya
+  3.4/3.5, Gecko, Midea) und das **go2rtc**-Kamera-Gateway (Docker, braucht
+  `deploy/go2rtc/go2rtc.yaml`). Schon laufende Dienste werden erkannt und nicht
+  doppelt gestartet. venv einmalig anlegen:
   `python3 -m venv .tuya-venv && .tuya-venv/bin/pip install -r tools/tuya-sidecar/requirements.txt`
-- **go2rtc** (Docker): Kamera-Gateway, braucht `deploy/go2rtc/go2rtc.yaml` (siehe Kameras).
-- Schon laufende Dienste werden erkannt und nicht doppelt gestartet.
 
 ## Use Cases
 
