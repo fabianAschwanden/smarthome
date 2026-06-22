@@ -7,20 +7,29 @@ den N95, 5 Jahre Support). Alternative: **Debian 13 „trixie"** (schlanker, gle
 Auf dem Server wird **nur Docker** gebraucht – Backend (Quarkus) und Frontend (Angular)
 werden im Container gebaut. Du brauchst also kein Java/Node/Maven zu installieren.
 
-## Kurzfassung (der schnelle Weg)
+> **Schritt-für-Schritt-Erstinstallation** (Ubuntu 26.04 + vorgebaute ghcr-Images +
+> Remote-Zugang): siehe **[`INSTALL.md`](INSTALL.md)** – der empfohlene, aktuelle Weg
+> (kein langer Build auf dem Mini-PC). Dieses Dokument hier ist die Referenz/Hintergrund.
 
-1. Ubuntu Server 26.04 vom USB-Stick installieren (SSH aktivieren).
-2. Einloggen, Repo klonen, **ein Skript** ausführen:
+## Kurzfassung (zwei Wege)
 
-   ```bash
-   git clone https://github.com/fabianAschwanden/smarthome.git
-   cd smarthome
-   bash scripts/bootstrap.sh 192.168.1.0/24   # dein LAN-CIDR
-   ```
+**A) Vorgebaute Releases ziehen (empfohlen, schnell):**
+```bash
+git clone https://github.com/fabianAschwanden/smarthome.git
+cd smarthome
+sudo bash scripts/server-provision.sh 192.168.1.0/24   # Docker/Firewall/wireguard
+# config/application.properties + deploy/.env ausfüllen (siehe INSTALL.md)
+bash scripts/server-update.sh                          # zieht ghcr-Images, startet
+```
 
-3. Dashboard öffnen: `http://<server-ip>:8080`
+**B) Lokal im Container bauen (kein ghcr nötig, erster Build dauert auf dem N95):**
+```bash
+git clone https://github.com/fabianAschwanden/smarthome.git
+cd smarthome
+bash scripts/bootstrap.sh 192.168.1.0/24
+```
 
-Der Rest dieses Dokuments erklärt die Schritte im Detail und den Betrieb.
+Dashboard öffnen: `http://<server-ip>:8080`. Der Rest dieses Dokuments erklärt Details und Betrieb.
 
 ---
 

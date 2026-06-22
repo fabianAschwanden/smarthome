@@ -16,7 +16,8 @@ echo "==> System aktualisieren"
 apt-get update -y && apt-get upgrade -y
 
 echo "==> Basis-Pakete"
-apt-get install -y ca-certificates curl gnupg ufw unattended-upgrades chrony
+# wireguard-tools für den optionalen Fly-Remote-Tunnel (siehe docs/remote/SETUP.md).
+apt-get install -y ca-certificates curl gnupg ufw unattended-upgrades chrony wireguard-tools
 
 echo "==> Zeitzone"
 timedatectl set-timezone Europe/Zurich || true
