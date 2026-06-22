@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -41,9 +42,14 @@ class HexagonalArchitectureTest {
                 .layer("domain").definedBy("..domain..")
                 .layer("application").definedBy("..application..")
                 .layer("adapter").definedBy("..adapter..")
+                // 'support' = geteilte, framework-nahe Helfer (z. B. Tuya-Protokoll). Nur Adapter
+                // dürfen sie nutzen – so bleibt das innere Hexagon (domain/application) frei davon.
+                .layer("support").definedBy("..support..")
                 .whereLayer("adapter").mayNotBeAccessedByAnyLayer()
                 .whereLayer("application").mayOnlyBeAccessedByLayers("adapter")
-                .whereLayer("domain").mayOnlyBeAccessedByLayers("application", "adapter")
+                // support darf die Domäne nutzen (wie ein Adapter), domain/application aber nicht support.
+                .whereLayer("domain").mayOnlyBeAccessedByLayers("application", "adapter", "support")
+                .whereLayer("support").mayOnlyBeAccessedByLayers("adapter")
                 .because("adapter -> application -> domain ist unverhandelbar (Blueprint §3.2)")
                 .check(CLASSES);
     }
@@ -72,6 +78,45 @@ class HexagonalArchitectureTest {
                 .that().resideOutsideOfPackage("..adapter.out.persistence..")
                 .should().dependOnClassesThat().areAnnotatedWith(jakarta.persistence.Entity.class)
                 .because("JPA-Entities leben ausschliesslich im Persistence-Adapter (Blueprint §4)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void domaenenmodelle_sind_records_oder_enums() {
+        classes()
+                .that().resideInAPackage("..domain.model..")
+                .should().beRecords()
+                .orShould().beEnums()
+                .because("Domänen-Modelle sind reine records (Werte) bzw. enums (Blueprint §3.2/§4)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void ports_sind_interfaces() {
+        classes()
+                .that().resideInAPackage("..domain.port..")
+                .and().areTopLevelClasses()                       // verschachtelte Wert-records (Reading/State) sind ok
+                .and().areNotAssignableTo(RuntimeException.class) // Fachfehler (NotFound/Unavailable) sind Exceptions
+                .should().beInterfaces()
+                .because("Ports sind Interfaces; nur Fach-Exceptions dürfen Klassen sein (Blueprint §3.3)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void keine_field_injection() {
+        noFields()
+                .should().beAnnotatedWith(jakarta.inject.Inject.class)
+                .because("ausschliesslich Konstruktor-Injection (Blueprint §4)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void application_services_sind_application_scoped() {
+        classes()
+                .that().resideInAPackage("..application.service..")
+                .and().areNotNestedClasses()
+                .should().beAnnotatedWith(jakarta.enterprise.context.ApplicationScoped.class)
+                .because("Application Services sind CDI-Beans mit @ApplicationScoped (Blueprint §4)")
                 .check(CLASSES);
     }
 }

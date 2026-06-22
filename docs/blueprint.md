@@ -17,15 +17,15 @@ Eine einzelne Maven-Modul-Einheit enthält Backend und Frontend. Das Quarkus-Bac
 | Bereich | Wahl | Version |
 |---|---|---|
 | Sprache | Java | 25 (`maven.compiler.release`) |
-| Framework | Quarkus (`quarkus-bom`) | 3.35.x |
+| Framework | Quarkus (`quarkus-bom`) | 3.36.x |
 | REST | `quarkus-rest` + `quarkus-rest-jackson` (JAX-RS, reaktiv) | — |
 | Persistenz-ORM | Hibernate ORM mit Panache | — |
 | Datenbank | PostgreSQL (`quarkus-jdbc-postgresql`) | — |
 | Schema-Migration | Liquibase (`quarkus-liquibase`) | — |
 | Validierung | Hibernate Validator | — |
-| Messaging | Kafka über SmallRye Reactive Messaging | — |
-| Auth | OIDC (`quarkus-oidc`) gegen Keycloak | — |
-| Object-Storage | S3-kompatibel (`quarkus-amazon-s3`), Dev über LocalStack | — |
+| Messaging | Kafka über SmallRye Reactive Messaging | *Template-Option, in dieser App nicht genutzt* |
+| Auth | OIDC (`quarkus-oidc`) gegen einen OIDC-IdP | — |
+| Object-Storage | S3-kompatibel (`quarkus-amazon-s3`), Dev über LocalStack | *Template-Option, in dieser App nicht genutzt* |
 | Scheduling | `quarkus-scheduler` | — |
 | API-Doku | `quarkus-smallrye-openapi` (+ Swagger-UI) | — |
 | Health | `quarkus-smallrye-health` | — |
@@ -49,14 +49,14 @@ Plain SPA, keine PWA.
 
 | Ebene | Werkzeug |
 |---|---|
-| Backend Unit | JUnit 5 + Mockito |
+| Backend Unit | JUnit 5 (alle Backend-Tests als `@QuarkusTest`, siehe Hinweis); `quarkus-junit5-mockito` verfügbar, aktuell ungenutzt |
 | Backend REST/Integration | `@QuarkusTest` + REST-assured, gegen Dev Services |
-| Backend BDD | Cucumber (`quarkus-cucumber`) — Java-Runner |
-| Architektur-Invarianten | ArchUnit |
+| Backend BDD | Cucumber (`quarkus-cucumber`) — *Template-Option, in dieser App nicht eingerichtet* |
+| Architektur-Invarianten | ArchUnit (9 Regeln, siehe §3.4) |
 | Frontend Unit/Component | Vitest |
-| Frontend E2E / BDD | Playwright (+ Cucumber.js) |
+| Frontend E2E | Playwright (`webapp/e2e/`); Cucumber.js *Template-Option, nicht eingerichtet* |
 | Coverage-Gate | JaCoCo (`jacoco:check`), min. **0.70** Line-Coverage |
-| Auth-Tests | `quarkus-test-security` (Identitäten stubben), `quarkus-test-keycloak-server` (Real-OIDC-Smoke-Test) |
+| Auth-Tests | `quarkus-test-security` (Identitäten stubben); `quarkus-test-keycloak-server` *Template-Option, nicht eingerichtet* |
 
 > **Coverage zählt nur aus `@QuarkusTest`-Läufen.** Das Gate misst `jacoco-quarkus.exec`
 > (quarkus-jacoco) – reine JUnit-Tests OHNE `@QuarkusTest` werden NICHT erfasst, selbst
@@ -73,7 +73,7 @@ Plain SPA, keine PWA.
 | Bereich | Wahl |
 |---|---|
 | Build | Maven (mvnw) + npm (über Quinoa) |
-| Container | Multi-Stage `Dockerfile.jvm` (`eclipse-temurin:25`); `quarkus-container-image-docker` |
+| Container | Multi-Stage `deploy/Dockerfile` (`eclipse-temurin:25`, baut Backend + Frontend); Sidecar `tools/tuya-sidecar/Dockerfile` |
 | CI | GitHub Actions (ubuntu-latest) |
 | Release | Tag (`v*`) → GitHub Actions baut App- + Sidecar-Image und pusht nach ghcr.io |
 | Deployment | Heim-Server (Linux-Host im LAN) via docker-compose, zieht die ghcr-Images; Remote-Zugang über Fly-Login-Proxy + WireGuard |
@@ -99,10 +99,16 @@ Hexagonal definiert, *wo* Code lebt; DDD Tactical Design definiert, *welche Form
 │   └── service/               # Application Services — orchestrieren Use Cases, Transaktionsgrenze
 └── adapter/
     ├── in/
-    │   └── rest/              # Driving Adapter (JAX-RS Resources)
-    │       └── dto/           # Transport-Objekte der REST-Schicht
+    │   ├── rest/              # Driving Adapter (JAX-RS Resources)
+    │   │   └── dto/           # Transport-Objekte der REST-Schicht
+    │   ├── gateway/           # weitere Driving Adapter (z. B. Vert.x-Reverse-Proxy)
+    │   └── security/          # OIDC-Rollen-Mapping am Auth-Boundary
     └── out/
-        └── persistence/       # Driven Adapter (JPA-Entities, Panache-Repositories)
+        ├── persistence/       # Driven Adapter (JPA-Entities, Panache-Repositories)
+        └── <device>/          # Geräte-Adapter: mock / local / pending je Slice
+
+support/                       # geteilte, framework-nahe Helfer (z. B. Tuya-LAN-Protokoll);
+                               # nur von Adaptern genutzt, nie von domain/application
 ```
 
 ### 3.2 Abhängigkeitsregel (unverhandelbar)
@@ -126,7 +132,13 @@ Regeln: Aggregate per ID referenzieren, nie per Objektreferenz · ganze Aggregat
 
 ### 3.4 Architektur-Invarianten erzwingen (ArchUnit)
 
-Ein ArchUnit-Test bricht den Build bei Schichtverletzungen (Framework-Import in `domain/`, `application/` greift auf Adapter zu, Persistence-Adapter referenziert anderen Adapter, REST-DTOs ausserhalb `adapter/in/rest/dto/`). Architektur, die nicht getestet wird, erodiert.
+Ein ArchUnit-Test (`HexagonalArchitectureTest`, 9 Regeln) bricht den Build bei
+Architektur-Verletzungen. Geprüft werden: Framework-Import in `domain/`; die Schichtenregel
+`adapter → application → domain` (inkl. `support` nur durch Adapter nutzbar); Adapter
+referenzieren einander nicht; REST-DTOs nur in `adapter/in/rest/dto/`; JPA-Entities nur im
+Persistence-Adapter; `domain/model` enthält nur `records`/`enums`; Ports sind Interfaces (ausser
+Fach-Exceptions); ausschliesslich Konstruktor-Injection (kein Feld-`@Inject`); Application
+Services sind `@ApplicationScoped`. Architektur, die nicht getestet wird, erodiert.
 
 ## 4. Backend-Konventionen (Java)
 
@@ -151,7 +163,8 @@ Standalone Components (nie NgModules; `standalone: true` nicht setzen) · Signal
 
 - **Liquibase besitzt das Schema** (`migrate-at-start=true`); Hibernate läuft im `validate`-Modus.
 - Migrationen append-only & unveränderlich; jede Änderung = neue Migration + Change-Log-Eintrag.
-- **Dev Services** starten PostgreSQL, Kafka, Keycloak, LocalStack automatisch (Container-Runtime nötig).
+- **Dev Services** starten PostgreSQL automatisch (Container-Runtime nötig). Kafka/Keycloak/LocalStack
+  sind Template-Optionen und in dieser App nicht aktiv (Keycloak-DevServices explizit aus).
 - **JSONB-Snapshots** für eingebettete, versionierte Wertobjekte; Persistenz-Modell = Domänen-record. Feldänderungen erfordern schema-bewusste Daten-Migration.
 - DB-Spalten: `snake_case`.
 
@@ -168,18 +181,28 @@ Kafka als Event-Backbone (SmallRye Reactive Messaging). Domain Events nach dem P
 - **Row-Level-Security serverseitig** aus der authentifizierten Identität, nie aus dem Request-Body.
 - Security-Header in Prod (CSP, Referrer-Policy, Permissions-Policy).
 
+> **Stand in dieser App:** `IdpRoleMappingAugmentor` ist vorhanden; die Autorisierung ist
+> path-basiert (`%prod`/`%fly`: alles unter `/*` erfordert Authentifizierung, Health offen).
+> Rollenbasierte `@RolesAllowed`-Endpunkte und Row-Level-Security sind als Template-Muster
+> beschrieben, aber (Single-User-Heim-App) noch nicht ausprogrammiert. Der Remote-Zugang
+> erzwingt den Login zusätzlich am Fly-Proxy (oauth2-proxy, siehe `docs/remote/SETUP.md`).
+
 ## 9. Konfiguration & Profile
 
 | Profil | Zweck |
 |---|---|
-| `%dev` | Frontend-Dev-Server, Dev Services, Auth aus |
-| `%test` | zufälliger HTTP-Port, kein Frontend-Dev-Server, Auth aus, Messaging In-Memory |
-| `%prod` | Auth an, explizite DB-URL, Security-Header |
-| `%<idp>` (optional) | OIDC gegen echten IdP, additiv kombinierbar (`-Dquarkus.profile=dev,<idp>`) |
+| `%dev` | Frontend-Dev-Server, Dev Services, Auth aus, Mock-Geräte (Default) |
+| `%test` | zufälliger HTTP-Port, kein Frontend-Dev-Server, Auth aus, Mock-Geräte |
+| `%live` | additiv zu `%dev`: echte Geräte im LAN (`-Dquarkus.profile=dev,live`), Auth aus |
+| `%lan` | Heimbetrieb auf dem Linux-Server (docker-compose): echte Geräte, Auth aus, DB per Env |
+| `%prod` / `%fly` | Cloud/Produktion: Auth an (OIDC), explizite DB-URL, Security-Header |
+
+Geräte real vs. Mock steuert die Build-Property `smarthome.real-devices` (siehe §10 zu
+`@IfBuildProperty`). App-spezifisch; das generische Template kennt nur `%dev/%test/%prod/%<idp>`.
 
 ## 10. Test-Strategie
 
-Unit (Domäne + Application Services, Ports gemockt, kein Container) · `@QuarkusTest` gegen Dev Services · BDD mit Tag-Routing (eine `.feature`, Java-Cucumber vs. Playwright/Cucumber.js; `@Pending` statt still überspringen) · Verhalten testen, nicht Implementierung · ArchUnit- und Konsistenz-Tests in der Suite · geteilte Test-DB: keine positions-/zählungsabhängigen Assertions auf Fremddaten, dedizierte Fixtures, Zeitbezüge relativ · Real-OIDC-Smoke-Test gegen echten Keycloak.
+Domäne + Application Services mit handgeschriebenen Fake-Ports (kein Mockito nötig) · REST über `@QuarkusTest` + REST-assured gegen Dev Services · **alle Backend-Tests tragen `@QuarkusTest`**, da nur diese ins Coverage-Gate zählen (siehe Hinweis in §2 Test & Qualität) · Geräte-Adapter mit echtem I/O werden direkt instanziiert und gegen lokale Fake-Server getestet (kein echtes Gerät) · Verhalten testen, nicht Implementierung · ArchUnit-Regeln in der Suite · Zeitbezüge über `Clock` injizierbar/relativ · BDD (Cucumber) und Real-OIDC-Smoke-Test sind Template-Optionen, hier nicht eingerichtet.
 
 ## 11. CI/CD & Betrieb
 
