@@ -68,6 +68,7 @@ bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Ger
 | 9 | **Sicherheit** | Tuya-Rauchmelder: Alarm + Batterie, Nachrichtenzentrale | [safety](docs/safety/SPEC.md) |
 | 10 | **Wetter** | Vorhersage (Open-Meteo, kein API-Key) | [weather](docs/weather/SPEC.md) |
 | 11 | **Kameras** | Live-Stream im Dashboard (RTSP→WebRTC über go2rtc) | [camera](docs/camera/SPEC.md) |
+| 12 | **Alerts** | Push aufs Handy bei kritischem Alarm (Rauchalarm) über ntfy.sh | [alert](docs/alert/SPEC.md) |
 | – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
 
 **Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind

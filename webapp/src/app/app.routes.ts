@@ -37,4 +37,8 @@ export const routes: Routes = [
     path: 'cameras',
     loadComponent: () => import('./features/camera/camera-page').then((m) => m.CameraPage),
   },
+  {
+    path: 'settings',
+    loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+  },
 ];
