@@ -6,16 +6,23 @@
 #   bash scripts/server-update.sh
 #
 # Macht der Reihe nach:
-#   1. git pull        – neuester Release-Stand vom Repo (origin/main)
+#   1. git pull        – aktuelle Compose-/Config-Dateien vom Repo (origin/main)
 #   2. Konfiguration   – deploy/.env und config/application.properties sicherstellen
 #   3. Fly-Tunnel      – WireGuard (wg-quick@fly) aktiv? sonst aktivieren
-#   4. docker compose  – app + sidecar + go2rtc + db neu bauen und starten
+#   4. docker compose  – vorgebaute ghcr-Images ziehen (pull) und starten
+#
+# Die App-/Sidecar-Images kommen als versioniertes Release aus der GitHub Container
+# Registry (ghcr.io) – kein lokaler Build. Die gewünschte Version steuert IMAGE_TAG
+# in deploy/.env ('latest' oder z. B. 1.2.0).
 #
 # Voraussetzungen (einmalig, siehe docs/server/SETUP.md & docs/remote/SETUP.md):
 #   - Docker + docker compose installiert
 #   - /etc/wireguard/fly.conf eingerichtet (flyctl wireguard create ... > fly.conf)
 #   - config/application.properties mit den echten Geräte-Daten gefüllt
+#   - bei privatem Repo: docker login ghcr.io (sonst sind die Images öffentlich lesbar)
 set -euo pipefail
+
+COMPOSE="docker-compose.release.yml"
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$HERE"
@@ -66,16 +73,20 @@ else
   echo "    Tunnel gestartet."
 fi
 
-echo "==> 4/4 Container bauen und starten (erster Build dauert ein paar Minuten)"
+echo "==> 4/4 Release-Images ziehen und starten"
 cd "$HERE/deploy"
 # go2rtc nur starten, wenn eine Kamera-Config vorhanden ist (sonst würde der Container failen).
 if [[ -f go2rtc/go2rtc.yaml ]]; then
-  sudo docker compose up -d --build
+  SERVICES=""
 else
   echo "    Hinweis: deploy/go2rtc/go2rtc.yaml fehlt – starte ohne Kamera-Gateway."
   echo "             (Vorlage: cp deploy/go2rtc/go2rtc.example.yaml deploy/go2rtc/go2rtc.yaml)"
-  sudo docker compose up -d --build db sidecar app
+  SERVICES="db sidecar app"
 fi
+sudo docker compose -f "$COMPOSE" pull $SERVICES
+sudo docker compose -f "$COMPOSE" up -d $SERVICES
+# Alte, nicht mehr referenzierte Images aufräumen (hält die Platte schlank).
+sudo docker image prune -f >/dev/null 2>&1 || true
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo

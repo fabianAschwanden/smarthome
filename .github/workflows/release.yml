@@ -1,0 +1,70 @@
+name: Release
+
+# Versionierte Container-Releases: bei einem Git-Tag v* werden App- und Sidecar-Image
+# gebaut und in die GitHub Container Registry (ghcr.io) gepusht. Der Heim-Server zieht
+# sie dann per `docker compose pull` (kein lokaler Build nötig).
+#
+#   git tag v1.2.0 && git push origin v1.2.0
+#
+# Images:
+#   ghcr.io/<owner>/smarthome:<version>          + :latest
+#   ghcr.io/<owner>/smarthome-sidecar:<version>  + :latest
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  images:
+    name: Build & push images (ghcr.io)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # owner kleingeschrieben (ghcr verlangt lowercase) + Version aus dem Tag.
+      - name: Compute image metadata
+        id: meta
+        run: |
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push sidecar image
+        uses: docker/build-push-action@v6
+        with:
+          context: tools/tuya-sidecar
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome-sidecar:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome-sidecar:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

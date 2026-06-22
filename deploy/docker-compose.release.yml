@@ -1,0 +1,64 @@
+# Heim-Server-Deployment mit VORGEBAUTEN Images aus der GitHub Container Registry.
+# Selbstständige Compose-Datei (kein lokaler Build) – der Server zieht die Images nur.
+#
+#   cd deploy
+#   docker compose -f docker-compose.release.yml pull
+#   docker compose -f docker-compose.release.yml up -d
+#
+# Version & Owner über deploy/.env:
+#   IMAGE_OWNER=fabianaschwanden     (GitHub-Owner, kleingeschrieben)
+#   IMAGE_TAG=latest                 (oder konkrete Version, z. B. 1.2.0)
+#   DB_PASSWORD=...
+#
+# Host-Netzwerk wie in docker-compose.yml (Tuya-UDP-Broadcast braucht es).
+
+services:
+  db:
+    image: postgres:18
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smarthome
+      POSTGRES_USER: smarthome
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U smarthome']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sidecar:
+    image: ghcr.io/${IMAGE_OWNER}/smarthome-sidecar:${IMAGE_TAG:-latest}
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8765
+
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml:ro
+
+  app:
+    image: ghcr.io/${IMAGE_OWNER}/smarthome:${IMAGE_TAG:-latest}
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - db
+      - sidecar
+    environment:
+      QUARKUS_PROFILE: lan
+      DB_URL: jdbc:postgresql://localhost:5432/smarthome
+      DB_USERNAME: smarthome
+      DB_PASSWORD: ${DB_PASSWORD}
+      SMARTHOME_TUYA_SIDECAR_URL: http://localhost:8765
+    volumes:
+      - ../config:/app/config:ro
+
+volumes:
+  db-data:

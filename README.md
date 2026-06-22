@@ -127,17 +127,32 @@ cp config/application.properties.example config/application.properties   # ausf�
 cd deploy && cp .env.example .env && docker compose up -d --build
 ```
 
-**Update + Start in einem Befehl** (holt den neuesten Stand, sichert den Fly-Tunnel,
-baut + startet App, Sidecar und go2rtc):
+**Update + Start in einem Befehl** (zieht das neueste Release aus der GitHub Container
+Registry, sichert den Fly-Tunnel, startet App, Sidecar und go2rtc):
 
 ```bash
 bash scripts/server-update.sh
 ```
 
-Das Skript ist idempotent: `git pull` (origin/main), `deploy/.env` und
-`config/application.properties` werden bei Bedarf aus der Vorlage erstellt, der
-WireGuard-Tunnel (`wg-quick@fly`) wird aktiviert falls nötig, dann `docker compose
-up -d --build`. Für regelmässige Updates einfach erneut ausführen.
+Das Skript ist idempotent: `git pull` (für aktuelle Compose-/Config-Dateien),
+`deploy/.env` und `config/application.properties` werden bei Bedarf aus der Vorlage
+erstellt, der WireGuard-Tunnel (`wg-quick@fly`) wird aktiviert falls nötig, dann
+`docker compose -f docker-compose.release.yml pull` + `up -d`. Für Updates einfach
+erneut ausführen. Die Version steuert `IMAGE_TAG` in `deploy/.env` (`latest` oder
+z. B. `1.2.0`).
+
+### Versionierte Releases (ghcr.io)
+
+Ein Git-Tag `v*` baut über GitHub Actions ([`release.yml`](.github/workflows/release.yml))
+die Images und pusht sie nach `ghcr.io/<owner>/smarthome[-sidecar]`:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0     # baut + veröffentlicht das Release
+```
+
+Der Server zieht sie dann per `scripts/server-update.sh` (bzw. direkt
+`docker compose -f deploy/docker-compose.release.yml pull && … up -d`). Die
+build-basierte `deploy/docker-compose.yml` bleibt für den lokalen Build erhalten.
 
 Details, Voraussetzungen und Provisioning: [`docs/server/SETUP.md`](docs/server/SETUP.md).
 Hinweis: NETGEAR ReadyNAS hat kein brauchbares Docker → kleiner Mini-PC/Raspberry Pi
