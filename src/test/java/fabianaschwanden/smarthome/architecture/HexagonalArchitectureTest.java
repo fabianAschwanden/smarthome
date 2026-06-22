@@ -85,6 +85,7 @@ class HexagonalArchitectureTest {
     void domaenenmodelle_sind_records_oder_enums() {
         classes()
                 .that().resideInAPackage("..domain.model..")
+                .and().areTopLevelClasses()                 // synthetische switch-/anonyme Klassen ($1) ausnehmen
                 .should().beRecords()
                 .orShould().beEnums()
                 .because("Domänen-Modelle sind reine records (Werte) bzw. enums (Blueprint §3.2/§4)")
