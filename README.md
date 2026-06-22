@@ -127,6 +127,18 @@ cp config/application.properties.example config/application.properties   # ausf�
 cd deploy && cp .env.example .env && docker compose up -d --build
 ```
 
+**Update + Start in einem Befehl** (holt den neuesten Stand, sichert den Fly-Tunnel,
+baut + startet App, Sidecar und go2rtc):
+
+```bash
+bash scripts/server-update.sh
+```
+
+Das Skript ist idempotent: `git pull` (origin/main), `deploy/.env` und
+`config/application.properties` werden bei Bedarf aus der Vorlage erstellt, der
+WireGuard-Tunnel (`wg-quick@fly`) wird aktiviert falls nötig, dann `docker compose
+up -d --build`. Für regelmässige Updates einfach erneut ausführen.
+
 Details, Voraussetzungen und Provisioning: [`docs/server/SETUP.md`](docs/server/SETUP.md).
 Hinweis: NETGEAR ReadyNAS hat kein brauchbares Docker → kleiner Mini-PC/Raspberry Pi
 (4 GB+ empfohlen) als Host.
