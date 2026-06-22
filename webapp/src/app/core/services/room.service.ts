@@ -1,4 +1,4 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { TuyaService } from './tuya.service';
 import { ClimateService } from './climate.service';
 import { ApplianceService } from './appliance.service';
@@ -43,4 +43,29 @@ export class RoomService {
     }
     return [...rooms].sort((a, b) => a.localeCompare(b, 'de'));
   });
+
+  /**
+   * Aktiver Raumfilter; {@code null} = "Alle" (alles sichtbar, aktiver Raum nur
+   * hervorgehoben). Ein konkreter Raum filtert die Seiten hart auf diesen Raum.
+   * Geteilt zwischen App-Shell (Raum-Chips) und den Seiten (z. B. Dashboard).
+   */
+  private readonly activeRoomState = signal<string | null>(null);
+  readonly activeRoom = this.activeRoomState.asReadonly();
+
+  /** Raum wählen ({@code null} = "Alle"). Ein bereits aktiver Raum wird abgewählt. */
+  select(room: string | null): void {
+    this.activeRoomState.update((cur) => (cur === room ? null : room));
+  }
+
+  /**
+   * Soll eine Kachel mit diesem Raum angezeigt werden? Bei "Alle" (oder raumlosen
+   * Items) immer; sonst nur, wenn der Raum dem aktiven entspricht.
+   */
+  shows(room: string | null | undefined): boolean {
+    const active = this.activeRoomState();
+    if (active === null) {
+      return true;
+    }
+    return room === active;
+  }
 }

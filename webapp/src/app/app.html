@@ -182,10 +182,19 @@
       <router-outlet />
     </main>
 
-    <!-- Raum-Tabs (automatisch aus den konfigurierten Geräten): mobil horizontal scrollbar -->
+    <!-- Raum-Tabs (automatisch aus den konfigurierten Geräten): filtert die Seiten.
+         "Alle" zeigt alles; ein Raum filtert hart. Mobil horizontal scrollbar. -->
     @if (rooms().length > 0) {
       <div class="mt-5 flex justify-center overflow-x-auto sm:mt-6">
         <div class="glass flex items-center gap-1 rounded-full p-1.5">
+          <button
+            type="button"
+            class="seg shrink-0 px-4 py-2 text-sm sm:px-5"
+            [attr.data-active]="activeRoom() === null"
+            (click)="selectRoom(null)"
+          >
+            Alle
+          </button>
           @for (room of rooms(); track room) {
             <button
               type="button"

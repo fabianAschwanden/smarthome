@@ -9,6 +9,7 @@ import { SensorService } from '../../core/services/sensor.service';
 import { SafetyService } from '../../core/services/safety.service';
 import { BatteryService } from '../../core/services/battery.service';
 import { WeatherService } from '../../core/services/weather.service';
+import { RoomService } from '../../core/services/room.service';
 import { PowerReading } from '../../core/models/energy';
 import { ClimateMode } from '../../core/models/climate';
 import { PowerToggle } from '../../shared/power-toggle';
@@ -69,46 +70,50 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
 
           <!-- Stehlampe -->
           @if (stehlampe(); as s) {
-            <article class="glass-card flex items-center justify-between gap-4 p-5">
-              <div class="flex min-w-0 items-center gap-3">
-                <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
-                <div class="min-w-0">
-                  <h3 class="truncate font-medium">{{ s.name }}</h3>
-                  <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
-                    {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
-                  </p>
+            @if (room.shows(s.room)) {
+              <article class="glass-card flex items-center justify-between gap-4 p-5">
+                <div class="flex min-w-0 items-center gap-3">
+                  <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
+                  <div class="min-w-0">
+                    <h3 class="truncate font-medium">{{ s.name }}</h3>
+                    <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                      {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <app-power-toggle
-                [on]="s.state === 'ON'"
-                [disabled]="!s.online"
-                size="lg"
-                [label]="s.name"
-                (onChange)="switchToggle(s.id, $event)"
-              />
-            </article>
+                <app-power-toggle
+                  [on]="s.state === 'ON'"
+                  [disabled]="!s.online"
+                  size="lg"
+                  [label]="s.name"
+                  (onChange)="switchToggle(s.id, $event)"
+                />
+              </article>
+            }
           }
 
           <!-- Palmenbeleuchtung -->
           @if (palme(); as s) {
-            <article class="glass-card flex items-center justify-between gap-4 p-5">
-              <div class="flex min-w-0 items-center gap-3">
-                <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
-                <div class="min-w-0">
-                  <h3 class="truncate font-medium">{{ s.name }}</h3>
-                  <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
-                    {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
-                  </p>
+            @if (room.shows(s.room)) {
+              <article class="glass-card flex items-center justify-between gap-4 p-5">
+                <div class="flex min-w-0 items-center gap-3">
+                  <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
+                  <div class="min-w-0">
+                    <h3 class="truncate font-medium">{{ s.name }}</h3>
+                    <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                      {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <app-power-toggle
-                [on]="s.state === 'ON'"
-                [disabled]="!s.online"
-                size="lg"
-                [label]="s.name"
-                (onChange)="switchToggle(s.id, $event)"
-              />
-            </article>
+                <app-power-toggle
+                  [on]="s.state === 'ON'"
+                  [disabled]="!s.online"
+                  size="lg"
+                  [label]="s.name"
+                  (onChange)="switchToggle(s.id, $event)"
+                />
+              </article>
+            }
           }
 
           <!-- Sicherheit (Rauchmelder) -->
@@ -143,68 +148,72 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         <div class="flex flex-col gap-4">
           <!-- Innentemperatur (Sensor, z. B. Küche) -->
           @if (sensor(); as s) {
-            <article class="glass-card space-y-3 p-5">
-              <header class="flex items-center justify-between">
-                <h3 class="font-medium">Innentemperatur</h3>
-                <span class="text-xs text-[color:var(--ink-faint)]">{{ s.room || s.name }}</span>
-              </header>
-              <div class="flex items-end justify-between">
-                <div>
-                  <p class="text-xs text-[color:var(--ink-soft)]">Temperatur</p>
-                  <p class="mt-0.5 text-3xl font-semibold tabular-nums">
-                    {{
-                      s.online && s.temperature > -100
-                        ? (s.temperature | number: '1.0-1') + '°'
-                        : '–'
-                    }}
-                  </p>
+            @if (room.shows(s.room)) {
+              <article class="glass-card space-y-3 p-5">
+                <header class="flex items-center justify-between">
+                  <h3 class="font-medium">Innentemperatur</h3>
+                  <span class="text-xs text-[color:var(--ink-faint)]">{{ s.room || s.name }}</span>
+                </header>
+                <div class="flex items-end justify-between">
+                  <div>
+                    <p class="text-xs text-[color:var(--ink-soft)]">Temperatur</p>
+                    <p class="mt-0.5 text-3xl font-semibold tabular-nums">
+                      {{
+                        s.online && s.temperature > -100
+                          ? (s.temperature | number: '1.0-1') + '°'
+                          : '–'
+                      }}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs text-[color:var(--ink-soft)]">Feuchte</p>
+                    <p class="mt-0.5 text-2xl font-medium">
+                      {{ s.online && s.humidity >= 0 ? s.humidity + '%' : '–' }}
+                    </p>
+                  </div>
                 </div>
-                <div class="text-right">
-                  <p class="text-xs text-[color:var(--ink-soft)]">Feuchte</p>
-                  <p class="mt-0.5 text-2xl font-medium">
-                    {{ s.online && s.humidity >= 0 ? s.humidity + '%' : '–' }}
-                  </p>
-                </div>
-              </div>
-              @if (!s.online) {
-                <p class="text-xs text-amber-300/90">⚠ Sensor nicht erreichbar.</p>
-              }
-            </article>
+                @if (!s.online) {
+                  <p class="text-xs text-amber-300/90">⚠ Sensor nicht erreichbar.</p>
+                }
+              </article>
+            }
           }
 
           <!-- Klimaanlage mit Temperatur-Kreis -->
           @if (climate(); as c) {
-            <article class="glass-card space-y-3 p-5" [class.opacity-60]="!c.online">
-              <header class="flex items-center justify-between gap-3">
-                <h3 class="truncate font-medium">{{ c.name }}</h3>
-                <app-power-toggle
-                  [on]="c.power"
-                  [disabled]="!c.online"
-                  size="lg"
-                  label="Klima ein/aus"
-                  (onChange)="climatePower($event)"
+            @if (room.shows(c.room)) {
+              <article class="glass-card space-y-3 p-5" [class.opacity-60]="!c.online">
+                <header class="flex items-center justify-between gap-3">
+                  <h3 class="truncate font-medium">{{ c.name }}</h3>
+                  <app-power-toggle
+                    [on]="c.power"
+                    [disabled]="!c.online"
+                    size="lg"
+                    label="Klima ein/aus"
+                    (onChange)="climatePower($event)"
+                  />
+                </header>
+                <app-temp-dial
+                  [target]="c.targetTemp"
+                  [current]="c.currentTemp"
+                  [label]="modeLabel(c.mode)"
+                  emphasis="current"
                 />
-              </header>
-              <app-temp-dial
-                [target]="c.targetTemp"
-                [current]="c.currentTemp"
-                [label]="modeLabel(c.mode)"
-                emphasis="current"
-              />
-              <a
-                routerLink="/climate"
-                class="block text-center text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-                >Einstellen →</a
-              >
-            </article>
+                <a
+                  routerLink="/climate"
+                  class="block text-center text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
+                  >Einstellen →</a
+                >
+              </article>
+            }
           }
         </div>
       </div>
 
       <!-- Storen über volle Breite -->
       <div class="grid gap-4">
-        <!-- Storen -->
-        @if (covers(); as list) {
+        <!-- Storen (im Raumfilter nur die des aktiven Raums) -->
+        @if (visibleCovers().length > 0) {
           <article class="glass-card space-y-3 p-5">
             <header class="flex items-center justify-between">
               <h3 class="font-medium">Storen</h3>
@@ -215,7 +224,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
               >
             </header>
             <div class="space-y-2">
-              @for (cv of list; track cv.id) {
+              @for (cv of visibleCovers(); track cv.id) {
                 <div class="flex items-center justify-between gap-3">
                   <span class="flex min-w-0 items-center gap-2.5 text-sm">
                     <app-blind-mini [closed]="cv.position < 0 ? 0 : 100 - cv.position" />
@@ -281,6 +290,8 @@ export class DashboardPage {
   private readonly safetySvc = inject(SafetyService);
   private readonly batterySvc = inject(BatteryService);
   private readonly weatherSvc = inject(WeatherService);
+  /** Raumfilter (geteilt mit der App-Shell): steuert, welche Kacheln sichtbar sind. */
+  protected readonly room = inject(RoomService);
 
   protected readonly weather = this.weatherSvc.weather;
 
@@ -333,6 +344,11 @@ export class DashboardPage {
   });
 
   protected readonly covers = this.coverSvc.covers;
+
+  /** Storen, gefiltert nach aktivem Raum (bei "Alle" alle). */
+  protected readonly visibleCovers = computed(() =>
+    (this.coverSvc.covers() ?? []).filter((cv) => this.room.shows(cv.room)),
+  );
 
   protected modeLabel(mode: ClimateMode): string {
     return CLIMATE_MODE_LABELS[mode] ?? mode;
