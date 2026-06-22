@@ -17,7 +17,7 @@ werden im Container gebaut. Du brauchst also kein Java/Node/Maven zu installiere
 ```bash
 git clone https://github.com/fabianAschwanden/smarthome.git
 cd smarthome
-sudo bash scripts/server-provision.sh 192.168.1.0/24   # Docker/Firewall/wireguard
+sudo bash scripts/server-provision.sh 192.168.113.0/24   # Docker/Firewall/wireguard
 # config/application.properties + deploy/.env ausfüllen (siehe INSTALL.md)
 bash scripts/server-update.sh                          # zieht ghcr-Images, startet
 ```
@@ -26,7 +26,7 @@ bash scripts/server-update.sh                          # zieht ghcr-Images, star
 ```bash
 git clone https://github.com/fabianAschwanden/smarthome.git
 cd smarthome
-bash scripts/bootstrap.sh 192.168.1.0/24
+bash scripts/bootstrap.sh 192.168.113.0/24
 ```
 
 Dashboard öffnen: `http://<server-ip>:8080`. Der Rest dieses Dokuments erklärt Details und Betrieb.
@@ -70,12 +70,12 @@ network:
   ethernets:
     enp1s0: # mit `ip a` den echten Namen prüfen
       dhcp4: false
-      addresses: [192.168.1.10/24]
+      addresses: [192.168.113.117/24]
       routes:
         - to: default
-          via: 192.168.1.1
+          via: 192.168.113.1   # Gateway deines Routers prüfen
       nameservers:
-        addresses: [192.168.1.1, 9.9.9.9]
+        addresses: [192.168.113.1, 9.9.9.9]
 ```
 
 ```bash
@@ -87,7 +87,7 @@ sudo netplan apply
 ```bash
 git clone https://github.com/fabianAschwanden/smarthome.git
 cd smarthome
-bash scripts/bootstrap.sh 192.168.1.0/24
+bash scripts/bootstrap.sh 192.168.113.0/24
 ```
 
 Das Skript (`scripts/bootstrap.sh` → `scripts/server-provision.sh`):

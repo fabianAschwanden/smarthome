@@ -21,12 +21,13 @@ Legende: 🖥️ = am Mini-PC (per SSH) · 💻 = an deinem Mac · ☁️ = Fly/
    Benutzer `fabian` anlegen.
 3. Stick raus, neu starten.
 
-💻 **Feste IP** am einfachsten per **DHCP-Reservierung im Router** (MAC des Servers).
-Notiere die IP, z. B. `192.168.1.10`.
+💻 **Feste IP: `192.168.113.117`** – am einfachsten per **DHCP-Reservierung im Router**
+(MAC des Servers). Liegt bewusst im selben Subnetz wie die Geräte (192.168.113.x), damit
+die Tuya-Discovery (UDP-Broadcast) ohne Subnetz-Grenzen funktioniert.
 
 💻 Einloggen:
 ```bash
-ssh fabian@192.168.1.10
+ssh fabian@192.168.113.117
 ```
 
 ---
@@ -38,13 +39,13 @@ wireguard-tools):
 ```bash
 git clone https://github.com/fabianAschwanden/smarthome.git
 cd smarthome
-sudo bash scripts/server-provision.sh 192.168.1.0/24    # dein LAN-CIDR
+sudo bash scripts/server-provision.sh 192.168.113.0/24    # dein LAN-CIDR
 ```
 
 🖥️ **Einmal ab- und wieder anmelden** (damit die docker-Gruppe greift):
 ```bash
 exit
-ssh fabian@192.168.1.10
+ssh fabian@192.168.113.117
 cd smarthome
 docker ps        # muss ohne sudo funktionieren
 ```
@@ -92,7 +93,7 @@ Hinweis ist ok) · `docker compose -f docker-compose.release.yml pull` + `up -d`
 cd deploy && docker compose -f docker-compose.release.yml ps
 curl -s localhost:8080/q/health
 ```
-**LAN-Test:** im Browser `http://192.168.1.10:8080` → Dashboard. ✅
+**LAN-Test:** im Browser `http://192.168.113.117:8080` → Dashboard. ✅
 
 ---
 
@@ -109,7 +110,7 @@ grep -E "Address|Endpoint" home.conf      # die fdaa:…-Address ist die UPSTREA
 
 💻 `home.conf` auf den Server kopieren:
 ```bash
-scp home.conf fabian@192.168.1.10:/home/fabian/
+scp home.conf fabian@192.168.113.117:/home/fabian/
 ```
 
 🖥️ **(am Mini-PC)** Tunnel als Dienst installieren (dauerhaft, ausgehend):
@@ -133,7 +134,7 @@ gestern gesetzt und bleiben. Setzen des Secrets triggert einen Redeploy.)
 → Google-Login → Dashboard vom Mini-PC. ✅
 
 > Falls die Kamera remote schwarz bleibt: go2rtc läuft, der Backend-Proxy reicht
-> `/go2rtc/*` durch – im LAN zuerst testen (`http://192.168.1.10:8080` → Kameras).
+> `/go2rtc/*` durch – im LAN zuerst testen (`http://192.168.113.117:8080` → Kameras).
 
 ---
 
