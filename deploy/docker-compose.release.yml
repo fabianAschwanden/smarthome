@@ -21,8 +21,10 @@ services:
       POSTGRES_DB: smarthome
       POSTGRES_USER: smarthome
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Postgres 18: Mount auf /var/lib/postgresql, Daten in Unterverzeichnis (PGDATA).
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U smarthome']
       interval: 10s
