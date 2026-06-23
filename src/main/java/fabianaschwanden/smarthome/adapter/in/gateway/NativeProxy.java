@@ -67,7 +67,49 @@ public class NativeProxy {
     }
 
     public void routes(@Observes Router router) {
+        // 1) Direkter Pfad /native/<id>/...
         router.route(PREFIX + "*").handler(this::handle);
+        // 2) Referer-Fallback: absolute Pfade der Fremd-UI (z. B. XHR auf /values.xml)
+        //    tragen kein /native/-Präfix; der <base>-Tag wirkt nur auf RELATIVE Pfade.
+        //    Solche Anfragen anhand des Referers dem richtigen Gerät zuordnen. Greift NUR,
+        //    wenn der Referer auf /native/<id>/ zeigt – App-Routen (/api, /go2rtc, /q,
+        //    Frontend) bleiben unberührt.
+        router.route().handler(this::handleByReferer);
+    }
+
+    /** Eigene App-Pfade, die NIE über den Referer-Fallback ans Gerät gehen dürfen. */
+    private static boolean isAppPath(String uri) {
+        return uri.startsWith("/api/") || uri.startsWith("/go2rtc/") || uri.startsWith("/q/")
+                || uri.startsWith(PREFIX);
+    }
+
+    /** Fallback für absolute Pfade der Fremd-UI: Ziel aus dem Referer ableiten. */
+    private void handleByReferer(RoutingContext ctx) {
+        if (isAppPath(ctx.request().uri())) {
+            ctx.next(); // echte App-Route -> niemals kapern
+            return;
+        }
+        String id = refererTargetId(ctx.request().getHeader("Referer"));
+        if (id == null) {
+            ctx.next(); // kein Native-Kontext -> normale App-Route weitermachen
+            return;
+        }
+        proxyTo(ctx, id, ctx.request().uri());
+    }
+
+    /** Liefert die Native-id, wenn der Referer auf /native/<id>/ zeigt – sonst null. */
+    private String refererTargetId(String referer) {
+        if (referer == null) {
+            return null;
+        }
+        int at = referer.indexOf(PREFIX);
+        if (at < 0) {
+            return null;
+        }
+        String rest = referer.substring(at + PREFIX.length());
+        int slash = rest.indexOf('/');
+        String id = slash < 0 ? rest : rest.substring(0, slash);
+        return targets.containsKey(id) ? id : null;
     }
 
     private void handle(RoutingContext ctx) {
@@ -78,7 +120,14 @@ public class NativeProxy {
         if (path.isEmpty()) {
             path = "/";
         }
+        if (!targets.containsKey(id)) {
+            ctx.response().setStatusCode(404).end("Unbekannte native View: " + id);
+            return;
+        }
+        proxyTo(ctx, id, path);
+    }
 
+    private void proxyTo(RoutingContext ctx, String id, String path) {
         URI target = targets.get(id);
         if (target == null) {
             ctx.response().setStatusCode(404).end("Unbekannte native View: " + id);

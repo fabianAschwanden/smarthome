@@ -62,6 +62,15 @@ class NativeProxyTest {
                 os.write(out);
             }
         });
+        // Absoluter AJAX-Pfad der Fremd-UI (XHR auf /values.xml) – wird via Referer geproxyt.
+        server.createContext("/values.xml", ex -> {
+            byte[] out = "<root><power>1234</power></root>".getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().add("Content-Type", "text/xml");
+            ex.sendResponseHeaders(200, out.length);
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(out);
+            }
+        });
         server.start();
     }
 
@@ -102,5 +111,25 @@ class NativeProxyTest {
         given()
                 .when().get("/native/gibtsnicht/index.shtml")
                 .then().statusCode(404);
+    }
+
+    @Test
+    void absoluterPfadMitNativeRefererWirdGeproxyt() {
+        // XHR der Fremd-UI auf /values.xml (kein /native/-Präfix) -> via Referer ans Gerät.
+        given()
+                .header("Referer", "http://localhost/native/fake/index.shtml")
+                .when().get("/values.xml")
+                .then().statusCode(200)
+                .body(containsString("<power>1234</power>"));
+    }
+
+    @Test
+    void appPfadeWerdenNichtGekapert() {
+        // Trotz Native-Referer darf /api/... NIE ans Gerät gehen (echte App-Route).
+        given()
+                .header("Referer", "http://localhost/native/fake/index.shtml")
+                .when().get("/api/cameras")
+                .then().statusCode(200)
+                .body(containsString("garten")); // echte Kamera-API, nicht das Gerät
     }
 }
