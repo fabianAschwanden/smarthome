@@ -38,6 +38,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/camera/camera-page').then((m) => m.CameraPage),
   },
   {
+    path: 'native',
+    loadComponent: () => import('./features/nativeview/native-page').then((m) => m.NativePage),
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
   },

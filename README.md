@@ -69,6 +69,7 @@ bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Ger
 | 10 | **Wetter** | Vorhersage (Open-Meteo, kein API-Key) | [weather](docs/weather/SPEC.md) |
 | 11 | **Kameras** | Live-Stream im Dashboard (RTSP→WebRTC über go2rtc) | [camera](docs/camera/SPEC.md) |
 | 12 | **Alerts** | Push aufs Handy bei kritischem Alarm (Rauchalarm) über ntfy.sh | [alert](docs/alert/SPEC.md) |
+| 13 | **Native** | Fremde Geräte-Web-UIs (z. B. SMARTFOX) eingebettet, remote-tauglich (Reverse-Proxy) | [nativeview](docs/nativeview/SPEC.md) |
 | – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
 
 **Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind
