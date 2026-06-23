@@ -37,11 +37,17 @@ echo "==> Aktuellen Benutzer in die docker-Gruppe (neu einloggen nötig)"
 TARGET_USER="${SUDO_USER:-$USER}"
 usermod -aG docker "$TARGET_USER" || true
 
-echo "==> Firewall (ufw): SSH + App-Port 8080 nur aus dem LAN"
+echo "==> Firewall (ufw): SSH + App-Port 8080 (LAN) + Remote-Tunnel (fly-Interface)"
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp
 ufw allow from "$LAN_CIDR" to any port 8080 proto tcp
+# Remote-Zugang (Fly-Tunnel): der oauth2-proxy erreicht die App über das WireGuard-
+# Interface 'fly' (IPv6/6PN) – das liegt NICHT im LAN-CIDR, sonst greift 'deny incoming'
+# und der Proxy läuft in i/o timeout (502). Eingehenden Verkehr auf 'fly' erlauben.
+# || true: das 'fly'-Interface existiert beim Provisioning ggf. noch nicht (Tunnel kommt
+# später) – die Regel wird gespeichert und greift, sobald das Interface da ist.
+ufw allow in on fly || true
 ufw --force enable
 
 echo "==> Automatische Sicherheitsupdates aktivieren"

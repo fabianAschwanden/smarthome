@@ -126,6 +126,10 @@ sudo cp /home/fabian/home.conf /etc/wireguard/fly.conf
 rm /home/fabian/home.conf
 sudo systemctl enable --now wg-quick@fly
 sudo wg show          # 'latest handshake' muss erscheinen
+# Firewall: der Proxy erreicht die App über das 'fly'-Interface (IPv6/6PN, NICHT im
+# LAN-CIDR) – ohne diese Regel blockt ufw 'deny incoming' den Tunnel -> 502 i/o timeout.
+# (server-provision.sh setzt sie bereits; hier nur falls der Tunnel später dazukam.)
+sudo ufw allow in on fly && sudo ufw reload
 ```
 
 💻 **(am Mac)** Den Fly-Proxy auf die Mini-PC-6PN-IP umstellen (UPSTREAM-Secret):
@@ -168,6 +172,12 @@ docker compose -f docker-compose.release.yml exec -T db \
 Typische Stolpersteine: docker-Gruppe (neu einloggen nötig), Geräte-IPs nicht fest
 (Discovery scheitert über Subnetze), Fly-Tunnel-Handshake fehlt (`sudo wg show`),
 UPSTREAM zeigt noch auf den Laptop statt den Mini-PC.
+
+**502 Bad Gateway remote (Login klappt, dann „upstream"-Fehler):** Der Proxy erreicht die
+App nicht über den Tunnel. Logs prüfen mit `flyctl logs -a smarthome-remote`. Häufigste
+Ursache `dial tcp [fdaa:…]:8080: i/o timeout` → ufw blockt den Tunnel: `sudo ufw allow in
+on fly && sudo ufw reload`. Weiter prüfen: Handshake aktuell (`sudo wg show`), UPSTREAM =
+aktuelle 6PN-IP des Mini-PC, App lauscht (`sudo ss -tlnp | grep 8080`).
 
 ---
 
