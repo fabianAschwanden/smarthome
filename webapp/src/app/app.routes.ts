@@ -14,6 +14,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/battery/battery-page').then((m) => m.BatteryPage),
   },
   {
+    path: 'battery/schedule',
+    loadComponent: () =>
+      import('./features/battery/battery-schedule-page').then((m) => m.BatterySchedulePage),
+  },
+  {
     path: 'switch',
     loadComponent: () => import('./features/tuya/switch-page').then((m) => m.SwitchPage),
   },

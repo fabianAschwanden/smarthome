@@ -60,7 +60,7 @@ bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Ger
 | 1 | **Energie** | Fronius (Solar-API) & SMARTFOX gegenübergestellt, Hausverbrauch, Tages-/Relativwerte | [energy](docs/energy/SPEC.md) |
 | 2 | **Batterie** | SMARTFOX-Relais 1: manuell + PV-Überschuss-Automatik | [battery](docs/battery/SPEC.md) |
 | 3 | **Schalter** | Tuya/Smart-Life lokal EIN/AUS (Stehlampe, Palme, Carport, Föhn, Homecinema) | [tuya](docs/tuya/SPEC.md) |
-| 4 | **Zeitsteuerung** | Schedule/Countdown/Random/Inching je Schalter (persistiert) | [schedule](docs/schedule/SPEC.md) |
+| 4 | **Zeitsteuerung Schalter** | Schedule/Countdown/Random/Inching je Schalter (persistiert) | [schedule](docs/schedule/SPEC.md) |
 | 5 | **Storen** | Tuya-Cover Auf/Ab/Stopp + Position (UI 100 % = zu, Lamellen-Visualisierung) | [cover](docs/cover/SPEC.md) |
 | 6 | **Wellness** | Whirlpool & Schwimmbecken: Pumpe/Heizung/Licht/Massage + Soll-Temperatur | [appliance](docs/appliance/SPEC.md) |
 | 7 | **Klimaanlage** | Midea/NetHome Plus lokal: ein/aus, Modus, Soll-/Ist-Temperatur | [climate](docs/climate/SPEC.md) |
@@ -70,6 +70,7 @@ bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Ger
 | 11 | **Kameras** | Live-Stream im Dashboard (RTSP→WebRTC über go2rtc) | [camera](docs/camera/SPEC.md) |
 | 12 | **Alerts** | Push aufs Handy bei kritischem Alarm (Rauchalarm) über ntfy.sh | [alert](docs/alert/SPEC.md) |
 | 13 | **Native** | Fremde Geräte-Web-UIs (z. B. SMARTFOX) eingebettet, remote-tauglich (Reverse-Proxy) | [nativeview](docs/nativeview/SPEC.md) |
+| 14 | **Zeitsteuerung Batterie** | Schedule/Countdown fürs Lade-Relais (setzt Manuell-Modus) | [batteryschedule](docs/batteryschedule/SPEC.md) |
 | – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
 
 **Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind

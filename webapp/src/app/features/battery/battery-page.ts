@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BatteryService } from '../../core/services/battery.service';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ItemImage } from '../../shared/item-image';
@@ -10,7 +11,7 @@ import { ItemImage } from '../../shared/item-image';
 @Component({
   selector: 'app-battery-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PowerToggle, ItemImage],
+  imports: [PowerToggle, ItemImage, RouterLink],
   template: `
     <section class="space-y-5">
       <div class="flex items-end justify-between">
@@ -23,6 +24,22 @@ import { ItemImage } from '../../shared/item-image';
             <p class="text-sm text-[color:var(--ink-faint)]">Stand: {{ ctrl.changedAt }}</p>
           }
         </div>
+        <a
+          routerLink="/battery/schedule"
+          class="flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
+        >
+          <svg
+            class="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Zeitsteuerung →
+        </a>
       </div>
 
       @if (control(); as ctrl) {

@@ -11,5 +11,6 @@
     <include file="db/changelog/changes/0003-create-item-image.xml"/>
     <include file="db/changelog/changes/0004-drop-note.xml"/>
     <include file="db/changelog/changes/0005-create-alert-settings.xml"/>
+    <include file="db/changelog/changes/0006-create-battery-schedule.xml"/>
 
 </databaseChangeLog>
