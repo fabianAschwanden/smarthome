@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { BatteryPage } from './battery-page';
 import { BatteryControl } from '../../core/models/battery';
 
@@ -8,7 +9,8 @@ describe('BatteryPage', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [BatteryPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      // RouterLink ("Zeitsteuerung →") braucht einen Router im Test.
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
   });
 
