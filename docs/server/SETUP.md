@@ -1,69 +1,174 @@
 # Heim-Server aufsetzen – Minix NEO Z95 (Intel N95)
 
 Ziel: den Mini-PC mit **möglichst wenig Aufwand** als Smart-Home-Server betreiben.
-Empfohlene Distribution: **Ubuntu Server 26.04 LTS** (beste Hardware-Unterstützung für
-den N95, 5 Jahre Support). Alternative: **Debian 13 „trixie"** (schlanker, gleicher Stack).
+Distribution: **Ubuntu Server 26.04 LTS** (beste N95-Hardware-Unterstützung, 5 Jahre
+Support; Debian 13 „trixie" geht auch, gleicher Stack). Auf dem Server wird **nur Docker**
+gebraucht – die App kommt als vorgebautes Container-Image (kein Java/Node/Maven nötig).
 
-Auf dem Server wird **nur Docker** gebraucht – Backend (Quarkus) und Frontend (Angular)
-werden im Container gebaut. Du brauchst also kein Java/Node/Maven zu installieren.
+Der erste Teil ist die **Schritt-für-Schritt-Erstinstallation** für das konkrete Setup
+(feste IP `192.168.113.117`, ghcr-Release-Images, Remote über Fly-Tunnel). Darunter folgt
+der **Referenzteil** (Netzwerk/Ports, Auth, Betrieb, alternativer Build-Weg).
 
-> **Schritt-für-Schritt-Erstinstallation** (Ubuntu 26.04 + vorgebaute ghcr-Images +
-> Remote-Zugang): siehe **[`INSTALL.md`](INSTALL.md)** – der empfohlene, aktuelle Weg
-> (kein langer Build auf dem Mini-PC). Dieses Dokument hier ist die Referenz/Hintergrund.
-
-## Kurzfassung (zwei Wege)
-
-**A) Vorgebaute Releases ziehen (empfohlen, schnell):**
-```bash
-git clone https://github.com/fabianAschwanden/smarthome.git
-cd smarthome
-sudo bash scripts/server-provision.sh 192.168.113.0/24   # Docker/Firewall/wireguard
-# config/application.properties + deploy/.env ausfüllen (siehe INSTALL.md)
-bash scripts/server-update.sh                          # zieht ghcr-Images, startet
-```
-
-**B) Lokal im Container bauen (kein ghcr nötig, erster Build dauert auf dem N95):**
-```bash
-git clone https://github.com/fabianAschwanden/smarthome.git
-cd smarthome
-bash scripts/bootstrap.sh 192.168.113.0/24
-```
-
-Dashboard öffnen: `http://<server-ip>:8080`. Der Rest dieses Dokuments erklärt Details und Betrieb.
+Legende: 🖥️ = am Mini-PC (per SSH) · 💻 = an deinem Mac · ☁️ = Fly/Browser.
 
 ---
 
-## 1. BIOS-Einstellungen (wichtig für einen Server)
+# Teil A — Erstinstallation (Schritt für Schritt)
 
-Beim Start `Entf`/`F7` drücken und einstellen:
+## Phase 0 – BIOS & OS
 
-- **Restore on AC Power Loss → Power On** (nach Stromausfall automatisch starten).
-- **Suspend/Sleep deaktivieren** (Server soll nie schlafen).
-- Boot-Reihenfolge: USB-Stick zuerst (für die Installation).
-- Secure Boot kann an bleiben (Ubuntu unterstützt es).
+🖥️ **BIOS** (beim Start `Entf`/`F7`):
+- *Restore on AC Power Loss* → **Power On** (nach Stromausfall automatisch starten)
+- Sleep/Suspend **aus** (Server soll nie schlafen)
+- Boot-Reihenfolge: USB-Stick zuerst · Secure Boot kann an bleiben
 
-## 2. Ubuntu Server 26.04 installieren
+🖥️ **Ubuntu Server 26.04 LTS** installieren:
+1. ISO: <https://ubuntu.com/download/server> → USB-Stick (balenaEtcher/Rufus)
+2. Installer: Sprache/Tastatur, Netzwerk (DHCP reicht erst mal), **„Install OpenSSH server"
+   ankreuzen**, Benutzer `fabian` anlegen. Keine zusätzlichen Snaps nötig.
+3. Stick raus, neu starten.
 
-1. ISO laden: <https://ubuntu.com/download/server> (26.04 LTS).
-2. USB-Stick schreiben mit **balenaEtcher** oder **Rufus**.
-3. Vom Stick booten, Installer folgen:
-   - Sprache/Tastatur, Netzwerk (DHCP reicht erst mal).
-   - **„Install OpenSSH server" ankreuzen** (für Fernzugriff).
-   - Benutzer anlegen (z. B. `fabian`).
-   - Keine zusätzlichen Snaps nötig.
-4. Nach der Installation Stick entfernen, neu starten.
+💻 **Feste IP: `192.168.113.117`** – am einfachsten per **DHCP-Reservierung im Router**
+(MAC des Servers). Liegt bewusst im selben Subnetz wie die Geräte (192.168.113.x), damit
+die Tuya-Discovery (UDP-Broadcast) ohne Subnetz-Grenzen funktioniert.
+Alternativ direkt am Server (Netplan) – siehe Teil B.
 
-Von deinem Rechner einloggen:
-
+💻 Einloggen:
 ```bash
-ssh fabian@<server-ip>
+ssh fabian@192.168.113.117
 ```
 
-## 3. Feste IP vergeben
+## Phase 1 – Repo & Provisioning
 
-Am einfachsten im Router eine **DHCP-Reservierung** für die MAC des Servers setzen.
-Alternativ direkt am Server (Netplan), Beispiel `/etc/netplan/01-static.yaml`:
+🖥️ Repo klonen und das System vorbereiten (Docker, Firewall, Zeitzone, Auto-Updates,
+wireguard-tools):
+```bash
+git clone https://github.com/fabianAschwanden/smarthome.git
+cd smarthome
+sudo bash scripts/server-provision.sh 192.168.113.0/24    # dein LAN-CIDR
+```
 
+🖥️ **Einmal ab- und wieder anmelden** (damit die docker-Gruppe greift):
+```bash
+exit
+ssh fabian@192.168.113.117
+cd smarthome
+docker ps        # muss ohne sudo funktionieren
+```
+
+## Phase 2 – Konfiguration (Geräte + DB)
+
+🖥️ Gerätedaten anlegen (gitignored, nie ins Repo committen):
+```bash
+cp config/application.properties.example config/application.properties
+nano config/application.properties
+```
+Fülle die **`%lan.*`**-Einträge: device-ids, local-keys/Token, **feste Geräte-IPs**,
+Wetter-Standort. (Vorlage zeigt jede Zeile.)
+
+🖥️ DB-Passwort + Image-Tag:
+```bash
+cp deploy/.env.example deploy/.env
+nano deploy/.env
+```
+- `DB_PASSWORD=` → sicheres Passwort (z. B. `openssl rand -hex 16`)
+- `IMAGE_OWNER=fabianaschwanden` · `IMAGE_TAG=latest` (oder `1.0.0` für die fixe Version)
+
+🖥️ Kamera-Gateway (optional, falls Tuya-Cam genutzt wird):
+```bash
+cp deploy/go2rtc/go2rtc.example.yaml deploy/go2rtc/go2rtc.yaml
+nano deploy/go2rtc/go2rtc.yaml    # echte rtsp://<kamera-ip>:554/... eintragen
+```
+
+## Phase 3 – Start (zieht die ghcr-Images, kein Build)
+
+🖥️
+```bash
+bash scripts/server-update.sh
+```
+Das Skript: `git pull` · sichert `.env`/config · prüft den Fly-Tunnel (noch nicht da,
+Hinweis ist ok) · `docker compose -f docker-compose.release.yml pull` + `up -d`.
+
+🖥️ Prüfen:
+```bash
+cd deploy && docker compose -f docker-compose.release.yml ps
+curl -s localhost:8080/q/health
+```
+**LAN-Test:** im Browser `http://192.168.113.117:8080` → Dashboard. ✅
+
+## Phase 4 – Remote-Zugang (Fly-Tunnel + Proxy)
+
+Der Mini-PC braucht einen **eigenen** WireGuard-Peer (`smarthome-laptop` bleibt unberührt).
+Danach zeigt der Fly-Proxy auf den Mini-PC statt auf den Laptop. Hintergrund:
+[`../remote/SETUP.md`](../remote/SETUP.md).
+
+💻 **(am Mac)** Peer für den Server erzeugen und die 6PN-IP merken:
+```bash
+flyctl wireguard create personal fra smarthome-home > home.conf
+grep -E "Address|Endpoint" home.conf      # die fdaa:…-Address ist die UPSTREAM-IP
+```
+
+💻 `home.conf` auf den Server kopieren:
+```bash
+scp home.conf fabian@192.168.113.117:/home/fabian/
+```
+
+🖥️ **(am Mini-PC)** Tunnel als Dienst installieren (dauerhaft, ausgehend):
+```bash
+sudo cp /home/fabian/home.conf /etc/wireguard/fly.conf
+rm /home/fabian/home.conf
+sudo systemctl enable --now wg-quick@fly
+sudo wg show          # 'latest handshake' muss erscheinen
+```
+
+💻 **(am Mac)** Den Fly-Proxy auf die Mini-PC-6PN-IP umstellen (UPSTREAM-Secret):
+```bash
+flyctl secrets set -a smarthome-remote \
+  UPSTREAM='http://[<MINI-PC-6PN-IP>]:8080'
+```
+(Die anderen Secrets – OIDC_CLIENT_ID/SECRET, COOKIE_SECRET, ALLOWED_EMAILS – bleiben.
+Das Setzen triggert einen Redeploy.)
+
+☁️ **Test:** `https://smarthome-remote.fly.dev` (am besten Handy über Mobilfunk)
+→ Google-Login → Dashboard vom Mini-PC. ✅
+
+> Kamera remote schwarz? go2rtc läuft, der Backend-Proxy reicht `/go2rtc/*` durch –
+> im LAN zuerst testen (`http://192.168.113.117:8080` → Kameras).
+
+## Phase 5 – Betrieb & Updates
+
+🖥️ Update (neues Release) – einfach erneut:
+```bash
+cd ~/smarthome && bash scripts/server-update.sh
+```
+
+🖥️ Alltag (im `deploy/`-Ordner):
+```bash
+docker compose -f docker-compose.release.yml ps          # Status
+docker compose -f docker-compose.release.yml logs -f app # Logs
+docker compose -f docker-compose.release.yml restart app # neu starten
+```
+
+🖥️ DB-Backup (Cron empfohlen):
+```bash
+docker compose -f docker-compose.release.yml exec -T db \
+  pg_dump -U smarthome smarthome > ~/backup-$(date +%F).sql
+```
+
+## Wenn etwas klemmt
+
+Öffne eine SSH-Sitzung und füge die Ausgabe hier ein – ich gehe Befehl für Befehl mit.
+Typische Stolpersteine: docker-Gruppe (neu einloggen nötig), Geräte-IPs nicht fest
+(Discovery scheitert über Subnetze), Fly-Tunnel-Handshake fehlt (`sudo wg show`),
+UPSTREAM zeigt noch auf den Laptop statt den Mini-PC.
+
+---
+
+# Teil B — Referenz
+
+## Feste IP per Netplan (statt Router-Reservierung)
+
+`/etc/netplan/01-static.yaml`:
 ```yaml
 network:
   version: 2
@@ -77,97 +182,33 @@ network:
       nameservers:
         addresses: [192.168.113.1, 9.9.9.9]
 ```
-
 ```bash
 sudo netplan apply
 ```
 
-## 4. Bootstrap ausführen
+## Netzwerk & Firewall
 
-```bash
-git clone https://github.com/fabianAschwanden/smarthome.git
-cd smarthome
-bash scripts/bootstrap.sh 192.168.113.0/24
-```
-
-Das Skript (`scripts/bootstrap.sh` → `scripts/server-provision.sh`):
-
-- installiert Docker Engine + Compose-Plugin,
-- richtet die Firewall ein (SSH + Port 8080 nur aus dem LAN),
-- aktiviert automatische Sicherheitsupdates und die Zeitzone,
-- legt `deploy/.env` an (mit generiertem DB-Passwort),
-- baut die Container und startet sie.
-
-Der **erste Build** dauert einige Minuten (Maven- und npm-Abhängigkeiten). Danach läuft
-alles als Container mit `restart: unless-stopped`, also auch nach Neustart/Stromausfall.
-
-## 5. Geräte konfigurieren
-
-Alle Geräte-Daten (device-ids, local-keys/Token, IPs, Wetter-Standort) stehen
-**ausschliesslich** in der gitignored `config/application.properties` – sie wird in
-den App-Container gemountet und überschreibt die Standardwerte. **Niemals** Secrets
-ins Repo committen.
-
-```bash
-cp config/application.properties.example config/application.properties
-nano config/application.properties   # %lan.*-Einträge ausfüllen (siehe Vorlage)
-```
-
-In `deploy/.env` steht nur das DB-Passwort (siehe `deploy/.env.example`).
-
-Nach Änderungen:
-
-```bash
-cd deploy && sudo docker compose up -d --build
-```
-
-> **Feste Geräte-IPs sind Pflicht** – die lokale Geräte-Discovery (UDP-Broadcast)
-> funktioniert nicht über Subnetz-Grenzen. Ports/Netz siehe Abschnitt 7.
-
-## 6. Betrieb
-
-```bash
-cd ~/smarthome/deploy
-
-sudo docker compose logs -f app     # Logs ansehen
-sudo docker compose ps              # Status
-sudo docker compose restart app     # neu starten
-sudo docker compose down            # stoppen
-
-# Update auf neue Version:
-cd ~/smarthome && git pull && cd deploy && sudo docker compose up -d --build
-```
-
-**Datenbank-Backup** (Cronjob empfohlen):
-
-```bash
-sudo docker compose exec -T db pg_dump -U smarthome smarthome > backup-$(date +%F).sql
-```
-
-## 7. Netzwerk & Firewall
-
-Die App läuft auf **TCP 8080**. Die Firewall erlaubt 8080 nur aus deinem LAN-CIDR
-(siehe Bootstrap-Parameter). Wenn Server und Geräte in **verschiedenen Subnetzen**
-liegen, brauchst du Routing (keine Internet-Port-Forwards) und die Geräte-Ports –
-Details und die vollständige Port-Liste stehen in der Antwort zur Subnetz-Frage bzw.
-können als eigenes Doc ergänzt werden:
+Die App läuft auf **TCP 8080**; die Firewall (ufw, vom Provisioning gesetzt) erlaubt 8080
+nur aus dem LAN-CIDR. Da der Server im **selben Subnetz** wie die Geräte liegt
+(192.168.113.x), funktioniert die Geräte-Discovery direkt. Ports:
 
 - Server → Geräte: SMARTFOX/Fronius **TCP 80**, Tuya **TCP 6668** + **UDP 6666/6667**
-  (Discovery-Broadcasts), Midea **TCP 6444**.
-- Clients → Server: **TCP 8080**.
+  (Discovery-Broadcasts), Midea **TCP 6444**, Gecko **UDP 10022**, Kamera-RTSP **TCP 554**.
+- Clients → Server: **TCP 8080**. Remote läuft über den Fly-Tunnel (kein Router-Port offen).
 
-## 8. Sicherheit / Auth
+## Sicherheit / Auth
 
-Im Profil **`%lan`** (Standard dieses Deployments) ist OIDC **aus** – die App ist im
-LAN ohne Login erreichbar. Das ist für ein reines Heimnetz okay. Wenn du sie später von
-aussen oder mit Login willst:
+Im Profil **`%lan`** (Standard dieses Deployments) ist OIDC **aus** – die App ist im LAN
+ohne Login erreichbar (für ein reines Heimnetz okay). Der **Remote**-Zugang erzwingt den
+Login dagegen am Fly-Proxy (oauth2-proxy/Google, siehe Phase 4). Alternativ ginge ein
+eigener Reverse-Proxy (Caddy + HTTPS/Basic-Auth) oder das `%prod`-Profil mit OIDC.
 
-- einen Reverse-Proxy (z. B. **Caddy**) mit HTTPS + Basic-Auth davorsetzen, oder
-- das `%prod`-Profil mit Keycloak/OIDC nutzen (Blueprint §8).
+## Alternativer Weg: lokal im Container bauen (ohne ghcr)
 
-## 9. Fernzugriff / Support
-
-OpenSSH ist installiert (Schritt 2). Für Hilfe beim Einrichten kannst du eine
-SSH-Sitzung öffnen und die Ausgaben hier einfügen – ich leite dich Befehl für Befehl
-durch und liefere fertige Snippets. Einen direkten SSH-Zugriff von ausserhalb deines
-Netzes solltest du nur bewusst und abgesichert (Key-Auth, ggf. VPN/Tailscale) öffnen.
+Statt der vorgebauten Images kann der Server alles selbst bauen (erster Build dauert auf
+dem N95 mehrere Minuten):
+```bash
+bash scripts/bootstrap.sh 192.168.113.0/24      # provision + lokaler Build + Start
+# später Updates:  git pull && cd deploy && sudo docker compose up -d --build
+```
+Nutzt `deploy/docker-compose.yml` (mit `build:`) statt `docker-compose.release.yml`.
