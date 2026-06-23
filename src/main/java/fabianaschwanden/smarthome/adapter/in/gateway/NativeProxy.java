@@ -168,25 +168,26 @@ public class NativeProxy {
             if (k.equalsIgnoreCase("X-Frame-Options") || k.equalsIgnoreCase("Content-Security-Policy")) {
                 return;
             }
-            // Bei HTML stimmt die Länge nach der <base>-Injektion nicht mehr -> weglassen.
-            if (isHtml && k.equalsIgnoreCase("Content-Length")) {
+            // Content-Length setzen wir unten selbst (Body wird gepuffert; bei HTML ändert
+            // die <base>-Injektion ohnehin die Länge). Original-Header hier auslassen.
+            if (k.equalsIgnoreCase("Content-Length") || k.equalsIgnoreCase("Transfer-Encoding")) {
                 return;
             }
             ctx.response().putHeader(k, h.getValue());
         });
 
-        if (isHtml) {
-            // HTML puffern, <base> injizieren, dann senden.
-            resp.body().onSuccess(body -> {
-                String html = body.toString(StandardCharsets.UTF_8);
+        // Body immer vollständig puffern und mit end(buffer) senden – zuverlässiger als
+        // pipeTo (sonst lieferten kleine Geräte-Antworten wie language_de.xml 0 Bytes,
+        // weil Header/Stream-Commit kollidierten). Die Fremd-UI-Dateien sind klein.
+        resp.body().onSuccess(body -> {
+            if (isHtml) {
                 String base = "<base href=\"" + PREFIX + id + "/\">";
-                String patched = injectBase(html, base);
+                String patched = injectBase(body.toString(StandardCharsets.UTF_8), base);
                 ctx.response().end(Buffer.buffer(patched, "UTF-8"));
-            }).onFailure(err -> fail(ctx, err, id));
-        } else {
-            // Assets (CSS/JS/Bilder/XML) durchstreamen (Backpressure via Pipe).
-            resp.pipeTo(ctx.response());
-        }
+            } else {
+                ctx.response().end(body);
+            }
+        }).onFailure(err -> fail(ctx, err, id));
     }
 
     /** Fügt den {@code <base>}-Tag direkt nach {@code <head>} ein (sonst am Anfang). */
