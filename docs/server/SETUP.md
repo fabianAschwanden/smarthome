@@ -28,10 +28,17 @@ Legende: 🖥️ = am Mini-PC (per SSH) · 💻 = an deinem Mac · ☁️ = Fly/
    ankreuzen**, Benutzer `fabian` anlegen. Keine zusätzlichen Snaps nötig.
 3. Stick raus, neu starten.
 
-💻 **Feste IP: `192.168.113.117`** – am einfachsten per **DHCP-Reservierung im Router**
-(MAC des Servers). Liegt bewusst im selben Subnetz wie die Geräte (192.168.113.x), damit
-die Tuya-Discovery (UDP-Broadcast) ohne Subnetz-Grenzen funktioniert.
-Alternativ direkt am Server (Netplan) – siehe Teil B.
+💻 **Feste IP: `192.168.113.117` per DHCP-Reservierung im Router** (auf die MAC des
+**Ethernet**-Interfaces). Das ist der **empfohlene** Weg: Der Server bleibt auf DHCP
+(`dhcp4: true`, Ubuntu-Default) und bekommt vom Router immer dieselbe IP.
+Liegt bewusst im selben Subnetz wie die Geräte (192.168.113.x), damit die Tuya-Discovery
+(UDP-Broadcast) ohne Subnetz-Grenzen funktioniert.
+
+> ⚠️ **Keine statische IP per Netplan** (siehe Teil B nur als Notlösung). Eine statische
+> Adresse auf dem falschen/inaktiven Interface (oder nach LAN↔WLAN-Wechsel) führt dazu,
+> dass das Ethernet-Interface **gar keine IP** bekommt und der Server nicht erreichbar
+> ist. DHCP + Router-Reservierung vermeidet das. Hängt der Server doch ohne IP:
+> `sudo dhclient -v <iface>` holt sofort eine Lease (Interface-Name via `ip -brief link`).
 
 💻 Einloggen:
 ```bash
@@ -166,31 +173,52 @@ UPSTREAM zeigt noch auf den Laptop statt den Mini-PC.
 
 # Teil B — Referenz
 
-## Feste IP per Netplan (statt Router-Reservierung)
+## Netzwerk / feste IP
 
-`/etc/netplan/01-static.yaml`:
+**Empfohlen: DHCP + Router-Reservierung** (Teil A). Der Server bleibt auf DHCP – das ist
+der Ubuntu-Server-Default, also ist normalerweise **nichts zu tun**. Den Interface-Namen
++ aktuelle IP zeigt:
+```bash
+ip -brief link    # Ethernet-Interface (z. B. enp1s0) finden
+ip -brief addr    # zugewiesene IP prüfen
+```
+Falls das Interface mal ohne IP dasteht (z. B. nach falscher Netplan-Bearbeitung oder
+LAN↔WLAN-Wechsel): `sudo dhclient -v <iface>` holt sofort eine Lease. Danach im Router
+eine **Reservierung** auf die MAC dieses Interfaces setzen → immer dieselbe IP.
+
+Eine DHCP-Netplan-Config (nur falls keine vorhanden ist) – `/etc/netplan/01-dhcp.yaml`:
 ```yaml
 network:
   version: 2
   ethernets:
-    enp1s0: # mit `ip a` den echten Namen prüfen
-      dhcp4: false
-      addresses: [192.168.113.117/24]
-      routes:
-        - to: default
-          via: 192.168.113.1   # Gateway deines Routers prüfen
-      nameservers:
-        addresses: [192.168.113.1, 9.9.9.9]
+    enp1s0:        # echten Namen via `ip -brief link` prüfen
+      dhcp4: true
 ```
 ```bash
-sudo netplan apply
+sudo chmod 600 /etc/netplan/01-dhcp.yaml && sudo netplan apply
 ```
+
+> **Notlösung – statische IP per Netplan** (nur wenn keine Router-Reservierung möglich):
+> `dhcp4: false` + `addresses: [192.168.113.117/24]` + `routes:`/`nameservers:` für genau
+> das **aktive Ethernet-Interface**. Fehleranfällig (falscher Interface-Name → keine IP),
+> daher nicht bevorzugt.
 
 ## Netzwerk & Firewall
 
-Die App läuft auf **TCP 8080**; die Firewall (ufw, vom Provisioning gesetzt) erlaubt 8080
-nur aus dem LAN-CIDR. Da der Server im **selben Subnetz** wie die Geräte liegt
-(192.168.113.x), funktioniert die Geräte-Discovery direkt. Ports:
+Die App läuft auf **TCP 8080**. Das Provisioning (`server-provision.sh <LAN-CIDR>`) setzt
+die ufw-Regel dafür bereits – **wichtig: mit dem richtigen LAN-CIDR aufrufen**
+(z. B. `192.168.113.0/24`), sonst ist 8080 von den Clients aus blockiert.
+
+ufw-Regeln sind **persistent** (in `/etc/ufw/` gespeichert, beim Boot automatisch geladen)
+– einmal setzen genügt, auch über Neustarts. Prüfen / bei Bedarf nachsetzen:
+```bash
+sudo ufw status verbose                                   # aktive Regeln
+systemctl is-enabled ufw                                  # sollte "enabled" sein
+sudo ufw allow from 192.168.113.0/24 to any port 8080 proto tcp   # 8080 fürs LAN freigeben
+```
+
+Da der Server im **selben Subnetz** wie die Geräte liegt (192.168.113.x), funktioniert die
+Geräte-Discovery direkt. Ports:
 
 - Server → Geräte: SMARTFOX/Fronius **TCP 80**, Tuya **TCP 6668** + **UDP 6666/6667**
   (Discovery-Broadcasts), Midea **TCP 6444**, Gecko **UDP 10022**, Kamera-RTSP **TCP 554**.
