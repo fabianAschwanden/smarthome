@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { CameraService } from '../../core/services/camera.service';
 import { Camera } from '../../core/models/camera';
 
 /**
  * Use Case 11: Kameras (siehe docs/camera/SPEC.md). Live-Bild über das go2rtc-Gateway.
  *
- * Der Stream kommt als fragmentiertes MP4 (H.264) über den relativen Pfad
- * {@code /go2rtc/...}, den das Backend an go2rtc weiterreicht. Reines HTTP – kein
- * WebSocket/UDP – darum funktioniert es identisch im LAN und remote (durch den
- * Fly-Login-Proxy + WireGuard, wo nur Port 8080 erreichbar ist). Die RTSP-URL/IP
- * bleibt im Gateway; das Frontend kennt nur den Stream-Namen.
+ * Eingebettet wird go2rtcs eigener MSE-Player ({@code stream.html}) per iframe über den
+ * relativen Pfad {@code /go2rtc/...}, den das Backend (inkl. WebSocket fürs MSE-Signaling)
+ * an go2rtc weiterreicht. MSE ist adaptiv und reconnectet – das ist über instabile
+ * Remote-Verbindungen (Fly-Tunnel/Mobilfunk) robuster als ein roher progressiver
+ * MP4-Download. Alles über Port 8080/gleiche Origin; die RTSP-URL/IP bleibt im Gateway.
  */
 @Component({
   selector: 'app-camera-page',
@@ -26,15 +27,13 @@ import { Camera } from '../../core/models/camera';
           @for (cam of list; track cam.id) {
             <article class="glass-card overflow-hidden">
               <div class="aspect-video w-full bg-black">
-                <!-- Fragmentiertes MP4 als progressive Quelle: kein iframe/WS nötig. -->
-                <video
-                  class="size-full object-contain"
+                <!-- go2rtc-MSE-Player (adaptiv, reconnect) – tunnel-tauglich. -->
+                <iframe
+                  class="size-full border-0"
                   [src]="streamUrl(cam)"
                   [title]="cam.name"
-                  autoplay
-                  muted
-                  playsinline
-                ></video>
+                  allow="autoplay; fullscreen"
+                ></iframe>
               </div>
               <div class="flex items-baseline justify-between gap-3 p-4">
                 <h3 class="text-lg font-semibold">{{ cam.name }}</h3>
@@ -51,11 +50,13 @@ import { Camera } from '../../core/models/camera';
 })
 export class CameraPage {
   private readonly api = inject(CameraService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly cameras = this.api.cameras;
 
-  /** MP4-Stream über den Backend-Proxy (gleiche Origin) – H.264 für Browser-Wiedergabe. */
-  protected streamUrl(cam: Camera): string {
-    return `/go2rtc/api/stream.mp4?src=${encodeURIComponent(cam.stream)}&video=h264`;
+  /** go2rtc-MSE-Player über den Backend-Proxy (gleiche Origin). */
+  protected streamUrl(cam: Camera): SafeResourceUrl {
+    const url = `/go2rtc/stream.html?src=${encodeURIComponent(cam.stream)}&mode=mse`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 }

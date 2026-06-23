@@ -4,6 +4,8 @@ import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.WebSocketClient;
+import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,9 +19,10 @@ import org.jboss.logging.Logger;
  *
  * <p>So läuft der Kamera-Verkehr über DIESELBE Origin/denselben Port wie die App
  * (8080). Remote (Fly-Login-Proxy + WireGuard) ist nur dieser Port erreichbar; ein
- * separater go2rtc-Port (1984) wäre von aussen schwarz. Genutzt wird der reine
- * HTTP-Streaming-Pfad ({@code stream.mp4}, fragmentiertes MP4) – kein WebSocket/UDP,
- * daher tunnel-tauglich. Im LAN funktioniert der direkte Zugriff weiterhin.
+ * separater go2rtc-Port (1984) wäre von aussen schwarz. Unterstützt sowohl den reinen
+ * HTTP-Streaming-Pfad ({@code stream.mp4}) als auch den WebSocket-Pfad
+ * ({@code /api/ws}) – Letzterer treibt go2rtcs MSE-Player (stream.html), der über
+ * instabile Remote-Verbindungen robuster ist als ein roher progressiver MP4-Download.
  */
 @ApplicationScoped
 public class Go2rtcProxy {
@@ -31,6 +34,7 @@ public class Go2rtcProxy {
     private final String upstreamHost;
     private final int upstreamPort;
     private HttpClient client;
+    private WebSocketClient wsClient;
 
     public Go2rtcProxy(
             Vertx vertx,
@@ -47,6 +51,7 @@ public class Go2rtcProxy {
                 .setDefaultPort(upstreamPort)
                 // Streams (stream.mp4) sind langlebig: kein Idle-Timeout erzwingen.
                 .setIdleTimeout(0));
+        wsClient = vertx.createWebSocketClient();
     }
 
     /** Registriert die Proxy-Route. {@code @Observes Router} ist der Quarkus-Weg, Vert.x-Routen beizusteuern. */
@@ -58,6 +63,11 @@ public class Go2rtcProxy {
         String target = ctx.request().uri().substring(PREFIX.length());
         if (target.isEmpty()) {
             target = "/";
+        }
+        // WebSocket-Upgrade (go2rtc-MSE-Player /api/ws) gesondert bridgen.
+        if ("websocket".equalsIgnoreCase(ctx.request().getHeader("Upgrade"))) {
+            proxyWebSocket(ctx, target);
+            return;
         }
         client.request(ctx.request().method(), target)
                 .onSuccess(req -> {
@@ -74,6 +84,31 @@ public class Go2rtcProxy {
                     ctx.request().pipeTo(req); // Request-Body weiterleiten (z. B. POST /api/webrtc)
                 })
                 .onFailure(err -> fail(ctx, err));
+    }
+
+    /** WebSocket-Bridge Browser ↔ Proxy ↔ go2rtc (für den MSE-Player /api/ws). */
+    private void proxyWebSocket(RoutingContext ctx, String target) {
+        WebSocketConnectOptions opts = new WebSocketConnectOptions()
+                .setHost(upstreamHost).setPort(upstreamPort).setURI(target);
+        wsClient.connect(opts).onSuccess(upstream ->
+                ctx.request().toWebSocket().onSuccess(downstream -> {
+                    // Frames in beide Richtungen weiterreichen.
+                    downstream.frameHandler(upstream::writeFrame);
+                    upstream.frameHandler(downstream::writeFrame);
+                    downstream.closeHandler(v -> upstream.close());
+                    upstream.closeHandler(v -> downstream.close());
+                    downstream.exceptionHandler(t -> upstream.close());
+                    upstream.exceptionHandler(t -> downstream.close());
+                }).onFailure(err -> {
+                    LOG.debugf(err, "go2rtc-WS: Downstream-Upgrade fehlgeschlagen");
+                    upstream.close();
+                })
+        ).onFailure(err -> {
+            LOG.debugf(err, "go2rtc-WS: Upstream nicht erreichbar (%s:%d)", upstreamHost, upstreamPort);
+            if (!ctx.response().ended()) {
+                ctx.response().setStatusCode(502).end("go2rtc-WebSocket nicht erreichbar");
+            }
+        });
     }
 
     private void fail(RoutingContext ctx, Throwable err) {
