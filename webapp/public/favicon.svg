@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Smart Home Energy">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2D8CFF"/>
+      <stop offset="1" stop-color="#1559C7"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded tech-blue tile -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)"/>
+  <!-- House silhouette -->
+  <path d="M32 13 L52 30 V51 a3 3 0 0 1-3 3 H15 a3 3 0 0 1-3-3 V30 Z"
+        fill="#FFFFFF"/>
+  <!-- Energy bolt cut into the house -->
+  <path d="M35 25 L24 41 H31 L29 51 L42 33 H34 Z" fill="#1559C7"/>
+</svg>
