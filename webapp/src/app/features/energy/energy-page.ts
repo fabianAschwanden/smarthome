@@ -131,10 +131,14 @@ export class EnergyPage {
 
   protected readonly snapshot = this.energy.snapshot;
 
-  /** Referenzquelle für die Hero-Kennzahl: bevorzugt SMARTFOX (Netzreferenz). */
+  /** Referenzquelle für die Hero-Kennzahl: bevorzugt Fronius (PV-Wechselrichter). */
   protected readonly primary = computed<PowerReading | undefined>(() => {
     const readings = this.snapshot()?.readings ?? [];
-    return readings.find((r) => r.source === 'SMARTFOX') ?? readings[0];
+    return (
+      readings.find((r) => r.source === 'FRONIUS' && r.status === 'OK') ??
+      readings.find((r) => r.source === 'FRONIUS') ??
+      readings[0]
+    );
   });
 
   protected watt(value: number): string {

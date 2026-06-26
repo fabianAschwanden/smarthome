@@ -15,7 +15,7 @@ export class EnergyService {
   private readonly snapshotState = signal<EnergySnapshot | null>(null);
   readonly snapshot = this.snapshotState.asReadonly();
 
-  private readonly intervalMs = 3000;
+  private readonly intervalMs = 2000;
 
   constructor() {
     timer(0, this.intervalMs)
