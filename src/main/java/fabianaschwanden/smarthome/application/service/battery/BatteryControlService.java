@@ -65,9 +65,15 @@ public class BatteryControlService implements ControlBattery {
         this.control = BatteryControl.initial(clock.instant());
     }
 
+    /**
+     * Start-Initialisierung: die App verhält sich NEUTRAL – sie schickt KEINEN
+     * Schaltbefehl ans Relais. Stattdessen wird der Ist-Zustand vom Gerät gelesen und
+     * übernommen (Modus bleibt MANUAL, damit der Auto-Tick nichts überschreibt). Ist der
+     * Zustand nicht lesbar, bleibt es bei Manuell/AUS (reine Anzeige, kein Eingriff).
+     */
     @PostConstruct
-    void applyInitialState() {
-        relay.apply(control.desiredState());
+    synchronized void initFromDevice() {
+        relay.read().ifPresent(actual -> control = control.withState(actual, clock.instant()));
     }
 
     @Override

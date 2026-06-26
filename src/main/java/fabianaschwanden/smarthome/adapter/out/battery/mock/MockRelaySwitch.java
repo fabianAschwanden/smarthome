@@ -6,6 +6,8 @@ import io.quarkus.arc.properties.UnlessBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
+import java.util.Optional;
+
 /**
  * Mock-Relais für Entwicklung/Test (aktiv, solange nicht gegen echte Geräte gefahren
  * wird): merkt sich den zuletzt geschalteten Zustand im Speicher, ohne Hardware anzusprechen.
@@ -22,6 +24,11 @@ public class MockRelaySwitch implements RelaySwitch {
     public void apply(RelayState state) {
         this.state = state;
         LOG.infof("[mock] Relais geschaltet: %s", state);
+    }
+
+    @Override
+    public Optional<RelayState> read() {
+        return Optional.of(state);
     }
 
     /** Letzter geschalteter Zustand – für Tests/Diagnose. */

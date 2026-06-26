@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class BatteryControlServiceTest {
@@ -35,16 +36,27 @@ class BatteryControlServiceTest {
     private BatteryControlService service() {
         BatteryControlService service = new BatteryControlService(
                 energyWith(() -> smartfoxGridWatt), relay, policy, PowerSource.SMARTFOX, clock);
-        service.applyInitialState();
+        service.initFromDevice();
         return service;
     }
 
     @Test
-    void startetImManuellModusMitRelaisAus() {
+    void startetNeutralOhneSchaltbefehl() {
+        // Ist-Zustand nicht lesbar (Default-Relay liefert empty) -> Manuell/AUS, KEIN apply().
         BatteryControlService service = service();
         assertEquals(ControlMode.MANUAL, service.status().mode());
         assertEquals(RelayState.OFF, service.status().desiredState());
-        assertEquals(RelayState.OFF, relay.last());
+        assertTrue(relay.calls.isEmpty(), "Start darf keinen Schaltbefehl senden");
+    }
+
+    @Test
+    void uebernimmtGelesenenIstZustandOhneSchaltbefehl() {
+        // Relais meldet EIN -> Zustand wird übernommen, aber NICHT erneut geschaltet.
+        relay.readState = Optional.of(RelayState.ON);
+        BatteryControlService service = service();
+        assertEquals(ControlMode.MANUAL, service.status().mode());
+        assertEquals(RelayState.ON, service.status().desiredState());
+        assertTrue(relay.calls.isEmpty(), "Start darf keinen Schaltbefehl senden");
     }
 
     @Test
@@ -106,8 +118,8 @@ class BatteryControlServiceTest {
         service.autoTick();
         service.autoTick(); // unveränderter Überschuss
 
-        // 1x initial (OFF) + 1x echter Wechsel auf ON, kein zweiter Call.
-        assertEquals(List.of(RelayState.OFF, RelayState.ON), relay.calls);
+        // Kein Start-Befehl, dann genau 1 echter Wechsel auf ON, kein zweiter Call.
+        assertEquals(List.of(RelayState.ON), relay.calls);
     }
 
     private CurrentEnergyQuery energyWith(java.util.function.DoubleSupplier grid) {
@@ -119,10 +131,16 @@ class BatteryControlServiceTest {
 
     private static final class CapturingRelay implements RelaySwitch {
         private final List<RelayState> calls = new ArrayList<>();
+        private Optional<RelayState> readState = Optional.empty();
 
         @Override
         public void apply(RelayState state) {
             calls.add(state);
+        }
+
+        @Override
+        public Optional<RelayState> read() {
+            return readState;
         }
 
         RelayState last() {

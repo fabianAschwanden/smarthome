@@ -48,6 +48,13 @@ abhängig und deshalb konfigurierbar (`battery.smartfox.relay-url`,
 Beim Wechsel nach `AUTO` greift sofort der nächste Auto-Tick; ein Wechsel nach
 `MANUAL` friert den Zustand auf die letzte manuelle Vorgabe ein.
 
+**Start-Verhalten (neutral):** Beim App-Start schickt die App **keinen** Schaltbefehl.
+Sie liest stattdessen den Ist-Zustand des Relais aus `values.xml`
+(`battery.smartfox.state-field`, Default `relais1State` → Klartext EIN/AUS) und
+übernimmt ihn in den Status; der Modus bleibt `MANUAL`. Ist der Zustand nicht lesbar
+(Gerät offline, Mock ohne Wert), bleibt es bei `MANUAL`/`AUS` – reine Anzeige, kein
+Eingriff. So überschreibt ein Neustart eine laufende SMARTFOX-Automatik nicht.
+
 **Wichtig:** Die Automatik gehört *dieser App* (`SurplusChargePolicy`), nicht dem
 SMARTFOX. Das Relais wird explizit von dieser App geschaltet (`state-on=1` für EIN,
 `state-off=0` für AUS).
