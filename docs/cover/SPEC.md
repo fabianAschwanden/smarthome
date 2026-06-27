@@ -8,7 +8,7 @@ Status: v1.1 (umgesetzt; UI 100 % = zu) · Datum: 2026-06-20 · Plattform: Java 
 Auf/Ab/Stopp und auf eine Prozent-Position fahren; aktuelle Position anzeigen.
 
 In Scope: Auf/Ab/Stopp, Position 0–100 %, Ist-Position-Anzeige, Mock-Modus.
-Out of Scope (später): Lamellen-Winkel, Gruppen/Szenen, Zeitsteuerung der Storen.
+Out of Scope (später): Lamellen-Winkel, Gruppen/Szenen.
 
 ## 2. Anbindung: Tuya-Cover (Datenpunkte)
 
@@ -44,6 +44,27 @@ die reale Store verifizieren (tinytuya `status` zeigt die belegten dps).
 
 404 bei unbekannter ID, 503 wenn die Store nicht erreichbar ist.
 
+### Zeitsteuerung der Storen
+
+Pro Store lassen sich Zeitsteuerungs-Regeln hinterlegen, die die Store zu einer
+festen Zeit (oder einmalig per Countdown) auf eine Zielposition fahren – z. B.
+nachts geschlossen, morgens um 06:30 kurz öffnen und bei 98 % „zu"
+(Geräte-Position 2) anhalten. Ein direkter Positionsbefehl fährt die Store auf
+genau diese Position und stoppt dort; es braucht keine Auf/Stopp-Sequenz.
+
+| Methode | Pfad                                       | Body / Antwort                          |
+|---------|--------------------------------------------|-----------------------------------------|
+| GET     | `/api/cover-schedules?coverId={id}`        | Liste der Regeln (optional je Store)    |
+| POST    | `/api/cover-schedules`                      | `{ coverId, type, position, time?, weekdays?, countdownSeconds? }` |
+| PUT     | `/api/cover-schedules/{id}/enabled/{bool}` | Regel aktivieren/deaktivieren           |
+| DELETE  | `/api/cover-schedules/{id}`                | Regel löschen                           |
+
+`type`: `SCHEDULE` (feste Uhrzeit, optional Wochentage – leer = täglich) oder
+`COUNTDOWN` (einmalig, deaktiviert sich nach dem Auslösen selbst). `position` in
+Geräteskala (0 = zu, 100 = offen); die UI rechnet in „% zu" und invertiert beim
+Speichern. Ein Scheduler-Tick (`cover-schedule.tick-interval`, Default 30 s) wertet
+die aktiven Regeln aus; SCHEDULE feuert höchstens einmal pro Minuten-Slot.
+
 ## 4. Konfiguration
 
 ```properties
@@ -78,4 +99,4 @@ Adapter-Querverweis – ArchUnit-konform).
       wie bei den Lampen). IP per DHCP-Reservierung fixieren.
 - [ ] Belegte dps je Store bestätigen (1/2/3 vs. 101 …) und ggf. Positionsrichtung
       invertieren.
-- [ ] Optional: Zeitsteuerung (Use Case 4) auf Storen erweitern.
+- [x] Zeitsteuerung der Storen (eigene Slice `cover-schedule`, je Store, SCHEDULE + COUNTDOWN).

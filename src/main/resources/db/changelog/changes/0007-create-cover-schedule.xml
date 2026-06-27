@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 5: Zeitsteuerung der Storen (SCHEDULE + COUNTDOWN, ein Tisch, je Store). -->
+    <changeSet id="0007-create-cover-schedule" author="smarthome">
+        <createTable tableName="cover_schedule">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cover_id" type="varchar(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="at_time" type="time"/>
+            <column name="weekdays" type="varchar(128)"/>
+            <column name="fire_at" type="timestamp with time zone"/>
+        </createTable>
+        <createIndex tableName="cover_schedule" indexName="idx_cover_schedule_cover_id">
+            <column name="cover_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

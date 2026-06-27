@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CoverService } from '../../core/services/cover.service';
 import { Cover } from '../../core/models/cover';
 import { ItemImage } from '../../shared/item-image';
@@ -10,10 +11,13 @@ import { ItemImage } from '../../shared/item-image';
 @Component({
   selector: 'app-cover-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ItemImage],
+  imports: [ItemImage, RouterLink],
   template: `
     <section class="space-y-5">
-      <h2 class="text-2xl font-semibold">Storen</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold">Storen</h2>
+        <a routerLink="/covers/schedule" class="seg px-3 py-1.5 text-sm">Zeitsteuerung</a>
+      </div>
 
       @if (covers(); as list) {
         @if (list.length === 0) {

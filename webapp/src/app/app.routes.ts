@@ -31,6 +31,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/cover/cover-page').then((m) => m.CoverPage),
   },
   {
+    path: 'covers/schedule',
+    loadComponent: () =>
+      import('./features/cover/cover-schedule-page').then((m) => m.CoverSchedulePage),
+  },
+  {
     path: 'wellness',
     loadComponent: () => import('./features/appliance/appliance-page').then((m) => m.AppliancePage),
   },
