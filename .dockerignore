@@ -1,0 +1,9 @@
+# Build-Artefakte und plattformspezifische Abhängigkeiten NICHT in den Build-Context:
+# webapp/node_modules enthält native Binaries des Host-OS (z. B. lightningcss,
+# esbuild) – im Linux-Container muss npm die passende Linux-Variante frisch
+# installieren. Sonst: "Cannot find module '../lightningcss.linux-*.node'".
+**/node_modules
+target
+webapp/dist
+.git
+.tuya-venv

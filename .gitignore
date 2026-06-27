@@ -35,6 +35,9 @@ config/application.properties
 # go2rtc-Config enthält die Kamera-IP/RTSP-URL – nur die .example wird eingecheckt
 deploy/go2rtc/go2rtc.yaml
 
+# Kubernetes-Secret (db-password) – nur secret.example.yaml wird eingecheckt
+deploy/k8s/secret.yaml
+
 # Python venv für Tuya-Diagnose (tinytuya)
 .tuya-venv/
 __pycache__/
