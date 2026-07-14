@@ -3,9 +3,10 @@ package fabianaschwanden.smarthome.domain.model.climate;
 import java.time.Instant;
 
 /**
- * Momentaufnahme einer Klimaanlage: Ein/Aus, Modus, Soll- und Ist-Temperatur.
- * {@code currentTemp} = {@link #TEMP_UNKNOWN}, wenn das Gerät keine Ist-Temperatur
- * meldet. Soll-Temperatur muss im erlaubten Bereich liegen (Invariante).
+ * Momentaufnahme einer Klimaanlage: Ein/Aus, Boost (Turbo), Modus, Soll-, Ist- und
+ * Außentemperatur. {@code currentTemp} bzw. {@code outdoorTemp} = {@link #TEMP_UNKNOWN},
+ * wenn das Gerät die jeweilige Temperatur nicht meldet. {@code boost} = Turbo-Modus für
+ * maximale Leistung. Soll-Temperatur muss im erlaubten Bereich liegen (Invariante).
  *
  * <p>Value Object: immutable {@code record}.
  */
@@ -14,9 +15,11 @@ public record Climate(
         String name,
         String room,
         boolean power,
+        boolean boost,
         ClimateMode mode,
         int targetTemp,
         int currentTemp,
+        int outdoorTemp,
         boolean online,
         Instant observedAt) {
 

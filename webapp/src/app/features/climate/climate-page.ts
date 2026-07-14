@@ -153,6 +153,18 @@ const MAX_TEMP = 30;
                   }
                 </div>
 
+                <!-- Boost / Turbo: maximale Leistung -->
+                <button
+                  type="button"
+                  [disabled]="!c.online"
+                  class="tile-toggle mt-3 w-full flex-row justify-center gap-2"
+                  [class.tile-toggle-active]="c.boost"
+                  (click)="toggleBoost(c)"
+                >
+                  <span class="text-base">🚀</span>
+                  <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
+                </button>
+
                 @if (!c.online) {
                   <p class="mt-4 text-xs text-amber-300/90">
                     ⚠ Gerade nicht erreichbar – Sidecar läuft? IP geprüft? (docs/climate/SPEC.md)
@@ -189,6 +201,10 @@ export class ClimatePage {
     if (next >= MIN_TEMP && next <= MAX_TEMP) {
       this.api.setTargetTemp(c.id, next);
     }
+  }
+
+  protected toggleBoost(c: Climate): void {
+    this.api.setBoost(c.id, !c.boost);
   }
 
   protected modeAction(mode: ClimateMode): string {

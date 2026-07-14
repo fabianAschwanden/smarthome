@@ -43,6 +43,10 @@ export class ClimateService {
     this.apply(this.http.post<Climate>(`/api/climate/${id}/target`, { temperature }));
   }
 
+  setBoost(id: string, on: boolean): void {
+    this.apply(this.http.post<Climate>(`/api/climate/${id}/boost`, { on }));
+  }
+
   private apply(request: Observable<Climate>): void {
     request.subscribe((updated) => {
       const current = this.climateState();

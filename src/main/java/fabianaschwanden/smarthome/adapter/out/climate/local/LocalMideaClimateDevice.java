@@ -90,25 +90,30 @@ public class LocalMideaClimateDevice implements ClimateDevice {
 
     @Override
     public void applyPower(boolean on) {
-        control(on, null, null);
+        control(on, null, null, null);
     }
 
     @Override
     public void applyMode(ClimateMode mode) {
-        control(null, toMsmartMode(mode), null);
+        control(null, toMsmartMode(mode), null, null);
     }
 
     @Override
     public void applyTargetTemp(int temperature) {
-        control(null, null, temperature);
+        control(null, null, temperature, null);
     }
 
-    private void control(Boolean power, String mode, Integer target) {
+    @Override
+    public void applyBoost(boolean on) {
+        control(null, null, null, on);
+    }
+
+    private void control(Boolean power, String mode, Integer target, Boolean boost) {
         // Steuerbefehl hat Vorrang: blockierend das Lock holen, damit er nicht mit einem
         // gleichzeitigen Status-Read kollidiert.
         lock.lock();
         try {
-            String body = sidecar.controlClimate(deviceId, token, key, address(), power, mode, target)
+            String body = sidecar.controlClimate(deviceId, token, key, address(), power, mode, target, boost)
                     .orElseThrow(() -> new ClimateUnavailable("Klimaanlage '" + name + "' nicht erreichbar"));
             LOG.debugf("[midea] Klima '%s' (%s) gesteuert -> %s", name, id, body);
             // Der Sidecar liefert den Zustand nach dem Befehl gleich mit – als frischen Cache
@@ -150,10 +155,12 @@ public class LocalMideaClimateDevice implements ClimateDevice {
             return Optional.empty();
         }
         boolean power = Boolean.TRUE.equals(parseBool(json, "power"));
+        boolean boost = Boolean.TRUE.equals(parseBool(json, "boost"));
         ClimateMode mode = fromMsmartMode(parseString(json, "mode"));
         int target = parseTemp(json, "target");
         int current = parseTemp(json, "current");
-        return Optional.of(new State(power, mode, target, current));
+        int outdoor = parseTemp(json, "outdoor");
+        return Optional.of(new State(power, boost, mode, target, current, outdoor));
     }
 
     private void cache(State state) {

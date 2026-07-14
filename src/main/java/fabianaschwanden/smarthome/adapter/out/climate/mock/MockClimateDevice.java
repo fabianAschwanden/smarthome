@@ -9,7 +9,8 @@ import java.util.Optional;
 /**
  * Mock-Klimaanlage für Entwicklung/Test: hält den Zustand im Speicher, immer
  * „erreichbar". Liefert eine plausible Ist-Temperatur (21 °C). Wird von
- * {@link MockClimateDeviceFactory} je konfiguriertem Gerät erzeugt.
+ * {@link MockClimateDeviceFactory} je konfiguriertem Gerät erzeugt. Meldet zusätzlich
+ * eine plausible Außentemperatur (14 °C).
  */
 public class MockClimateDevice implements ClimateDevice {
 
@@ -20,9 +21,11 @@ public class MockClimateDevice implements ClimateDevice {
     private final String room;
 
     private volatile boolean power = false;
+    private volatile boolean boost = false;
     private volatile ClimateMode mode = ClimateMode.AUTO;
     private volatile int targetTemp = 22;
     private volatile int currentTemp = 21;
+    private volatile int outdoorTemp = 14;
 
     public MockClimateDevice(String id, String name, String room) {
         this.id = id;
@@ -58,6 +61,12 @@ public class MockClimateDevice implements ClimateDevice {
     }
 
     @Override
+    public void applyBoost(boolean on) {
+        this.boost = on;
+        LOG.infof("[mock] Klima '%s' (%s) -> Boost %s", name, id, on ? "EIN" : "AUS");
+    }
+
+    @Override
     public void applyTargetTemp(int temperature) {
         this.targetTemp = temperature;
         LOG.infof("[mock] Klima '%s' (%s) -> Soll %d°C", name, id, temperature);
@@ -65,6 +74,6 @@ public class MockClimateDevice implements ClimateDevice {
 
     @Override
     public Optional<State> readState() {
-        return Optional.of(new State(power, mode, targetTemp, currentTemp));
+        return Optional.of(new State(power, boost, mode, targetTemp, currentTemp, outdoorTemp));
     }
 }

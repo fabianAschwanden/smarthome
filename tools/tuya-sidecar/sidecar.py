@@ -50,6 +50,8 @@ def _snapshot(dev) -> dict:
         "mode": dev.operational_mode.name if dev.operational_mode else None,
         "target": dev.target_temperature,
         "current": dev.indoor_temperature,
+        "outdoor": dev.outdoor_temperature,
+        "boost": dev.turbo_mode,
         "online": dev.online,
     }
 
@@ -88,7 +90,9 @@ def climate_read(q) -> dict:
 
 
 def climate_control(q) -> dict:
-    """Schaltet/setzt die Klimaanlage (power/mode/target) über msmart-ng."""
+    """Schaltet/setzt die Klimaanlage (power/mode/target/boost) über msmart-ng.
+
+    boost = Turbo-Modus (dev.turbo_mode) für maximale Leistung."""
     from msmart.device import AirConditioner as AC
 
     async def run():
@@ -101,6 +105,8 @@ def climate_control(q) -> dict:
             dev.operational_mode = AC.OperationalMode[q["mode"][0].upper()]
         if "target" in q:
             dev.target_temperature = float(q["target"][0])
+        if "boost" in q:
+            dev.turbo_mode = q["boost"][0].lower() == "true"
         await dev.apply()
         return _snapshot(dev)
 

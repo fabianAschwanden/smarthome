@@ -63,6 +63,23 @@ class ClimateControlServiceTest {
     }
 
     @Test
+    void aussentemperaturWirdDurchgereicht() {
+        FakeClimate k = new FakeClimate("klima");
+        ClimateControlService service = new ClimateControlService(List.of(k), clock);
+
+        assertEquals(12, service.list().get(0).outdoorTemp());
+    }
+
+    @Test
+    void boostSetzen() {
+        FakeClimate k = new FakeClimate("klima");
+        ClimateControlService service = new ClimateControlService(List.of(k), clock);
+
+        assertTrue(service.setBoost("klima", true).boost());
+        assertFalse(service.setBoost("klima", false).boost());
+    }
+
+    @Test
     void offlineMeldetLetztenZustand() {
         FakeClimate k = new FakeClimate("klima");
         ClimateControlService service = new ClimateControlService(List.of(k), clock);
@@ -78,6 +95,7 @@ class ClimateControlServiceTest {
     private static final class FakeClimate implements ClimateDevice {
         private final String id;
         private boolean power = false;
+        private boolean boost = false;
         private ClimateMode mode = ClimateMode.AUTO;
         private int target = 22;
         private boolean reachable = true;
@@ -92,8 +110,9 @@ class ClimateControlServiceTest {
         @Override public void applyPower(boolean on) { this.power = on; }
         @Override public void applyMode(ClimateMode mode) { this.mode = mode; }
         @Override public void applyTargetTemp(int temperature) { this.target = temperature; }
+        @Override public void applyBoost(boolean on) { this.boost = on; }
         @Override public Optional<State> readState() {
-            return reachable ? Optional.of(new State(power, mode, target, 21)) : Optional.empty();
+            return reachable ? Optional.of(new State(power, boost, mode, target, 21, 12)) : Optional.empty();
         }
     }
 }

@@ -18,6 +18,7 @@ import { TempDial } from '../../shared/temp-dial';
 import { BlindMini } from '../../shared/blind-mini';
 import { EnergyFlow } from './energy-flow';
 import { WeatherCard } from './weather-card';
+import { OutdoorTempCard } from './outdoor-temp-card';
 
 const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
   COOL: 'Kühlen',
@@ -43,6 +44,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
     BlindMini,
     EnergyFlow,
     WeatherCard,
+    OutdoorTempCard,
   ],
   template: `
     <section class="space-y-5">
@@ -144,8 +146,13 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           }
         </div>
 
-        <!-- Spalte 3: Innentemperatur und Klimaanlage -->
+        <!-- Spalte 3: Außen-/Innentemperatur und Klimaanlage -->
         <div class="flex flex-col gap-4">
+          <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
+          @if (climate(); as c) {
+            <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+          }
+
           <!-- Innentemperatur (Sensor, z. B. Küche) -->
           @if (sensor(); as s) {
             @if (room.shows(s.room)) {
