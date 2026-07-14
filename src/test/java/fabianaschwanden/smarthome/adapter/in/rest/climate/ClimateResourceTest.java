@@ -46,6 +46,14 @@ class ClimateResourceTest {
     }
 
     @Test
+    void boost_setzen() {
+        given().contentType("application/json").body("{\"on\":true}")
+                .when().post("/api/climate/klima/boost")
+                .then().statusCode(200)
+                .body("boost", is(true));
+    }
+
+    @Test
     void ungueltige_temperatur_ist_400() {
         given().contentType("application/json").body("{\"temperature\":40}")
                 .when().post("/api/climate/klima/target")

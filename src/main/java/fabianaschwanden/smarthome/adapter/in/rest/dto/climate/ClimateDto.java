@@ -11,6 +11,7 @@ public record ClimateDto(
         String name,
         String room,
         boolean power,
+        boolean boost,
         String mode,
         int targetTemp,
         int currentTemp,
@@ -19,7 +20,7 @@ public record ClimateDto(
         String observedAt) {
 
     public static ClimateDto from(Climate c) {
-        return new ClimateDto(c.id(), c.name(), c.room(), c.power(), c.mode().name(),
+        return new ClimateDto(c.id(), c.name(), c.room(), c.power(), c.boost(), c.mode().name(),
                 c.targetTemp(), c.currentTemp(), c.outdoorTemp(), c.online(), c.observedAt().toString());
     }
 }

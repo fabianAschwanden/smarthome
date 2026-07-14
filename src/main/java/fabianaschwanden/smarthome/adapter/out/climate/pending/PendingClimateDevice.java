@@ -54,6 +54,11 @@ public class PendingClimateDevice implements ClimateDevice {
     }
 
     @Override
+    public void applyBoost(boolean on) {
+        throw unavailable();
+    }
+
+    @Override
     public Optional<State> readState() {
         return Optional.empty();
     }

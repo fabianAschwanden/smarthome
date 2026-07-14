@@ -34,10 +34,11 @@ Mode-Mapping Domäne ↔ msmart: `COOL`/`HEAT`/`AUTO` direkt, `FAN` ↔ `FAN_ONL
 
 | Methode | Pfad                        | Body / Antwort                              |
 |---------|-----------------------------|---------------------------------------------|
-| GET     | `/api/climate`              | Liste (power, mode, targetTemp, currentTemp, online) |
+| GET     | `/api/climate`              | Liste (power, boost, mode, targetTemp, currentTemp, outdoorTemp, online) |
 | POST    | `/api/climate/{id}/power`   | `{ "on": true\|false }`                     |
 | POST    | `/api/climate/{id}/mode`    | `{ "mode": "COOL"\|"HEAT"\|"AUTO"\|"FAN" }` |
 | POST    | `/api/climate/{id}/target`  | `{ "temperature": 16..30 }`                 |
+| POST    | `/api/climate/{id}/boost`   | `{ "on": true\|false }` (Turbo/maximale Leistung) |
 
 404 unbekannte Anlage, 400 Temperatur ausserhalb 16–30 °C, 503 nicht erreichbar.
 

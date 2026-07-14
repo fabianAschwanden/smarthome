@@ -26,6 +26,7 @@ describe('ClimatePage', () => {
         name: 'Klimaanlage',
         room: 'Wohnzimmer',
         power: true,
+        boost: false,
         mode: 'COOL',
         targetTemp: 22,
         currentTemp: 21,

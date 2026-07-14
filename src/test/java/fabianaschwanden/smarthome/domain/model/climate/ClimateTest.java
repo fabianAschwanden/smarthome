@@ -16,11 +16,12 @@ class ClimateTest {
     @Test
     void gueltigeInstanzBautKorrekt() {
         Climate c = new Climate("ac1", "Wohnzimmer-Klima", "Wohnzimmer", true,
-                ClimateMode.COOL, 22, 24, 12, true, now);
+                true, ClimateMode.COOL, 22, 24, 12, true, now);
         assertEquals("ac1", c.id());
         assertEquals("Wohnzimmer-Klima", c.name());
         assertEquals("Wohnzimmer", c.room());
         assertEquals(true, c.power());
+        assertEquals(true, c.boost());
         assertEquals(ClimateMode.COOL, c.mode());
         assertEquals(22, c.targetTemp());
         assertEquals(24, c.currentTemp());
@@ -31,7 +32,7 @@ class ClimateTest {
 
     @Test
     void nullRoomWirdLeererString() {
-        Climate c = new Climate("ac1", "Klima", null, false, ClimateMode.AUTO, 20,
+        Climate c = new Climate("ac1", "Klima", null, false, false, ClimateMode.AUTO, 20,
                 Climate.TEMP_UNKNOWN, Climate.TEMP_UNKNOWN, false, now);
         assertEquals("", c.room());
     }
@@ -39,39 +40,39 @@ class ClimateTest {
     @Test
     void idDarfNichtLeerSein() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                " ", "Klima", "Raum", true, ClimateMode.COOL, 22, 22, 12, true, now));
+                " ", "Klima", "Raum", true, false, ClimateMode.COOL, 22, 22, 12, true, now));
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                null, "Klima", "Raum", true, ClimateMode.COOL, 22, 22, 12, true, now));
+                null, "Klima", "Raum", true, false, ClimateMode.COOL, 22, 22, 12, true, now));
     }
 
     @Test
     void nameDarfNichtLeerSein() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                "ac1", " ", "Raum", true, ClimateMode.COOL, 22, 22, 12, true, now));
+                "ac1", " ", "Raum", true, false, ClimateMode.COOL, 22, 22, 12, true, now));
     }
 
     @Test
     void modeDarfNichtNullSein() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                "ac1", "Klima", "Raum", true, null, 22, 22, 12, true, now));
+                "ac1", "Klima", "Raum", true, false, null, 22, 22, 12, true, now));
     }
 
     @Test
     void targetTempUnterMinWirft() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                "ac1", "Klima", "Raum", true, ClimateMode.COOL, Climate.MIN_TEMP - 1, 22, 12, true, now));
+                "ac1", "Klima", "Raum", true, false, ClimateMode.COOL, Climate.MIN_TEMP - 1, 22, 12, true, now));
     }
 
     @Test
     void targetTempUeberMaxWirft() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                "ac1", "Klima", "Raum", true, ClimateMode.COOL, Climate.MAX_TEMP + 1, 22, 12, true, now));
+                "ac1", "Klima", "Raum", true, false, ClimateMode.COOL, Climate.MAX_TEMP + 1, 22, 12, true, now));
     }
 
     @Test
     void observedAtDarfNichtNullSein() {
         assertThrows(IllegalArgumentException.class, () -> new Climate(
-                "ac1", "Klima", "Raum", true, ClimateMode.COOL, 22, 22, 12, true, null));
+                "ac1", "Klima", "Raum", true, false, ClimateMode.COOL, 22, 22, 12, true, null));
     }
 
     @Test

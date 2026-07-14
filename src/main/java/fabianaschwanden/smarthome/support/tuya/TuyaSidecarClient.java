@@ -62,12 +62,13 @@ public class TuyaSidecarClient {
 
     /**
      * Steuert eine Midea/NetHome-Plus-Klimaanlage. Nur die übergebenen Parameter werden
-     * gesetzt ({@code power}=true/false, {@code mode}=COOL/HEAT/AUTO/FAN, {@code target}=°C).
-     * Liefert den resultierenden Zustand als JSON; {@code empty} bei Fehler.
+     * gesetzt ({@code power}=true/false, {@code mode}=COOL/HEAT/AUTO/FAN, {@code target}=°C,
+     * {@code boost}=true/false für Turbo). Liefert den resultierenden Zustand als JSON;
+     * {@code empty} bei Fehler.
      */
     public Optional<String> controlClimate(
             String deviceId, String token, String key, String ip,
-            Boolean power, String mode, Integer target) {
+            Boolean power, String mode, Integer target, Boolean boost) {
         StringBuilder url = new StringBuilder("/climate/control?id=").append(enc(deviceId))
                 .append("&token=").append(enc(token))
                 .append("&key=").append(enc(key))
@@ -80,6 +81,9 @@ public class TuyaSidecarClient {
         }
         if (target != null) {
             url.append("&target=").append(target);
+        }
+        if (boost != null) {
+            url.append("&boost=").append(boost);
         }
         return get(url.toString());
     }

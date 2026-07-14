@@ -1,5 +1,6 @@
 package fabianaschwanden.smarthome.adapter.in.rest.climate;
 
+import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.BoostRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.ClimateDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.ModeRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.PowerRequest;
@@ -49,5 +50,11 @@ public class ClimateResource {
     @Path("{id}/target")
     public ClimateDto setTarget(@PathParam("id") String id, @Valid TargetTempRequest request) {
         return ClimateDto.from(climate.setTargetTemp(id, request.temperature()));
+    }
+
+    @POST
+    @Path("{id}/boost")
+    public ClimateDto setBoost(@PathParam("id") String id, @Valid BoostRequest request) {
+        return ClimateDto.from(climate.setBoost(id, request.on()));
     }
 }

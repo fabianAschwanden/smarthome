@@ -6,6 +6,8 @@ export interface Climate {
   name: string;
   room: string;
   power: boolean;
+  /** Boost/Turbo aktiv (maximale Leistung). */
+  boost: boolean;
   mode: ClimateMode;
   targetTemp: number;
   /** -1 = unbekannt. */

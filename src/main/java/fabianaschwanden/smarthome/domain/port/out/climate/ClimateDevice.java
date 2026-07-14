@@ -23,10 +23,14 @@ public interface ClimateDevice {
 
     void applyTargetTemp(int temperature);
 
+    /** Schaltet den Boost-/Turbo-Modus (maximale Leistung) ein/aus. */
+    void applyBoost(boolean on);
+
     /** Liest den aktuellen Zustand; {@code empty}, wenn nicht erreichbar. */
     Optional<State> readState();
 
     /** Schnappschuss der Geräte-Zustände (interne Transport-Struktur des Ports). */
-    record State(boolean power, ClimateMode mode, int targetTemp, int currentTemp, int outdoorTemp) {
+    record State(boolean power, boolean boost, ClimateMode mode, int targetTemp, int currentTemp,
+                 int outdoorTemp) {
     }
 }

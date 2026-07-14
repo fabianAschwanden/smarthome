@@ -61,6 +61,7 @@ describe('DashboardPage', () => {
         name: 'Klimaanlage',
         room: 'Wohnzimmer',
         power: false,
+        boost: false,
         mode: 'AUTO',
         targetTemp: 22,
         currentTemp: 21,

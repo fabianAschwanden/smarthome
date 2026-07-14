@@ -21,6 +21,7 @@ public class MockClimateDevice implements ClimateDevice {
     private final String room;
 
     private volatile boolean power = false;
+    private volatile boolean boost = false;
     private volatile ClimateMode mode = ClimateMode.AUTO;
     private volatile int targetTemp = 22;
     private volatile int currentTemp = 21;
@@ -60,6 +61,12 @@ public class MockClimateDevice implements ClimateDevice {
     }
 
     @Override
+    public void applyBoost(boolean on) {
+        this.boost = on;
+        LOG.infof("[mock] Klima '%s' (%s) -> Boost %s", name, id, on ? "EIN" : "AUS");
+    }
+
+    @Override
     public void applyTargetTemp(int temperature) {
         this.targetTemp = temperature;
         LOG.infof("[mock] Klima '%s' (%s) -> Soll %d°C", name, id, temperature);
@@ -67,6 +74,6 @@ public class MockClimateDevice implements ClimateDevice {
 
     @Override
     public Optional<State> readState() {
-        return Optional.of(new State(power, mode, targetTemp, currentTemp, outdoorTemp));
+        return Optional.of(new State(power, boost, mode, targetTemp, currentTemp, outdoorTemp));
     }
 }

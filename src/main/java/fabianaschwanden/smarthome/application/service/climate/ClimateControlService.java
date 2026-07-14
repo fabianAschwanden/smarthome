@@ -40,7 +40,8 @@ public class ClimateControlService implements ControlClimate {
         for (ClimateDevice device : devices) {
             this.devices.put(device.id(), device);
             this.lastKnown.put(device.id(), new ClimateDevice.State(
-                    false, ClimateMode.AUTO, DEFAULT_TARGET, Climate.TEMP_UNKNOWN, Climate.TEMP_UNKNOWN));
+                    false, false, ClimateMode.AUTO, DEFAULT_TARGET,
+                    Climate.TEMP_UNKNOWN, Climate.TEMP_UNKNOWN));
         }
         this.clock = clock;
     }
@@ -71,6 +72,13 @@ public class ClimateControlService implements ControlClimate {
         return observe(device);
     }
 
+    @Override
+    public Climate setBoost(String id, boolean on) {
+        ClimateDevice device = require(id);
+        device.applyBoost(on);
+        return observe(device);
+    }
+
     private ClimateDevice require(String id) {
         ClimateDevice device = devices.get(id);
         if (device == null) {
@@ -92,7 +100,7 @@ public class ClimateControlService implements ControlClimate {
             online = false;
         }
         return new Climate(device.id(), device.name(), device.room(),
-                state.power(), state.mode(), state.targetTemp(), state.currentTemp(),
+                state.power(), state.boost(), state.mode(), state.targetTemp(), state.currentTemp(),
                 state.outdoorTemp(), online, clock.instant());
     }
 }
