@@ -63,6 +63,14 @@ class ClimateControlServiceTest {
     }
 
     @Test
+    void aussentemperaturWirdDurchgereicht() {
+        FakeClimate k = new FakeClimate("klima");
+        ClimateControlService service = new ClimateControlService(List.of(k), clock);
+
+        assertEquals(12, service.list().get(0).outdoorTemp());
+    }
+
+    @Test
     void offlineMeldetLetztenZustand() {
         FakeClimate k = new FakeClimate("klima");
         ClimateControlService service = new ClimateControlService(List.of(k), clock);
@@ -93,7 +101,7 @@ class ClimateControlServiceTest {
         @Override public void applyMode(ClimateMode mode) { this.mode = mode; }
         @Override public void applyTargetTemp(int temperature) { this.target = temperature; }
         @Override public Optional<State> readState() {
-            return reachable ? Optional.of(new State(power, mode, target, 21)) : Optional.empty();
+            return reachable ? Optional.of(new State(power, mode, target, 21, 12)) : Optional.empty();
         }
     }
 }

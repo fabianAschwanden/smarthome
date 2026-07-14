@@ -29,6 +29,7 @@ describe('ClimatePage', () => {
         mode: 'COOL',
         targetTemp: 22,
         currentTemp: 21,
+        outdoorTemp: 14,
         online: true,
         observedAt: 'x',
       },

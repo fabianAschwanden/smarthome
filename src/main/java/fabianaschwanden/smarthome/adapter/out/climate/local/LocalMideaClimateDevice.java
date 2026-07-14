@@ -153,7 +153,8 @@ public class LocalMideaClimateDevice implements ClimateDevice {
         ClimateMode mode = fromMsmartMode(parseString(json, "mode"));
         int target = parseTemp(json, "target");
         int current = parseTemp(json, "current");
-        return Optional.of(new State(power, mode, target, current));
+        int outdoor = parseTemp(json, "outdoor");
+        return Optional.of(new State(power, mode, target, current, outdoor));
     }
 
     private void cache(State state) {

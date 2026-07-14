@@ -39,8 +39,8 @@ public class ClimateControlService implements ControlClimate {
     ClimateControlService(List<ClimateDevice> devices, Clock clock) {
         for (ClimateDevice device : devices) {
             this.devices.put(device.id(), device);
-            this.lastKnown.put(device.id(),
-                    new ClimateDevice.State(false, ClimateMode.AUTO, DEFAULT_TARGET, Climate.TEMP_UNKNOWN));
+            this.lastKnown.put(device.id(), new ClimateDevice.State(
+                    false, ClimateMode.AUTO, DEFAULT_TARGET, Climate.TEMP_UNKNOWN, Climate.TEMP_UNKNOWN));
         }
         this.clock = clock;
     }
@@ -93,6 +93,6 @@ public class ClimateControlService implements ControlClimate {
         }
         return new Climate(device.id(), device.name(), device.room(),
                 state.power(), state.mode(), state.targetTemp(), state.currentTemp(),
-                online, clock.instant());
+                state.outdoorTemp(), online, clock.instant());
     }
 }

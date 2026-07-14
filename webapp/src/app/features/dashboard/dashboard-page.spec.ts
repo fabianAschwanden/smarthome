@@ -64,6 +64,7 @@ describe('DashboardPage', () => {
         mode: 'AUTO',
         targetTemp: 22,
         currentTemp: 21,
+        outdoorTemp: 14,
         online: true,
         observedAt: 'x',
       },

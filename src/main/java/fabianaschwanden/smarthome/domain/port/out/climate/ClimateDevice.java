@@ -27,6 +27,6 @@ public interface ClimateDevice {
     Optional<State> readState();
 
     /** Schnappschuss der Geräte-Zustände (interne Transport-Struktur des Ports). */
-    record State(boolean power, ClimateMode mode, int targetTemp, int currentTemp) {
+    record State(boolean power, ClimateMode mode, int targetTemp, int currentTemp, int outdoorTemp) {
     }
 }

@@ -10,6 +10,8 @@ export interface Climate {
   targetTemp: number;
   /** -1 = unbekannt. */
   currentTemp: number;
+  /** Außentemperatur (vom Klima-Außengerät gemeldet); -1 = unbekannt. */
+  outdoorTemp: number;
   online: boolean;
   observedAt: string;
 }

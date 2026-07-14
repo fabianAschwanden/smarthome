@@ -50,6 +50,7 @@ def _snapshot(dev) -> dict:
         "mode": dev.operational_mode.name if dev.operational_mode else None,
         "target": dev.target_temperature,
         "current": dev.indoor_temperature,
+        "outdoor": dev.outdoor_temperature,
         "online": dev.online,
     }
 
