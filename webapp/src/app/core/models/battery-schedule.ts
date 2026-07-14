@@ -2,13 +2,7 @@
 export type BatteryScheduleType = 'SCHEDULE' | 'COUNTDOWN';
 export type RelayState = 'ON' | 'OFF';
 export type Weekday =
-  | 'MONDAY'
-  | 'TUESDAY'
-  | 'WEDNESDAY'
-  | 'THURSDAY'
-  | 'FRIDAY'
-  | 'SATURDAY'
-  | 'SUNDAY';
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
 export interface BatterySchedule {
   id: string;
