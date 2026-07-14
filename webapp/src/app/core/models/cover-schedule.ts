@@ -1,13 +1,7 @@
 /** Spiegelt die REST-DTOs der Storen-Zeitsteuerung (publizierte Sprache). */
 export type CoverScheduleType = 'SCHEDULE' | 'COUNTDOWN';
 export type Weekday =
-  | 'MONDAY'
-  | 'TUESDAY'
-  | 'WEDNESDAY'
-  | 'THURSDAY'
-  | 'FRIDAY'
-  | 'SATURDAY'
-  | 'SUNDAY';
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
 export interface CoverSchedule {
   id: string;

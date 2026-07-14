@@ -2,13 +2,7 @@
 export type ScheduleType = 'SCHEDULE' | 'COUNTDOWN' | 'RANDOM' | 'INCHING';
 export type SwitchState = 'ON' | 'OFF';
 export type Weekday =
-  | 'MONDAY'
-  | 'TUESDAY'
-  | 'WEDNESDAY'
-  | 'THURSDAY'
-  | 'FRIDAY'
-  | 'SATURDAY'
-  | 'SUNDAY';
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
 export interface Schedule {
   id: string;
