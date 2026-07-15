@@ -62,9 +62,13 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
       <!-- Oben: 3 saubere Spalten — Energie | Wetter+Stehlampe+Rauchmelder | Klima -->
       <div class="grid items-start gap-4 lg:grid-cols-3">
         <!-- Spalte 1: Energie (Fronius) -->
-        <a routerLink="/energy" class="block">
-          <app-energy-flow [reading]="energy()" [batteryStatus]="batteryStatus()" />
-        </a>
+        <div routerLink="/energy" class="block cursor-pointer">
+          <app-energy-flow
+            [reading]="energy()"
+            [batteryStatus]="batteryStatus()"
+            (batteryToggle)="batterySwitch($event)"
+          />
+        </div>
 
         <!-- Spalte 2: Wetter, darunter Stehlampe und Rauchmelder -->
         <div class="flex flex-col gap-4">
@@ -388,6 +392,14 @@ export class DashboardPage {
     if (c) {
       this.climateSvc.setPower(c.id, on);
     }
+  }
+
+  /**
+   * Batterie von der Energie-Kachel schalten. Wechselt bei Bedarf auf MANUAL –
+   * im Automatik-Modus lehnt das Backend Schaltbefehle ab.
+   */
+  protected batterySwitch(on: boolean): void {
+    this.batterySvc.switchRelayManual(on ? 'ON' : 'OFF');
   }
 
   protected climateBoost(on: boolean): void {
