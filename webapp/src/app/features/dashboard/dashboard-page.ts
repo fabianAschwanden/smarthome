@@ -221,6 +221,17 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   [label]="modeLabel(c.mode)"
                   emphasis="current"
                 />
+                <!-- Boost / Turbo: maximale Leistung -->
+                <button
+                  type="button"
+                  [disabled]="!c.online"
+                  class="tile-toggle w-full flex-row justify-center gap-2"
+                  [class.tile-toggle-active]="c.boost"
+                  (click)="$event.stopPropagation(); climateBoost(!c.boost)"
+                >
+                  <span class="text-base">🚀</span>
+                  <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
+                </button>
                 <p class="text-center text-xs text-[color:var(--ink-soft)]">Einstellen →</p>
               </article>
             }
@@ -376,6 +387,13 @@ export class DashboardPage {
     const c = this.climate();
     if (c) {
       this.climateSvc.setPower(c.id, on);
+    }
+  }
+
+  protected climateBoost(on: boolean): void {
+    const c = this.climate();
+    if (c) {
+      this.climateSvc.setBoost(c.id, on);
     }
   }
 
