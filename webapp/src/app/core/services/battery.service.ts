@@ -43,4 +43,23 @@ export class BatteryService {
       this.controlState.set(control);
     });
   }
+
+  /**
+   * Schaltet das Relais und wechselt dabei nötigenfalls auf MANUAL: Das Backend
+   * lehnt Schaltbefehle im AUTO-Modus ab (ManualSwitchNotAllowed). Für die
+   * Dashboard-Kachel, wo kein Modus-Umschalter Platz hat – die Automatik bleibt
+   * danach aus, bis sie auf der Batterie-Seite wieder eingeschaltet wird.
+   */
+  switchRelayManual(state: RelayState): void {
+    const relay = () => this.http.post<BatteryControl>('/api/battery/relay', { state });
+    const request =
+      this.controlState()?.mode === 'MANUAL'
+        ? relay()
+        : this.http
+            .put<BatteryControl>('/api/battery/mode', { mode: 'MANUAL' })
+            .pipe(switchMap(relay));
+    request.subscribe((control) => {
+      this.controlState.set(control);
+    });
+  }
 }

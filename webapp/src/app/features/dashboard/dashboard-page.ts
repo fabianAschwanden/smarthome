@@ -62,9 +62,13 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
       <!-- Oben: 3 saubere Spalten — Energie | Wetter+Stehlampe+Rauchmelder | Klima -->
       <div class="grid items-start gap-4 lg:grid-cols-3">
         <!-- Spalte 1: Energie (Fronius) -->
-        <a routerLink="/energy" class="block">
-          <app-energy-flow [reading]="energy()" [batteryStatus]="batteryStatus()" />
-        </a>
+        <div routerLink="/energy" class="block cursor-pointer">
+          <app-energy-flow
+            [reading]="energy()"
+            [batteryStatus]="batteryStatus()"
+            (batteryToggle)="batterySwitch($event)"
+          />
+        </div>
 
         <!-- Spalte 2: Wetter, darunter Stehlampe und Rauchmelder -->
         <div class="flex flex-col gap-4">
@@ -73,7 +77,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Stehlampe -->
           @if (stehlampe(); as s) {
             @if (room.shows(s.room)) {
-              <article class="glass-card flex items-center justify-between gap-4 p-5">
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                routerLink="/switch"
+              >
                 <div class="flex min-w-0 items-center gap-3">
                   <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
                   <div class="min-w-0">
@@ -89,6 +96,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   size="lg"
                   [label]="s.name"
                   (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
                 />
               </article>
             }
@@ -97,7 +105,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Palmenbeleuchtung -->
           @if (palme(); as s) {
             @if (room.shows(s.room)) {
-              <article class="glass-card flex items-center justify-between gap-4 p-5">
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                routerLink="/switch"
+              >
                 <div class="flex min-w-0 items-center gap-3">
                   <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
                   <div class="min-w-0">
@@ -113,6 +124,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   size="lg"
                   [label]="s.name"
                   (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
                 />
               </article>
             }
@@ -150,7 +162,9 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         <div class="flex flex-col gap-4">
           <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
           @if (climate(); as c) {
-            <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+            <a routerLink="/climate" class="block">
+              <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+            </a>
           }
 
           <!-- Innentemperatur (Sensor, z. B. Küche) -->
@@ -189,7 +203,11 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Klimaanlage mit Temperatur-Kreis -->
           @if (climate(); as c) {
             @if (room.shows(c.room)) {
-              <article class="glass-card space-y-3 p-5" [class.opacity-60]="!c.online">
+              <article
+                class="glass-card cursor-pointer space-y-3 p-5"
+                [class.opacity-60]="!c.online"
+                routerLink="/climate"
+              >
                 <header class="flex items-center justify-between gap-3">
                   <h3 class="truncate font-medium">{{ c.name }}</h3>
                   <app-power-toggle
@@ -198,6 +216,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                     size="lg"
                     label="Klima ein/aus"
                     (onChange)="climatePower($event)"
+                    (click)="$event.stopPropagation()"
                   />
                 </header>
                 <app-temp-dial
@@ -206,11 +225,18 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   [label]="modeLabel(c.mode)"
                   emphasis="current"
                 />
-                <a
-                  routerLink="/climate"
-                  class="block text-center text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-                  >Einstellen →</a
+                <!-- Boost / Turbo: maximale Leistung -->
+                <button
+                  type="button"
+                  [disabled]="!c.online"
+                  class="tile-toggle w-full flex-row justify-center gap-2"
+                  [class.tile-toggle-active]="c.boost"
+                  (click)="$event.stopPropagation(); climateBoost(!c.boost)"
                 >
+                  <span class="text-base">🚀</span>
+                  <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
+                </button>
+                <p class="text-center text-xs text-[color:var(--ink-soft)]">Einstellen →</p>
               </article>
             }
           }
@@ -221,14 +247,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
       <div class="grid gap-4">
         <!-- Storen (im Raumfilter nur die des aktiven Raums) -->
         @if (visibleCovers().length > 0) {
-          <article class="glass-card space-y-3 p-5">
+          <article class="glass-card cursor-pointer space-y-3 p-5" routerLink="/covers">
             <header class="flex items-center justify-between">
               <h3 class="font-medium">Storen</h3>
-              <a
-                routerLink="/covers"
-                class="text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-                >Alle →</a
-              >
+              <span class="text-xs text-[color:var(--ink-soft)]">Alle →</span>
             </header>
             <div class="space-y-2">
               @for (cv of visibleCovers(); track cv.id) {
@@ -253,7 +275,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'OPEN')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'OPEN')"
                       aria-label="Auf"
                     >
                       ▲
@@ -262,7 +284,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'STOP')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'STOP')"
                       aria-label="Stopp"
                     >
                       ■
@@ -271,7 +293,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'CLOSE')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'CLOSE')"
                       aria-label="Ab"
                     >
                       ▼
@@ -369,6 +391,21 @@ export class DashboardPage {
     const c = this.climate();
     if (c) {
       this.climateSvc.setPower(c.id, on);
+    }
+  }
+
+  /**
+   * Batterie von der Energie-Kachel schalten. Wechselt bei Bedarf auf MANUAL –
+   * im Automatik-Modus lehnt das Backend Schaltbefehle ab.
+   */
+  protected batterySwitch(on: boolean): void {
+    this.batterySvc.switchRelayManual(on ? 'ON' : 'OFF');
+  }
+
+  protected climateBoost(on: boolean): void {
+    const c = this.climate();
+    if (c) {
+      this.climateSvc.setBoost(c.id, on);
     }
   }
 

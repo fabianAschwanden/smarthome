@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { PowerReading } from '../../core/models/energy';
+import { PowerToggle } from '../../shared/power-toggle';
 
 /**
  * Energiefluss-Darstellung nach dem Muster der Fronius-App: PV oben (Ring mit
@@ -11,6 +12,7 @@ import { PowerReading } from '../../core/models/energy';
 @Component({
   selector: 'app-energy-flow',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PowerToggle],
   template: `
     @if (reading(); as r) {
       <div class="glass-card space-y-3 p-4">
@@ -141,7 +143,16 @@ import { PowerReading } from '../../core/models/energy';
               </span>
               Batterie
             </span>
-            <span class="text-sm font-medium" [class]="batteryClass()">{{ batteryLabel() }}</span>
+            <span class="flex items-center gap-3">
+              <span class="text-sm font-medium" [class]="batteryClass()">{{ batteryLabel() }}</span>
+              <app-power-toggle
+                [on]="batteryStatus() === 'charging'"
+                size="sm"
+                label="Batterieladung ein/aus"
+                (onChange)="batteryToggle.emit($event)"
+                (click)="$event.stopPropagation()"
+              />
+            </span>
           </div>
         }
 
@@ -206,6 +217,9 @@ export class EnergyFlow {
    * geschaltet, daher kein Lade-Watt-Schwellwert.
    */
   readonly batteryStatus = input<'charging' | 'off' | 'unknown'>('unknown');
+
+  /** Batterie-Schalter betätigt (true = ein). Das Schalten selbst macht die Seite. */
+  readonly batteryToggle = output<boolean>();
 
   /** PV-Ring-Füllung 0–100 %: skaliert auf eine angenommene Spitzenleistung. */
   protected readonly pvFill = computed(() => {
