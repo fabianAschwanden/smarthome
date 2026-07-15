@@ -73,7 +73,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Stehlampe -->
           @if (stehlampe(); as s) {
             @if (room.shows(s.room)) {
-              <article class="glass-card flex items-center justify-between gap-4 p-5">
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                routerLink="/switch"
+              >
                 <div class="flex min-w-0 items-center gap-3">
                   <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
                   <div class="min-w-0">
@@ -89,6 +92,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   size="lg"
                   [label]="s.name"
                   (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
                 />
               </article>
             }
@@ -97,7 +101,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Palmenbeleuchtung -->
           @if (palme(); as s) {
             @if (room.shows(s.room)) {
-              <article class="glass-card flex items-center justify-between gap-4 p-5">
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                routerLink="/switch"
+              >
                 <div class="flex min-w-0 items-center gap-3">
                   <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
                   <div class="min-w-0">
@@ -113,6 +120,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   size="lg"
                   [label]="s.name"
                   (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
                 />
               </article>
             }
@@ -150,7 +158,9 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         <div class="flex flex-col gap-4">
           <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
           @if (climate(); as c) {
-            <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+            <a routerLink="/climate" class="block">
+              <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+            </a>
           }
 
           <!-- Innentemperatur (Sensor, z. B. Küche) -->
@@ -189,7 +199,11 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Klimaanlage mit Temperatur-Kreis -->
           @if (climate(); as c) {
             @if (room.shows(c.room)) {
-              <article class="glass-card space-y-3 p-5" [class.opacity-60]="!c.online">
+              <article
+                class="glass-card cursor-pointer space-y-3 p-5"
+                [class.opacity-60]="!c.online"
+                routerLink="/climate"
+              >
                 <header class="flex items-center justify-between gap-3">
                   <h3 class="truncate font-medium">{{ c.name }}</h3>
                   <app-power-toggle
@@ -198,6 +212,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                     size="lg"
                     label="Klima ein/aus"
                     (onChange)="climatePower($event)"
+                    (click)="$event.stopPropagation()"
                   />
                 </header>
                 <app-temp-dial
@@ -206,11 +221,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   [label]="modeLabel(c.mode)"
                   emphasis="current"
                 />
-                <a
-                  routerLink="/climate"
-                  class="block text-center text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-                  >Einstellen →</a
-                >
+                <p class="text-center text-xs text-[color:var(--ink-soft)]">Einstellen →</p>
               </article>
             }
           }
@@ -221,14 +232,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
       <div class="grid gap-4">
         <!-- Storen (im Raumfilter nur die des aktiven Raums) -->
         @if (visibleCovers().length > 0) {
-          <article class="glass-card space-y-3 p-5">
+          <article class="glass-card cursor-pointer space-y-3 p-5" routerLink="/covers">
             <header class="flex items-center justify-between">
               <h3 class="font-medium">Storen</h3>
-              <a
-                routerLink="/covers"
-                class="text-xs text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
-                >Alle →</a
-              >
+              <span class="text-xs text-[color:var(--ink-soft)]">Alle →</span>
             </header>
             <div class="space-y-2">
               @for (cv of visibleCovers(); track cv.id) {
@@ -253,7 +260,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'OPEN')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'OPEN')"
                       aria-label="Auf"
                     >
                       ▲
@@ -262,7 +269,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'STOP')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'STOP')"
                       aria-label="Stopp"
                     >
                       ■
@@ -271,7 +278,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                       type="button"
                       [disabled]="!cv.online"
                       class="glass size-12 rounded-xl text-lg disabled:opacity-40"
-                      (click)="coverCmd(cv.id, 'CLOSE')"
+                      (click)="$event.stopPropagation(); coverCmd(cv.id, 'CLOSE')"
                       aria-label="Ab"
                     >
                       ▼
