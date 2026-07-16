@@ -203,17 +203,17 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Klimaanlage mit Temperatur-Kreis -->
           @if (climate(); as c) {
             @if (room.shows(c.room)) {
+              <!-- Kompakt: halber Dial, enge Abstände – Details auf /climate -->
               <article
-                class="glass-card cursor-pointer space-y-3 p-5"
+                class="glass-card cursor-pointer space-y-2.5 p-4"
                 [class.opacity-60]="!c.online"
                 routerLink="/climate"
               >
-                <header class="flex items-center justify-between gap-3">
-                  <h3 class="truncate font-medium">{{ c.name }}</h3>
+                <header class="flex items-center justify-between gap-2">
+                  <h3 class="truncate text-sm font-medium">{{ c.name }}</h3>
                   <app-power-toggle
                     [on]="c.power"
                     [disabled]="!c.online"
-                    size="lg"
                     label="Klima ein/aus"
                     (onChange)="climatePower($event)"
                     (click)="$event.stopPropagation()"
@@ -224,19 +224,19 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   [current]="c.currentTemp"
                   [label]="modeLabel(c.mode)"
                   emphasis="current"
+                  size="sm"
                 />
                 <!-- Boost / Turbo: maximale Leistung -->
                 <button
                   type="button"
                   [disabled]="!c.online"
-                  class="tile-toggle w-full flex-row justify-center gap-2"
+                  class="tile-toggle w-full flex-row justify-center gap-1.5 py-2"
                   [class.tile-toggle-active]="c.boost"
                   (click)="$event.stopPropagation(); climateBoost(!c.boost)"
                 >
-                  <span class="text-base">🚀</span>
+                  <span class="text-sm">🚀</span>
                   <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
                 </button>
-                <p class="text-center text-xs text-[color:var(--ink-soft)]">Einstellen →</p>
               </article>
             }
           }

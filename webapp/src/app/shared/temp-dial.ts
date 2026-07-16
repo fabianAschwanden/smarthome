@@ -6,12 +6,18 @@ const RING_CIRC = 2 * Math.PI * 70;
  * Präsentations-Komponente: Ring-Dial mit Soll-Temperatur in der Mitte.
  * Der Bogen zeigt die Position der Soll-Temperatur zwischen Min und Max.
  * Interaktion (+/-) liegt bewusst beim Eltern-Element.
+ *
+ * <p>{@code size="sm"} halbiert den Ring (120px statt 240px) und skaliert die
+ * Schrift mit – für die Dashboard-Kachel, wo der Dial nur anzeigt.
  */
 @Component({
   selector: 'app-temp-dial',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="relative mx-auto aspect-square w-full max-w-[240px]">
+    <div
+      class="relative mx-auto aspect-square w-full"
+      [class]="compact() ? 'max-w-[120px]' : 'max-w-[240px]'"
+    >
       <svg viewBox="0 0 180 180" class="h-full w-full">
         <circle
           cx="90"
@@ -37,21 +43,36 @@ const RING_CIRC = 2 * Math.PI * 70;
       </svg>
       <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
         @if (label()) {
-          <span class="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+          <span
+            class="font-medium uppercase tracking-wide text-slate-500"
+            [class]="compact() ? 'text-[9px]' : 'text-[11px]'"
+          >
             {{ label() }}
           </span>
         }
         @if (emphasis() === 'current') {
           <!-- Klima: Ist gross, Soll klein -->
-          <span class="text-4xl font-semibold tabular-nums text-slate-900">
+          <span
+            class="font-semibold tabular-nums text-slate-900"
+            [class]="compact() ? 'text-xl' : 'text-4xl'"
+          >
             {{ current() >= 0 ? current() + '°' : '–' }}
           </span>
-          <span class="mt-0.5 text-xs text-slate-500">Soll {{ target() }}°</span>
+          <span class="text-slate-500" [class]="compact() ? 'text-[10px]' : 'mt-0.5 text-xs'">
+            Soll {{ target() }}°
+          </span>
         } @else {
           <!-- Standard: Soll gross, Ist klein -->
-          <span class="text-4xl font-semibold tabular-nums text-slate-900">{{ target() }}°</span>
+          <span
+            class="font-semibold tabular-nums text-slate-900"
+            [class]="compact() ? 'text-xl' : 'text-4xl'"
+          >
+            {{ target() }}°
+          </span>
           @if (current() >= 0) {
-            <span class="mt-0.5 text-xs text-slate-500">Ist {{ current() }}°</span>
+            <span class="text-slate-500" [class]="compact() ? 'text-[10px]' : 'mt-0.5 text-xs'">
+              Ist {{ current() }}°
+            </span>
           }
         }
       </div>
@@ -67,6 +88,11 @@ export class TempDial {
 
   /** Was steht gross in der Mitte: 'target' (Soll, Standard) oder 'current' (Ist). */
   readonly emphasis = input<'target' | 'current'>('target');
+
+  /** 'sm' = halber Ring für die Dashboard-Kachel; 'md' = volle Grösse (Detailseite). */
+  readonly size = input<'sm' | 'md'>('md');
+
+  protected readonly compact = computed(() => this.size() === 'sm');
 
   protected readonly ringCirc = RING_CIRC;
 
