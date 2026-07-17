@@ -15,7 +15,7 @@ import { PowerToggle } from '../../shared/power-toggle';
   imports: [PowerToggle],
   template: `
     @if (reading(); as r) {
-      <div class="glass-card space-y-3 p-4">
+      <div class="glass-card h-full space-y-3 p-4">
         <!-- Energiefluss-Diagramm -->
         <div class="flow">
           <!-- PV oben -->
