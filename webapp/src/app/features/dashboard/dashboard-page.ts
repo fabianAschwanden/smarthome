@@ -59,11 +59,15 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         </div>
       }
 
-      <!-- Oben: 3 saubere Spalten — Energie | Wetter+Stehlampe+Rauchmelder | Klima -->
-      <div class="grid items-start gap-4 lg:grid-cols-3">
+      <!-- Oben: 3 gleich hohe Spalten (items-stretch) mit bündiger Unterkante über den
+           Storen — Energie | Wetter+Stehlampe+Rauchmelder | Klima. Die einspaltige
+           Energie-Kachel füllt via h-full, die mehrteiligen Spalten verteilen ihre
+           Kacheln (justify-between), damit alle drei auf einer Linie enden. -->
+      <div class="grid items-stretch gap-4 lg:grid-cols-3">
         <!-- Spalte 1: Energie (Fronius) -->
-        <div routerLink="/energy" class="block cursor-pointer">
+        <div routerLink="/energy" class="block h-full cursor-pointer">
           <app-energy-flow
+            class="block h-full"
             [reading]="energy()"
             [batteryStatus]="batteryStatus()"
             (batteryToggle)="batterySwitch($event)"
@@ -71,7 +75,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         </div>
 
         <!-- Spalte 2: Wetter, darunter Stehlampe und Rauchmelder -->
-        <div class="flex flex-col gap-4">
+        <div class="flex h-full flex-col justify-between gap-4">
           <app-weather-card [weather]="weather()" />
 
           <!-- Stehlampe -->
@@ -159,7 +163,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
         </div>
 
         <!-- Spalte 3: Außen-/Innentemperatur und Klimaanlage -->
-        <div class="flex flex-col gap-4">
+        <div class="flex h-full flex-col justify-between gap-4">
           <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
           @if (climate(); as c) {
             <a routerLink="/climate" class="block">
