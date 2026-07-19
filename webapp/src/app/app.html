@@ -144,23 +144,7 @@
   <section class="glass-panel relative flex min-w-0 flex-1 flex-col p-4 pb-24 sm:p-7 sm:pb-7">
     <!-- Topbar -->
     <header class="flex items-center justify-between gap-3">
-      <label class="glass hidden max-w-xl flex-1 items-center gap-3 rounded-full px-5 py-3 sm:flex">
-        <svg
-          class="size-5 shrink-0 opacity-60"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3-3" stroke-linecap="round" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Insert command or search something"
-          class="w-full bg-transparent text-sm outline-none placeholder:text-[color:var(--ink-faint)]"
-        />
-      </label>
+      <app-search-bar class="hidden max-w-xl flex-1 sm:block" />
 
       <!-- Mobil: Titel statt Suchfeld -->
       <span class="text-lg font-semibold sm:hidden">Smart Home</span>
