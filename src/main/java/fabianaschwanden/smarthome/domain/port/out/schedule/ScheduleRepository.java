@@ -18,6 +18,9 @@ public interface ScheduleRepository {
 
     List<SwitchSchedule> forSwitch(String switchId);
 
+    /** Alle Regeln (auch deaktivierte) – für Export/Backup. */
+    List<SwitchSchedule> all();
+
     /** Alle aktiven Regeln – Grundlage für den Scheduler-Tick. */
     List<SwitchSchedule> allEnabled();
 

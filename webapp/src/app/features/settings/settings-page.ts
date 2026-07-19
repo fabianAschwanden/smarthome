@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertSettingsService } from '../../core/services/alert-settings.service';
+import { BackupService } from '../../core/services/backup.service';
 import { PowerToggle } from '../../shared/power-toggle';
 
 /**
@@ -96,11 +97,59 @@ import { PowerToggle } from '../../shared/power-toggle';
       } @else {
         <p class="text-[color:var(--ink-soft)]">Lade Einstellungen …</p>
       }
+
+      <!-- Backup: Nutzerdaten sichern/wiederherstellen -->
+      <article class="glass-card space-y-5 p-6">
+        <header>
+          <h3 class="text-lg font-semibold">Backup</h3>
+          <p class="mt-0.5 text-sm text-[color:var(--ink-soft)]">
+            Sichert Zeitpläne, Alarm-Einstellungen und Gerätebilder als JSON-Datei. Der
+            Energie-Verlauf ist nicht enthalten – er wird laufend neu aufgezeichnet.
+          </p>
+        </header>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            class="rounded-xl bg-[color:var(--accent)] px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+            [disabled]="backupBusy()"
+            (click)="downloadBackup()"
+          >
+            {{ backupBusy() ? 'Arbeite …' : 'Backup herunterladen' }}
+          </button>
+          <label
+            class="glass cursor-pointer rounded-xl px-5 py-2.5 text-sm"
+            [class.opacity-40]="backupBusy()"
+          >
+            Backup wiederherstellen …
+            <input
+              type="file"
+              accept="application/json,.json"
+              class="sr-only"
+              [disabled]="backupBusy()"
+              (change)="restoreBackup($event)"
+            />
+          </label>
+          @if (backupMessage(); as m) {
+            <span
+              class="text-sm"
+              [class.text-emerald-300]="backupOk()"
+              [class.text-amber-300]="!backupOk()"
+            >
+              {{ m }}
+            </span>
+          }
+        </div>
+        <p class="text-xs text-[color:var(--ink-faint)]">
+          Wiederherstellen ersetzt die vorhandenen Zeitpläne, Einstellungen und Bilder durch den
+          Stand aus der Datei.
+        </p>
+      </article>
     </section>
   `,
 })
 export class SettingsPage {
   private readonly api = inject(AlertSettingsService);
+  private readonly backup = inject(BackupService);
 
   protected readonly enabled = signal(false);
   protected readonly topic = signal('');
@@ -108,6 +157,9 @@ export class SettingsPage {
   protected readonly testing = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly ok = signal(true);
+  protected readonly backupBusy = signal(false);
+  protected readonly backupMessage = signal<string | null>(null);
+  protected readonly backupOk = signal(true);
 
   private readonly current = this.api.settings;
   protected readonly loaded = computed(() => this.current() !== null);
@@ -156,5 +208,51 @@ export class SettingsPage {
       sent ? 'Test-Push gesendet.' : 'Test fehlgeschlagen – Topic/Verbindung prüfen.',
     );
     this.testing.set(false);
+  }
+
+  protected async downloadBackup(): Promise<void> {
+    this.backupBusy.set(true);
+    this.backupMessage.set(null);
+    try {
+      await this.backup.download();
+      this.backupOk.set(true);
+      this.backupMessage.set('Backup heruntergeladen.');
+    } catch {
+      this.backupOk.set(false);
+      this.backupMessage.set('Export fehlgeschlagen.');
+    } finally {
+      this.backupBusy.set(false);
+    }
+  }
+
+  protected async restoreBackup(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    if (
+      !confirm(
+        'Backup wiederherstellen? Vorhandene Zeitpläne, Einstellungen und Bilder werden ersetzt.',
+      )
+    ) {
+      return;
+    }
+    this.backupBusy.set(true);
+    this.backupMessage.set(null);
+    try {
+      const s = await this.backup.restore(file);
+      this.backupOk.set(true);
+      this.backupMessage.set(
+        `Wiederhergestellt: ${s.switchSchedules + s.batterySchedules + s.coverSchedules} Zeitpläne, ${s.itemImages} Bilder.`,
+      );
+      this.api.reload();
+    } catch {
+      this.backupOk.set(false);
+      this.backupMessage.set('Wiederherstellen fehlgeschlagen – Datei prüfen.');
+    } finally {
+      this.backupBusy.set(false);
+    }
   }
 }

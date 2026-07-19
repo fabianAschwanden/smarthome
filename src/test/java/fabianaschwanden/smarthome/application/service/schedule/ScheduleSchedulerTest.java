@@ -88,6 +88,7 @@ class ScheduleSchedulerTest {
         @Override public SwitchSchedule save(SwitchSchedule s) { return s; }
         @Override public Optional<SwitchSchedule> byId(UUID id) { return Optional.empty(); }
         @Override public List<SwitchSchedule> forSwitch(String switchId) { return List.of(); }
+        @Override public List<SwitchSchedule> all() { return List.of(); }
         @Override public List<SwitchSchedule> allEnabled() { return List.of(); }
         @Override public void delete(UUID id) { }
     }

@@ -19,6 +19,11 @@ export class AlertSettingsService {
       .subscribe((value) => this.state.set(value));
   }
 
+  /** Lädt die Einstellungen neu (z. B. nach einem Backup-Restore). */
+  reload(): void {
+    this.http.get<AlertSettings>('/api/alert-settings').subscribe((value) => this.state.set(value));
+  }
+
   /** Speichert die Einstellungen und aktualisiert das Signal. */
   async save(settings: AlertSettings): Promise<void> {
     const saved = await firstValueFrom(
