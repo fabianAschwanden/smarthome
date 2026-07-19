@@ -44,6 +44,9 @@ describe('DashboardPage', () => {
       ],
       comparison: null,
     });
+    httpMock
+      .expectOne('/api/energy/history?range=day')
+      .flush({ range: 'day', buckets: [], samples: [] });
     httpMock.expectOne('/api/switches').flush([
       {
         id: 'stehlampe',

@@ -70,6 +70,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
             class="block h-full"
             [reading]="energy()"
             [batteryStatus]="batteryStatus()"
+            [dayHistory]="energyHistory()"
             (batteryToggle)="batterySwitch($event)"
           />
         </div>
@@ -327,6 +328,9 @@ export class DashboardPage {
   protected readonly room = inject(RoomService);
 
   protected readonly weather = this.weatherSvc.weather;
+
+  /** Tagesverlauf (kWh je Stunde) für die Energie-Kachel-Sparkline. */
+  protected readonly energyHistory = this.energySvc.dayHistory;
 
   /** Energie-Kennzahl fürs Dashboard: Fronius bevorzugt, sonst erste OK-Quelle. */
   protected readonly energy = computed<PowerReading | undefined>(() => {
