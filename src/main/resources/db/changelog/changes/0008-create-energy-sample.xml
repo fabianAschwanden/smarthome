@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case: Energie-Verlauf (Verbrauch + PV-Produktion). Zeitreihe periodischer
+         Messpunkte; Aggregation zu Tag/Woche/Monat passiert im Application-Service. -->
+    <changeSet id="0008-create-energy-sample" author="smarthome">
+        <createTable tableName="energy_sample">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ts" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pv_watt" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consumption_watt" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="energy_sample" indexName="idx_energy_sample_ts">
+            <column name="ts"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

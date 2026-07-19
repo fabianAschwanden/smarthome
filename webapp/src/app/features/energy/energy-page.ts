@@ -1,16 +1,32 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EnergyService } from '../../core/services/energy.service';
-import { PowerReading } from '../../core/models/energy';
+import { EnergyHistory, HistoryRange, PowerReading } from '../../core/models/energy';
 import { ItemImage } from '../../shared/item-image';
+import { ENERGY_COLORS, EnergyHistoryChart } from './energy-history-chart';
+
+const RANGES: { key: HistoryRange; label: string }[] = [
+  { key: 'day', label: 'Tag' },
+  { key: 'week', label: 'Woche' },
+  { key: 'month', label: 'Monat' },
+];
 
 /**
- * Use Case 1: aktuellen Energieverbrauch visualisieren – stellt Fronius und
- * SMARTFOX nebeneinander dar und hebt die Differenz hervor (siehe docs/energy/SPEC.md §5).
+ * Use Case 1: aktuellen Energieverbrauch visualisieren – Fronius und SMARTFOX
+ * nebeneinander mit Differenz (docs/energy/SPEC.md §5) plus Verlauf von Verbrauch und
+ * PV-Produktion (Tag/Woche/Monat) als kWh-Balkendiagramm.
  */
 @Component({
   selector: 'app-energy-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ItemImage],
+  imports: [ItemImage, EnergyHistoryChart],
   template: `
     <section class="space-y-5">
       @if (snapshot(); as snap) {
@@ -123,13 +139,77 @@ import { ItemImage } from '../../shared/item-image';
       } @else {
         <p class="text-[color:var(--ink-soft)]">Lade aktuelle Werte …</p>
       }
+
+      <!-- Energie-Verlauf (Fronius-Solar.web-Optik): Leistungskurve am Tag,
+           kWh-Balken für Woche/Monat, Legende mit Summen darunter -->
+      <article class="glass-card space-y-4 p-5">
+        <header class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="text-lg font-semibold">Energie</h3>
+          <div class="glass inline-flex items-center gap-1 rounded-full p-1">
+            @for (r of ranges; track r.key) {
+              <button
+                type="button"
+                class="seg px-4 py-1.5 text-sm"
+                [attr.data-active]="range() === r.key"
+                (click)="setRange(r.key)"
+              >
+                {{ r.label }}
+              </button>
+            }
+          </div>
+        </header>
+
+        @if (history(); as h) {
+          <app-energy-history-chart [history]="h" />
+          <div class="space-y-2 border-t border-white/10 pt-3">
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2.5 text-sm text-[color:var(--ink-soft)]">
+                <span class="size-2.5 rounded-full" [style.background]="colors.production"></span>
+                Erzeugung
+              </span>
+              <span class="text-lg font-semibold tabular-nums"
+                >{{ totalPv() }} <span class="text-sm font-normal">kWh</span></span
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2.5 text-sm text-[color:var(--ink-soft)]">
+                <span class="size-2.5 rounded-full" [style.background]="colors.selfUse"></span>
+                Eigennutzung
+              </span>
+              <span class="text-lg font-semibold tabular-nums"
+                >{{ totalSelfUse() }} <span class="text-sm font-normal">kWh</span></span
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2.5 text-sm text-[color:var(--ink-soft)]">
+                <span class="size-2.5 rounded-full" [style.background]="colors.consumption"></span>
+                Verbrauch
+              </span>
+              <span class="text-lg font-semibold tabular-nums"
+                >{{ totalConsumption() }} <span class="text-sm font-normal">kWh</span></span
+              >
+            </div>
+          </div>
+        } @else {
+          <p class="text-sm text-[color:var(--ink-soft)]">Lade Verlauf …</p>
+        }
+      </article>
     </section>
   `,
 })
 export class EnergyPage {
   private readonly energy = inject(EnergyService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly snapshot = this.energy.snapshot;
+  protected readonly ranges = RANGES;
+  protected readonly colors = ENERGY_COLORS;
+  protected readonly range = signal<HistoryRange>('day');
+  protected readonly history = signal<EnergyHistory | null>(null);
+
+  protected readonly totalPv = computed(() => this.sum((b) => b.pvKwh));
+  protected readonly totalConsumption = computed(() => this.sum((b) => b.consumptionKwh));
+  protected readonly totalSelfUse = computed(() => this.sum((b) => b.selfUseKwh));
 
   /** Referenzquelle für die Hero-Kennzahl: bevorzugt Fronius (PV-Wechselrichter). */
   protected readonly primary = computed<PowerReading | undefined>(() => {
@@ -140,6 +220,36 @@ export class EnergyPage {
       readings[0]
     );
   });
+
+  constructor() {
+    this.loadHistory('day');
+  }
+
+  protected setRange(range: HistoryRange): void {
+    if (range !== this.range()) {
+      this.range.set(range);
+      this.history.set(null);
+      this.loadHistory(range);
+    }
+  }
+
+  private loadHistory(range: HistoryRange): void {
+    this.energy
+      .history(range)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((h) => {
+        if (this.range() === range) {
+          this.history.set(h);
+        }
+      });
+  }
+
+  private sum(
+    pick: (b: { pvKwh: number; consumptionKwh: number; selfUseKwh: number }) => number,
+  ): string {
+    const buckets = this.history()?.buckets ?? [];
+    return buckets.reduce((acc, b) => acc + pick(b), 0).toFixed(2);
+  }
 
   protected watt(value: number): string {
     return `${Math.round(value)} W`;

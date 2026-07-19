@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { PowerReading } from '../../core/models/energy';
+import { EnergyHistory, PowerReading } from '../../core/models/energy';
 import { PowerToggle } from '../../shared/power-toggle';
+import { EnergyHistoryChart } from '../energy/energy-history-chart';
 
 /**
  * Energiefluss-Darstellung nach dem Muster der Fronius-App: PV oben (Ring mit
@@ -12,7 +13,7 @@ import { PowerToggle } from '../../shared/power-toggle';
 @Component({
   selector: 'app-energy-flow',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PowerToggle],
+  imports: [PowerToggle, EnergyHistoryChart],
   template: `
     @if (reading(); as r) {
       <div class="glass-card h-full space-y-3 p-4">
@@ -199,6 +200,19 @@ import { PowerToggle } from '../../shared/power-toggle';
             <span>{{ pct(r.daily?.autonomyPercent) }}</span>
           </div>
         </div>
+
+        <!-- Tagesverlauf (Sparkline); nicht-interaktiv, damit Tap die Detailseite öffnet -->
+        @if (dayHistory(); as dh) {
+          <div class="space-y-1.5 border-t border-white/10 pt-3">
+            <div class="flex items-baseline justify-between">
+              <h4 class="font-medium">Verlauf</h4>
+              <span class="text-xs text-[color:var(--ink-faint)]">Heute</span>
+            </div>
+            <div class="pointer-events-none">
+              <app-energy-history-chart [history]="dh" [compact]="true" />
+            </div>
+          </div>
+        }
       </div>
     } @else {
       <div class="glass-card p-5">
@@ -220,6 +234,9 @@ export class EnergyFlow {
 
   /** Batterie-Schalter betätigt (true = ein). Das Schalten selbst macht die Seite. */
   readonly batteryToggle = output<boolean>();
+
+  /** Tagesverlauf (kWh je Stunde) für die Sparkline; null solange nicht geladen. */
+  readonly dayHistory = input<EnergyHistory | null>(null);
 
   /** PV-Ring-Füllung 0–100 %: skaliert auf eine angenommene Spitzenleistung. */
   protected readonly pvFill = computed(() => {

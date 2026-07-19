@@ -31,3 +31,28 @@ export interface EnergySnapshot {
   readings: PowerReading[];
   comparison: SourceComparison | null;
 }
+
+/** Bereich des Energie-Verlaufs. */
+export type HistoryRange = 'day' | 'week' | 'month';
+
+/** Ein Verlaufs-Abschnitt: Beginn (ISO-8601), Energie und Eigennutzung in kWh. */
+export interface EnergyBucket {
+  start: string;
+  pvKwh: number;
+  consumptionKwh: number;
+  selfUseKwh: number;
+}
+
+/** Roh-Messpunkt (Leistungskurve der Tagesansicht). */
+export interface EnergySamplePoint {
+  timestamp: string;
+  pvWatt: number;
+  consumptionWatt: number;
+}
+
+/** Verlauf von Verbrauch und PV-Produktion; samples nur bei range=day gefüllt. */
+export interface EnergyHistory {
+  range: HistoryRange;
+  buckets: EnergyBucket[];
+  samples: EnergySamplePoint[];
+}
