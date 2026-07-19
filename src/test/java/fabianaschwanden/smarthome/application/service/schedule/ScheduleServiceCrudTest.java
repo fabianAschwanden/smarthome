@@ -126,6 +126,7 @@ class ScheduleServiceCrudTest {
         @Override public List<SwitchSchedule> forSwitch(String switchId) {
             return store.values().stream().filter(s -> s.switchId().equals(switchId)).toList();
         }
+        @Override public List<SwitchSchedule> all() { return List.copyOf(store.values()); }
         @Override public List<SwitchSchedule> allEnabled() {
             return store.values().stream().filter(SwitchSchedule::enabled).toList();
         }

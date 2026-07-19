@@ -42,6 +42,11 @@ public class PanacheScheduleRepository
     }
 
     @Override
+    public List<SwitchSchedule> all() {
+        return listAll().stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<SwitchSchedule> allEnabled() {
         return list("enabled", true).stream().map(this::toDomain).toList();
     }

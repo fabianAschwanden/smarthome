@@ -6,6 +6,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /** Driven Adapter — übersetzt zwischen Domänen-Modell und JPA-Entity. */
@@ -27,6 +28,11 @@ public class PanacheItemImageRepository
     @Override
     public Optional<ItemImage> byItemId(String itemId) {
         return findByIdOptional(itemId).map(this::toDomain);
+    }
+
+    @Override
+    public List<ItemImage> all() {
+        return listAll().stream().map(this::toDomain).toList();
     }
 
     @Override
