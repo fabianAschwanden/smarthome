@@ -1,14 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { EnergyHistory, PowerReading } from '../../core/models/energy';
 import { PowerToggle } from '../../shared/power-toggle';
-import { EnergyHistoryChart } from '../energy/energy-history-chart';
+import { ENERGY_COLORS, EnergyHistoryChart } from '../energy/energy-history-chart';
 
 /**
  * Energiefluss-Darstellung nach dem Muster der Fronius-App: PV oben (Ring mit
  * Auslastung), Wechselrichter-Logo in der Mitte, Netz links und Haus rechts –
- * darunter die Tages-Karten Erzeugung und Verbrauch mit Eigennutzung/Selbst-
- * versorgung. Zeigt die Live-Watt aus dem Fronius-Reading; Tages-/Relativwerte
- * (kWh, %) nur, wenn die Anlage sie liefert (sonst „–").
+ * darunter der Tagesverlauf in Fronius-Solar.web-Optik (Leistungskurve wie auf
+ * der Detailseite) mit kWh-Summen für Erzeugung, Eigennutzung und Verbrauch.
  */
 @Component({
   selector: 'app-energy-flow',
@@ -157,59 +156,45 @@ import { EnergyHistoryChart } from '../energy/energy-history-chart';
           </div>
         }
 
-        <!-- Erzeugung heute -->
-        <div class="space-y-1.5 border-t border-white/10 pt-3">
-          <div class="flex items-baseline justify-between">
-            <h4 class="font-medium">Erzeugung</h4>
-            <span class="text-xs text-[color:var(--ink-faint)]">Heute</span>
-          </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-sm text-[color:var(--ink-soft)]">Tagesertrag</span>
-            <span class="text-lg font-semibold">{{ kwh(r.daily?.productionWhToday) }}</span>
-          </div>
-          <div class="bar">
-            <div
-              class="bar-fill bar-fill-blue"
-              [style.width.%]="r.daily?.selfConsumptionPercent ?? 0"
-            ></div>
-          </div>
-          <div class="flex justify-between text-xs text-[color:var(--ink-soft)]">
-            <span>Eigennutzung</span>
-            <span>{{ pct(r.daily?.selfConsumptionPercent) }}</span>
-          </div>
-        </div>
-
-        <!-- Verbrauch heute -->
-        <div class="space-y-1.5 border-t border-white/10 pt-3">
-          <div class="flex items-baseline justify-between">
-            <h4 class="font-medium">Verbrauch</h4>
-            <span class="text-xs text-[color:var(--ink-faint)]">Heute</span>
-          </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-sm text-[color:var(--ink-soft)]">Aktuell</span>
-            <span class="text-lg font-semibold">{{ kw(r.consumptionWatt) }}</span>
-          </div>
-          <div class="bar">
-            <div
-              class="bar-fill bar-fill-amber"
-              [style.width.%]="r.daily?.autonomyPercent ?? 0"
-            ></div>
-          </div>
-          <div class="flex justify-between text-xs text-[color:var(--ink-soft)]">
-            <span>Selbstversorgung</span>
-            <span>{{ pct(r.daily?.autonomyPercent) }}</span>
-          </div>
-        </div>
-
-        <!-- Tagesverlauf (Sparkline); nicht-interaktiv, damit Tap die Detailseite öffnet -->
+        <!-- Energie-Verlauf heute (Fronius-Optik, wie die Detailseite): Leistungskurve
+             mit Achsen + kWh-Zeilen. Nicht-interaktiv, damit Tap die Detailseite öffnet. -->
         @if (dayHistory(); as dh) {
-          <div class="space-y-1.5 border-t border-white/10 pt-3">
+          <div class="space-y-2 border-t border-white/10 pt-3">
             <div class="flex items-baseline justify-between">
-              <h4 class="font-medium">Verlauf</h4>
+              <h4 class="font-medium">Energie</h4>
               <span class="text-xs text-[color:var(--ink-faint)]">Heute</span>
             </div>
             <div class="pointer-events-none">
-              <app-energy-history-chart [history]="dh" [compact]="true" />
+              <app-energy-history-chart [history]="dh" [height]="170" />
+            </div>
+            <div class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
+                  <span class="size-2 rounded-full" [style.background]="colors.production"></span>
+                  Erzeugung
+                </span>
+                <span class="font-semibold tabular-nums"
+                  >{{ totalPv() }} <span class="text-xs font-normal">kWh</span></span
+                >
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
+                  <span class="size-2 rounded-full" [style.background]="colors.selfUse"></span>
+                  Eigennutzung
+                </span>
+                <span class="font-semibold tabular-nums"
+                  >{{ totalSelfUse() }} <span class="text-xs font-normal">kWh</span></span
+                >
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
+                  <span class="size-2 rounded-full" [style.background]="colors.consumption"></span>
+                  Verbrauch
+                </span>
+                <span class="font-semibold tabular-nums"
+                  >{{ totalConsumption() }} <span class="text-xs font-normal">kWh</span></span
+                >
+              </div>
             </div>
           </div>
         }
@@ -235,8 +220,14 @@ export class EnergyFlow {
   /** Batterie-Schalter betätigt (true = ein). Das Schalten selbst macht die Seite. */
   readonly batteryToggle = output<boolean>();
 
-  /** Tagesverlauf (kWh je Stunde) für die Sparkline; null solange nicht geladen. */
+  /** Tagesverlauf für Leistungskurve + kWh-Summen; null solange nicht geladen. */
   readonly dayHistory = input<EnergyHistory | null>(null);
+
+  protected readonly colors = ENERGY_COLORS;
+
+  protected readonly totalPv = computed(() => this.sumKwh((b) => b.pvKwh));
+  protected readonly totalSelfUse = computed(() => this.sumKwh((b) => b.selfUseKwh));
+  protected readonly totalConsumption = computed(() => this.sumKwh((b) => b.consumptionKwh));
 
   /** PV-Ring-Füllung 0–100 %: skaliert auf eine angenommene Spitzenleistung. */
   protected readonly pvFill = computed(() => {
@@ -280,11 +271,10 @@ export class EnergyFlow {
     return this.kw(watt);
   }
 
-  protected kwh(wh: number | null | undefined): string {
-    return wh == null ? '–' : `${(wh / 1000).toFixed(2)} kWh`;
-  }
-
-  protected pct(value: number | null | undefined): string {
-    return value == null ? '–' : `${Math.round(value)} %`;
+  private sumKwh(
+    pick: (b: { pvKwh: number; consumptionKwh: number; selfUseKwh: number }) => number,
+  ): string {
+    const buckets = this.dayHistory()?.buckets ?? [];
+    return buckets.reduce((acc, b) => acc + pick(b), 0).toFixed(2);
   }
 }

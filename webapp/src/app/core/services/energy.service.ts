@@ -22,7 +22,7 @@ export class EnergyService {
   readonly dayHistory = this.dayHistoryState.asReadonly();
 
   private readonly intervalMs = 2000;
-  private readonly historyIntervalMs = 300_000; // 5 min – passt zum Sampling-Intervall
+  private readonly historyIntervalMs = 10_000; // 10 s – passt zum Sampling-Intervall
 
   constructor() {
     timer(0, this.intervalMs)
