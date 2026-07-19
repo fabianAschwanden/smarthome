@@ -79,10 +79,38 @@ public class EnergyHistoryService implements EnergyHistoryQuery {
             buckets.add(new EnergyBucket(start, round(pvKwh), round(consumptionKwh), round(selfUseKwh)));
             cursor = next;
         }
-        // Für den Tag die Roh-Messpunkte mitgeben: daraus zeichnet die Anzeige die
-        // Leistungskurve (kW). Woche/Monat brauchen nur die Tages-Buckets.
-        List<EnergySample> curve = range == HistoryRange.DAY ? samples : List.of();
+        // Für den Tag die Leistungskurve mitgeben – auf Minuten-Auflösung verdichtet
+        // (Mittelwert je Minute): feiner löst kein Chart auf, und die Response bleibt
+        // klein, obwohl alle 10 s gesampelt wird. Die kWh-Aggregation oben nutzt
+        // weiterhin alle Roh-Messpunkte. Woche/Monat brauchen nur die Tages-Buckets.
+        List<EnergySample> curve = range == HistoryRange.DAY ? minuteCurve(samples) : List.of();
         return new EnergyHistory(range, buckets, curve);
+    }
+
+    /** Verdichtet Messpunkte auf einen je Minute (Mittelwert), zeitlich aufsteigend. */
+    private static List<EnergySample> minuteCurve(List<EnergySample> samples) {
+        List<EnergySample> curve = new ArrayList<>();
+        Instant minute = null;
+        double pvSum = 0;
+        double consSum = 0;
+        int n = 0;
+        for (EnergySample s : samples) {
+            Instant m = s.timestamp().truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
+            if (minute != null && !m.equals(minute)) {
+                curve.add(new EnergySample(minute, pvSum / n, consSum / n));
+                pvSum = 0;
+                consSum = 0;
+                n = 0;
+            }
+            minute = m;
+            pvSum += s.pvWatt();
+            consSum += s.consumptionWatt();
+            n++;
+        }
+        if (minute != null) {
+            curve.add(new EnergySample(minute, pvSum / n, consSum / n));
+        }
+        return curve;
     }
 
     private Map<Instant, double[]> accumulate(HistoryRange range, List<EnergySample> samples) {

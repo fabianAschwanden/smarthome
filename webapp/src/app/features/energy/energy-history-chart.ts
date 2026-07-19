@@ -35,7 +35,7 @@ const TICK_COLOR = 'rgba(159, 176, 195, 0.9)';
   selector: 'app-energy-history-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [style.height.px]="compact() ? 64 : 260">
+    <div [style.height.px]="height() ?? (compact() ? 64 : 260)">
       <canvas #canvas></canvas>
     </div>
   `,
@@ -43,6 +43,8 @@ const TICK_COLOR = 'rgba(159, 176, 195, 0.9)';
 export class EnergyHistoryChart implements OnDestroy {
   readonly history = input<EnergyHistory | null>(null);
   readonly compact = input<boolean>(false);
+  /** Optionale Höhe in px; Default 260 (voll) bzw. 64 (compact). */
+  readonly height = input<number | null>(null);
 
   private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private chart?: Chart;

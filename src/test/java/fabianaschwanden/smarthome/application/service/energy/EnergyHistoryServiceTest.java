@@ -57,12 +57,28 @@ class EnergyHistoryServiceTest {
     }
 
     @Test
-    void tagesverlaufEnthaeltRohMesspunkteFuerDieLeistungskurve() {
+    void tagesverlaufEnthaeltLeistungskurveNurFuerDay() {
         repo.add("2026-07-18T08:00:00Z", 4000, 300);
         repo.add("2026-07-18T09:00:00Z", 5000, 400);
 
         assertEquals(2, service.history(HistoryRange.DAY).samples().size());
         assertEquals(0, service.history(HistoryRange.WEEK).samples().size());
+    }
+
+    @Test
+    void leistungskurveVerdichtetAufMinutenMittelwerte() {
+        // Drei 10-s-Samples in derselben Minute -> ein Kurvenpunkt mit Mittelwert.
+        repo.add("2026-07-18T08:00:00Z", 3000, 300);
+        repo.add("2026-07-18T08:00:10Z", 4000, 400);
+        repo.add("2026-07-18T08:00:20Z", 5000, 500);
+        repo.add("2026-07-18T08:01:00Z", 6000, 600);
+
+        var curve = service.history(HistoryRange.DAY).samples();
+        assertEquals(2, curve.size());
+        assertEquals(Instant.parse("2026-07-18T08:00:00Z"), curve.get(0).timestamp());
+        assertEquals(4000.0, curve.get(0).pvWatt(), 1e-9);
+        assertEquals(400.0, curve.get(0).consumptionWatt(), 1e-9);
+        assertEquals(6000.0, curve.get(1).pvWatt(), 1e-9);
     }
 
     @Test
