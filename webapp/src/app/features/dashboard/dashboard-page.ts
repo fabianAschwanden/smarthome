@@ -135,6 +135,34 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
             }
           }
 
+          <!-- Carport -->
+          @if (carport(); as s) {
+            @if (room.shows(s.room)) {
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                routerLink="/switch"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
+                  <div class="min-w-0">
+                    <h3 class="truncate font-medium">{{ s.name }}</h3>
+                    <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                      {{ !s.online ? 'Offline' : s.state === 'ON' ? 'Ein' : 'Aus' }}
+                    </p>
+                  </div>
+                </div>
+                <app-power-toggle
+                  [on]="s.state === 'ON'"
+                  [disabled]="!s.online"
+                  size="lg"
+                  [label]="s.name"
+                  (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
+                />
+              </article>
+            }
+          }
+
           <!-- Sicherheit (Rauchmelder) -->
           @for (sm of smoke(); track sm.id) {
             <article
@@ -364,6 +392,10 @@ export class DashboardPage {
 
   protected readonly palme = computed(() =>
     (this.tuya.switches() ?? []).find((s) => s.id === 'palmenbeleuchtung'),
+  );
+
+  protected readonly carport = computed(() =>
+    (this.tuya.switches() ?? []).find((s) => s.id === 'carport'),
   );
 
   protected readonly climate = computed(() => (this.climateSvc.climate() ?? [])[0]);
