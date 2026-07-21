@@ -9,6 +9,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AlertSettingsService } from '../../core/services/alert-settings.service';
 import { BackupService } from '../../core/services/backup.service';
+import { InfoService } from '../../core/services/info.service';
 import { PowerToggle } from '../../shared/power-toggle';
 
 /**
@@ -144,12 +145,36 @@ import { PowerToggle } from '../../shared/power-toggle';
           Stand aus der Datei.
         </p>
       </article>
+
+      <!-- Release-Info -->
+      <article class="glass-card space-y-3 p-6">
+        <h3 class="text-lg font-semibold">Release</h3>
+        @if (info(); as i) {
+          <div class="flex items-baseline justify-between gap-4">
+            <span class="text-sm text-[color:var(--ink-soft)]">Version</span>
+            <span class="font-mono text-lg font-semibold tabular-nums">{{
+              i.version === 'dev' ? 'dev' : 'v' + i.version
+            }}</span>
+          </div>
+          @if (i.builtAt) {
+            <div class="flex items-baseline justify-between gap-4">
+              <span class="text-sm text-[color:var(--ink-soft)]">Gebaut</span>
+              <span class="text-sm text-[color:var(--ink)] tabular-nums">{{
+                built(i.builtAt)
+              }}</span>
+            </div>
+          }
+        } @else {
+          <p class="text-sm text-[color:var(--ink-soft)]">Lade Release-Info …</p>
+        }
+      </article>
     </section>
   `,
 })
 export class SettingsPage {
   private readonly api = inject(AlertSettingsService);
   private readonly backup = inject(BackupService);
+  protected readonly info = inject(InfoService).info;
 
   protected readonly enabled = signal(false);
   protected readonly topic = signal('');
@@ -208,6 +233,14 @@ export class SettingsPage {
       sent ? 'Test-Push gesendet.' : 'Test fehlgeschlagen – Topic/Verbindung prüfen.',
     );
     this.testing.set(false);
+  }
+
+  /** ISO-Zeitpunkt als lokales Datum/Uhrzeit (de-CH); Rohwert bei Parse-Fehler. */
+  protected built(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime())
+      ? iso
+      : d.toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' });
   }
 
   protected async downloadBackup(): Promise<void> {
