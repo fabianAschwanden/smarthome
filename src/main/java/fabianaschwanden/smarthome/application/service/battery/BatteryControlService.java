@@ -81,6 +81,28 @@ public class BatteryControlService implements ControlBattery {
         return control;
     }
 
+    /**
+     * Gleicht im MANUAL-Modus die Anzeige periodisch mit dem ECHTEN Relais ab. Ohne das
+     * würde der Steuerstand veralten: {@code status()} lieferte sonst dauerhaft den
+     * zuletzt gesendeten Befehl – auch wenn das Relais extern (native View) umgeschaltet
+     * wurde oder ein Schaltbefehl gar nicht griff. Genau das führte dazu, dass die App
+     * „ein" zeigte, während real „aus" war. Im AUTO-Modus führt der {@link #autoTick()}
+     * das Relais; dort nicht dazwischenfunken. Ist der Ist-Zustand nicht lesbar, bleibt
+     * der letzte bekannte Stand (kein Flackern bei einem einzelnen Lesefehler).
+     */
+    @Scheduled(every = "{battery.sync-interval}")
+    synchronized void syncFromDevice() {
+        if (control.mode() != ControlMode.MANUAL) {
+            return;
+        }
+        relay.read().ifPresent(actual -> {
+            if (actual != control.desiredState()) {
+                control = control.withState(actual, clock.instant());
+                LOG.infof("Relais-Ist weicht ab -> Anzeige nachgeführt: %s", actual);
+            }
+        });
+    }
+
     @Override
     public synchronized BatteryControl changeMode(ControlMode mode) {
         control = control.withMode(mode, clock.instant());

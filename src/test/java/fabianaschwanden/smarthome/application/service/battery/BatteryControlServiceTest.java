@@ -60,6 +60,47 @@ class BatteryControlServiceTest {
     }
 
     @Test
+    void manuellFuehrtVeralteteAnzeigeNach() {
+        // Start: Relais liest EIN -> Anzeige EIN.
+        relay.readState = Optional.of(RelayState.ON);
+        BatteryControlService service = service();
+        assertEquals(RelayState.ON, service.status().desiredState());
+
+        // Relais wird extern (native View) auf AUS gestellt.
+        relay.readState = Optional.of(RelayState.OFF);
+        service.syncFromDevice();
+
+        assertEquals(RelayState.OFF, service.status().desiredState(), "Anzeige muss dem Ist folgen");
+        assertTrue(relay.calls.isEmpty(), "Nachführen darf nicht selbst schalten");
+    }
+
+    @Test
+    void syncGreiftImAutoModusNichtEin() {
+        smartfoxGridWatt = -2000;
+        BatteryControlService service = service();
+        service.changeMode(ControlMode.AUTO);
+        service.autoTick(); // -> ON
+        assertEquals(RelayState.ON, service.status().desiredState());
+
+        // Ein einzelner Lese-Ausreisser darf im AUTO-Modus nichts überschreiben.
+        relay.readState = Optional.of(RelayState.OFF);
+        service.syncFromDevice();
+
+        assertEquals(RelayState.ON, service.status().desiredState());
+    }
+
+    @Test
+    void manuellHaeltStandBeiLesefehler() {
+        relay.readState = Optional.of(RelayState.ON);
+        BatteryControlService service = service();
+
+        relay.readState = Optional.empty(); // Ist nicht lesbar
+        service.syncFromDevice();
+
+        assertEquals(RelayState.ON, service.status().desiredState(), "kein Flackern bei Lesefehler");
+    }
+
+    @Test
     void autoModusSchaltetBeiUeberschussEin() {
         smartfoxGridWatt = -2000; // 2000 W Einspeisung
         BatteryControlService service = service();

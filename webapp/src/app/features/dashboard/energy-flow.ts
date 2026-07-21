@@ -146,7 +146,7 @@ import { ENERGY_COLORS, EnergyHistoryChart } from '../energy/energy-history-char
             <span class="flex items-center gap-3">
               <span class="text-sm font-medium" [class]="batteryClass()">{{ batteryLabel() }}</span>
               <app-power-toggle
-                [on]="batteryStatus() === 'charging'"
+                [on]="batteryOn()"
                 size="sm"
                 label="Batterieladung ein/aus"
                 (onChange)="batteryToggle.emit($event)"
@@ -211,11 +211,17 @@ export class EnergyFlow {
   readonly reading = input<PowerReading | undefined>();
 
   /**
-   * Batterie-Zustand: 'charging' (eingeschaltet -> lädt), 'off' (ausgeschaltet),
-   * 'unknown' (kein Status -> Zeile aus). Die Batterie wird nur per Taster
-   * geschaltet, daher kein Lade-Watt-Schwellwert.
+   * Batterie-Zustand aus der GEMESSENEN Leistung: 'charging' (lädt real), 'discharging'
+   * (entlädt), 'idle' (Relais ein, aber ~0 W – lädt gerade nicht), 'off' (Relais aus),
+   * 'unknown' (kein Status -> Zeile aus). Bewusst aus der Messung statt aus dem
+   * Schaltbefehl abgeleitet, sonst zeigt die Kachel „lädt", obwohl 0 W fliessen.
    */
-  readonly batteryStatus = input<'charging' | 'off' | 'unknown'>('unknown');
+  readonly batteryStatus = input<'charging' | 'discharging' | 'idle' | 'off' | 'unknown'>(
+    'unknown',
+  );
+
+  /** Relais auf EIN kommandiert (Toggle-Stellung) – unabhängig davon, ob real geladen wird. */
+  readonly batteryOn = input<boolean>(false);
 
   /** Batterie-Schalter betätigt (true = ein). Das Schalten selbst macht die Seite. */
   readonly batteryToggle = output<boolean>();
@@ -244,6 +250,10 @@ export class EnergyFlow {
     switch (this.batteryStatus()) {
       case 'charging':
         return 'lädt';
+      case 'discharging':
+        return 'entlädt';
+      case 'idle':
+        return 'ein · lädt nicht';
       case 'off':
         return 'aus';
       default:
@@ -255,6 +265,8 @@ export class EnergyFlow {
     switch (this.batteryStatus()) {
       case 'charging':
         return 'text-emerald-300';
+      case 'discharging':
+        return 'text-amber-300';
       case 'off':
         return 'text-[color:var(--ink-faint)]';
       default:
