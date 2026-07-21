@@ -70,6 +70,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
             class="block h-full"
             [reading]="energy()"
             [batteryStatus]="batteryStatus()"
+            [batteryOn]="batteryOn()"
             [dayHistory]="energyHistory()"
             (batteryToggle)="batterySwitch($event)"
           />
@@ -369,21 +370,35 @@ export class DashboardPage {
     );
   });
 
+  /** Relais auf EIN kommandiert? Steuert die Toggle-Stellung (nicht die Lade-Anzeige). */
+  protected readonly batteryOn = computed(() => this.batterySvc.control()?.desiredState === 'ON');
+
   /**
-   * Batterie-Leistung aus der besten Quelle: der angezeigte Fronius hat oft keine
-   * (P_Akku null), die Batterie hängt am SMARTFOX. Erste OK-Quelle mit Wert gewinnt.
+   * Batterie-Zustand fürs Dashboard aus der GEMESSENEN Leistung (SMARTFOX-batteryWatt,
+   * + = laden / − = entladen), nicht aus dem Schaltbefehl. Sonst zeigt die Kachel
+   * „lädt", obwohl das Relais zwar ein ist, real aber 0 W fliessen (Akku voll, extern
+   * abgeschaltet, Befehl nicht gegriffen). 'idle' = Relais ein, aber ~0 W.
+   * 'unknown' bis der Steuerstand geladen ist.
    */
-  /**
-   * Batterie-Zustand fürs Dashboard: Die Batterie wird nur per Taster (Relais)
-   * geschaltet – die Lade-Leistung ist dabei systembedingt tief. Daher gilt:
-   * Relais ein = lädt, Relais aus = aus. 'unknown' bis der Steuerstand geladen ist.
-   */
-  protected readonly batteryStatus = computed<'charging' | 'off' | 'unknown'>(() => {
+  protected readonly batteryStatus = computed<
+    'charging' | 'discharging' | 'idle' | 'off' | 'unknown'
+  >(() => {
     const control = this.batterySvc.control();
     if (!control) {
       return 'unknown';
     }
-    return control.desiredState === 'ON' ? 'charging' : 'off';
+    const sf = (this.energySvc.snapshot()?.readings ?? []).find(
+      (r) => r.source === 'SMARTFOX' && r.status === 'OK',
+    );
+    const watt = sf?.batteryWatt ?? null;
+    if (watt !== null && watt > 50) {
+      return 'charging';
+    }
+    if (watt !== null && watt < -50) {
+      return 'discharging';
+    }
+    // ~0 W: Relais-Zustand entscheidet zwischen „ein, lädt nicht" und „aus".
+    return control.desiredState === 'ON' ? 'idle' : 'off';
   });
 
   protected readonly stehlampe = computed(() =>
