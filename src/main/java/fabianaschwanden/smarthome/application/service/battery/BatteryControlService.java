@@ -6,74 +6,55 @@ import fabianaschwanden.smarthome.domain.model.battery.RelayState;
 import fabianaschwanden.smarthome.domain.port.in.battery.ControlBattery;
 import fabianaschwanden.smarthome.domain.port.in.battery.ManualSwitchNotAllowed;
 import fabianaschwanden.smarthome.domain.port.out.battery.RelaySwitch;
-import fabianaschwanden.smarthome.domain.service.battery.SurplusChargePolicy;
-import fabianaschwanden.smarthome.domain.model.energy.PowerReading;
-import fabianaschwanden.smarthome.domain.model.energy.PowerSource;
-import fabianaschwanden.smarthome.domain.port.in.energy.CurrentEnergyQuery;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.time.Clock;
 
 /**
- * Application-Service: orchestriert die Batteriesteuerung. Hält den Steuerstand
- * im Speicher (kein DB-Zwang, vgl. Energie-SPEC §7), treibt den Auto-Modus per
- * Scheduler und schaltet das Relais ausschliesslich bei echten Zustandswechseln
- * (idempotent, SPEC §7). Enthält keine Geschäftsregeln – die Überschuss-Logik
- * lebt im Domain-Service {@link SurplusChargePolicy}.
+ * Application-Service: orchestriert die Batteriesteuerung über das dreiwertige
+ * SMARTFOX-Relais 1 (Aus / Manuell / Automatik). Der Steuerstand bildet das als
+ * ({@link ControlMode}, {@link RelayState}) ab: Aus=(MANUAL,OFF), Manuell=(MANUAL,ON),
+ * Automatik=(AUTO, Ist-Ausgang).
+ *
+ * <p>Die Überschuss-Automatik macht die SMARTFOX selbst – die App setzt im AUTO-Modus
+ * nur den Gerätemodus und spiegelt dessen Ist-Zustand zurück (kein eigener Algorithmus).
+ * Der {@link #syncFromDevice()}-Tick hält die Anzeige mit dem echten Relais im Gleich-
+ * lauf (externe Umschaltung, Automatik-Schaltvorgänge, nicht gegriffener Befehl).
  */
 @ApplicationScoped
 public class BatteryControlService implements ControlBattery {
 
     private static final Logger LOG = Logger.getLogger(BatteryControlService.class);
 
-    private final CurrentEnergyQuery energy;
     private final RelaySwitch relay;
-    private final SurplusChargePolicy policy;
-    private final PowerSource referenceSource;
     private final Clock clock;
 
     private BatteryControl control;
 
     @Inject
-    public BatteryControlService(
-            CurrentEnergyQuery energy,
-            RelaySwitch relay,
-            @ConfigProperty(name = "battery.auto.charge-on-watt", defaultValue = "1500") double chargeOnWatt,
-            @ConfigProperty(name = "battery.auto.charge-off-watt", defaultValue = "300") double chargeOffWatt,
-            @ConfigProperty(name = "energy.reference-source", defaultValue = "SMARTFOX") PowerSource referenceSource) {
-        this(energy, relay, new SurplusChargePolicy(chargeOnWatt, chargeOffWatt),
-                referenceSource, Clock.systemUTC());
+    public BatteryControlService(RelaySwitch relay) {
+        this(relay, Clock.systemUTC());
     }
 
-    // Sichtbar fürs Testen (Policy/Referenz/Zeit injizierbar).
-    BatteryControlService(
-            CurrentEnergyQuery energy,
-            RelaySwitch relay,
-            SurplusChargePolicy policy,
-            PowerSource referenceSource,
-            Clock clock) {
-        this.energy = energy;
+    // Sichtbar fürs Testen (Zeit injizierbar).
+    BatteryControlService(RelaySwitch relay, Clock clock) {
         this.relay = relay;
-        this.policy = policy;
-        this.referenceSource = referenceSource;
         this.clock = clock;
         this.control = BatteryControl.initial(clock.instant());
     }
 
     /**
-     * Start-Initialisierung: die App verhält sich NEUTRAL – sie schickt KEINEN
-     * Schaltbefehl ans Relais. Stattdessen wird der Ist-Zustand vom Gerät gelesen und
-     * übernommen (Modus bleibt MANUAL, damit der Auto-Tick nichts überschreibt). Ist der
-     * Zustand nicht lesbar, bleibt es bei Manuell/AUS (reine Anzeige, kein Eingriff).
+     * Start-Initialisierung: die App verhält sich NEUTRAL – kein Schaltbefehl. Der
+     * Ist-Zustand wird vom Gerät gelesen und übernommen; ist er nicht lesbar, bleibt es
+     * beim Anfangszustand (Aus).
      */
     @PostConstruct
     synchronized void initFromDevice() {
-        relay.read().ifPresent(actual -> control = control.withState(actual, clock.instant()));
+        relay.read().ifPresent(r -> control = new BatteryControl(r.mode(), r.state(), clock.instant()));
     }
 
     @Override
@@ -82,31 +63,12 @@ public class BatteryControlService implements ControlBattery {
     }
 
     /**
-     * Gleicht im MANUAL-Modus die Anzeige periodisch mit dem ECHTEN Relais ab. Ohne das
-     * würde der Steuerstand veralten: {@code status()} lieferte sonst dauerhaft den
-     * zuletzt gesendeten Befehl – auch wenn das Relais extern (native View) umgeschaltet
-     * wurde oder ein Schaltbefehl gar nicht griff. Genau das führte dazu, dass die App
-     * „ein" zeigte, während real „aus" war. Im AUTO-Modus führt der {@link #autoTick()}
-     * das Relais; dort nicht dazwischenfunken. Ist der Ist-Zustand nicht lesbar, bleibt
-     * der letzte bekannte Stand (kein Flackern bei einem einzelnen Lesefehler).
+     * Modus wechseln. Aus/Manuell behalten den zuletzt gewünschten Ein/Aus-Zustand;
+     * Automatik übergibt die Kontrolle an die SMARTFOX (Zustand geräteseitig).
      */
-    @Scheduled(every = "{battery.sync-interval}")
-    synchronized void syncFromDevice() {
-        if (control.mode() != ControlMode.MANUAL) {
-            return;
-        }
-        relay.read().ifPresent(actual -> {
-            if (actual != control.desiredState()) {
-                control = control.withState(actual, clock.instant());
-                LOG.infof("Relais-Ist weicht ab -> Anzeige nachgeführt: %s", actual);
-            }
-        });
-    }
-
     @Override
     public synchronized BatteryControl changeMode(ControlMode mode) {
-        control = control.withMode(mode, clock.instant());
-        return control;
+        return apply(mode, control.desiredState());
     }
 
     @Override
@@ -114,35 +76,31 @@ public class BatteryControlService implements ControlBattery {
         if (control.mode() != ControlMode.MANUAL) {
             throw new ManualSwitchNotAllowed();
         }
-        return applyState(state);
+        return apply(ControlMode.MANUAL, state);
     }
 
-    /** Auto-Modus: periodisch den Überschuss auswerten und das Relais nachführen. */
-    @Scheduled(every = "{battery.auto.tick-interval}")
-    synchronized void autoTick() {
-        if (control.mode() != ControlMode.AUTO) {
-            return;
-        }
-        double surplusWatt = -referenceGridWatt();
-        RelayState target = policy.decide(surplusWatt, control.desiredState());
-        applyState(target);
-    }
-
-    private BatteryControl applyState(RelayState state) {
-        if (state != control.desiredState()) {
-            relay.apply(state);
-            control = control.withState(state, clock.instant());
-            LOG.infof("Relais -> %s (Modus %s)", state, control.mode());
+    /** Stellt Modus/Zustand am Gerät – nur bei echtem Wechsel (idempotent). */
+    private BatteryControl apply(ControlMode mode, RelayState state) {
+        if (mode != control.mode() || state != control.desiredState()) {
+            relay.apply(mode, state);
+            control = new BatteryControl(mode, state, clock.instant());
+            LOG.infof("Batterie gestellt -> Modus %s / %s", mode, state);
         }
         return control;
     }
 
-    /** Netzleistung der Referenzquelle; 0 W, wenn keine gültige Messung vorliegt. */
-    private double referenceGridWatt() {
-        return energy.currentEnergy().readings().stream()
-                .filter(reading -> reading.source() == referenceSource && reading.isOk())
-                .mapToDouble(PowerReading::gridWatt)
-                .findFirst()
-                .orElse(0.0);
+    /**
+     * Gleicht die Anzeige periodisch mit dem ECHTEN Relais ab (in ALLEN Modi, da die App
+     * keine eigene Automatik mehr fährt). Fängt externe Umschaltung, Automatik-Schalt-
+     * vorgänge und nicht gegriffene Befehle ab. Lesefehler halten den letzten Stand.
+     */
+    @Scheduled(every = "{battery.sync-interval}")
+    synchronized void syncFromDevice() {
+        relay.read().ifPresent(r -> {
+            if (r.mode() != control.mode() || r.state() != control.desiredState()) {
+                control = new BatteryControl(r.mode(), r.state(), clock.instant());
+                LOG.infof("Relais-Ist weicht ab -> Anzeige nachgeführt: Modus %s / %s", r.mode(), r.state());
+            }
+        });
     }
 }

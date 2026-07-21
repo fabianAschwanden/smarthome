@@ -11,7 +11,7 @@ Use Case macht dieses Relais steuerbar – **manuell** (Bedienung am Dashboard) 
 In Scope:
 
 - Relais 1 manuell EIN/AUS schalten (REST + Dashboard)
-- Automatik-Modus: Relais schaltet anhand des PV-Überschusses (mit Hysterese)
+- Automatik-Modus: an die native SMARTFOX-Überschuss-Steuerung übergeben
 - Umschalten Manuell ↔ Auto
 - Statusanzeige (Modus, gewünschter Relais-Zustand, letzter Schaltzeitpunkt)
 - Mock-Modus zum Testen ohne Hardware
@@ -21,54 +21,44 @@ SoC-basierte Steuerung (Ladezustand der Batterie), Historie/Persistenz.
 
 ## 2. Steuer-Schnittstelle (SMARTFOX-Relais)
 
-Der SMARTFOX schaltet ein Relais per HTTP-GET:
+Das SMARTFOX-Relais 1 (Batterie) ist **dreiwertig** (Aus / Manuell / Automatik) und
+wird per HTTP-GET gestellt:
 
 ```
-GET http://<smartfox-ip>/setswrel.cgi?rel=<n>&state=<0|1>
+GET http://<smartfox-ip>/setswrel.cgi?rel=1&state=<0|1|2>
 ```
 
-| Parameter | Bedeutung                                                       |
-|-----------|-----------------------------------------------------------------|
-| `rel`     | Relaisnummer (hier **1** für die Batterie)                      |
-| `state=1` | manuell **EIN** – schaltet die Batterieladung ein              |
-| `state=0` | **AUS** – schaltet ab / zurück auf SMARTFOX-Automatik          |
+| `state` | Wirkung   | liest zurück (`hidR1Mode`) |
+|---------|-----------|-----------------------------|
+| `1`     | **Manuell** ein (Ladung erzwingen) | `m` |
+| `2`     | **Aus**   | `x` |
+| `0`     | **Automatik** (geräteeigene PV-Überschuss-Steuerung) | `0` nicht ladend / `1` ladend |
 
-An der realen Anlage verifiziert: `GET http://<smartfox-ip>/setswrel.cgi?rel=1&state=1`
-schaltet die Batterieladung sofort ein. Die URL und die state-Codes sind firmware-
-abhängig und deshalb konfigurierbar (`battery.smartfox.relay-url`,
-`battery.smartfox.state-on=1`, `battery.smartfox.state-off=0`), nicht festverdrahtet.
+An der realen Anlage verifiziert (2026-07). Die URL und Codes sind firmware-abhängig und
+konfigurierbar (`battery.smartfox.relay-url`, `state-on=1`, `state-off=2`, `state-auto=0`),
+nicht festverdrahtet.
 
 ## 3. Modi
 
-| Modus    | Verhalten                                                                 |
-|----------|---------------------------------------------------------------------------|
-| `MANUAL` | Der Relais-Zustand folgt direkt der letzten Benutzeraktion (EIN/AUS).      |
-| `AUTO`   | Ein Scheduler wertet periodisch den PV-Überschuss aus und schaltet das Relais. |
+Die drei Gerätezustände werden auf das Domänen-Paar (`ControlMode`, `RelayState`) abgebildet:
 
-Beim Wechsel nach `AUTO` greift sofort der nächste Auto-Tick; ein Wechsel nach
-`MANUAL` friert den Zustand auf die letzte manuelle Vorgabe ein.
+| Anzeige      | (mode, state)      | `hidR1Mode` |
+|--------------|--------------------|-------------|
+| **Aus**      | `(MANUAL, OFF)`    | `x` |
+| **Manuell**  | `(MANUAL, ON)`     | `m` |
+| **Automatik**| `(AUTO, Ist-Ausgang)` | `0`/`1` |
 
-**Start-Verhalten (neutral):** Beim App-Start schickt die App **keinen** Schaltbefehl.
-Sie liest stattdessen den Ist-Zustand des Relais aus `values.xml`
-(`battery.smartfox.state-field`, Default `relais1State` → Klartext EIN/AUS) und
-übernimmt ihn in den Status; der Modus bleibt `MANUAL`. Ist der Zustand nicht lesbar
-(Gerät offline, Mock ohne Wert), bleibt es bei `MANUAL`/`AUS` – reine Anzeige, kein
-Eingriff. So überschreibt ein Neustart eine laufende SMARTFOX-Automatik nicht.
+**Automatik gehört dem SMARTFOX, nicht der App.** Im `AUTO`-Modus setzt die App nur den
+Gerätemodus (`state=0`) und spiegelt dessen Ist-Ausgang zurück – sie fährt **keinen
+eigenen** Überschuss-Algorithmus (früher `SurplusChargePolicy`; entfernt, weil er die
+native SMARTFOX-Automatik dupliziert hätte).
 
-**Wichtig:** Die Automatik gehört *dieser App* (`SurplusChargePolicy`), nicht dem
-SMARTFOX. Das Relais wird explizit von dieser App geschaltet (`state-on=1` für EIN,
-`state-off=0` für AUS).
-
-## 4. Auto-Logik: Überschuss-Laden mit Hysterese
-
-Überschuss = Einspeisung der Referenzquelle (SMARTFOX): `surplusW = -gridWatt`.
-
-- `surplusW ≥ chargeOnWatt`  → Relais **EIN**
-- `surplusW ≤ chargeOffWatt` → Relais **AUS**
-- dazwischen → Zustand **halten** (Hysterese gegen Flattern)
-
-Default: `chargeOnWatt = 1500`, `chargeOffWatt = 300`. Reine Domänenlogik in
-`SurplusChargePolicy` (framework-frei, pur, testbar).
+**Rückkopplung:** Beim Start liest die App den Ist-Zustand aus `values.xml`
+(`battery.smartfox.state-field`, Default `hidR1Mode`) und übernimmt ihn (kein Schalt-
+befehl). Ein Scheduler (`battery.sync-interval`, Default 15 s) gleicht die Anzeige danach
+laufend mit dem echten Relais ab – so werden externe Umschaltung (native View),
+Automatik-Schaltvorgänge und nicht gegriffene Befehle sichtbar. Lesefehler halten den
+letzten Stand.
 
 ## 5. API (REST)
 
@@ -86,9 +76,10 @@ besitzt dann den Relais-Zustand.
 ```properties
 battery.smartfox.relay-url=http://<smartfox-ip>/setswrel.cgi?rel=1&state={state}
 battery.smartfox.state-on=1
-battery.smartfox.state-off=0
-battery.auto.charge-on-watt=1500
-battery.auto.charge-off-watt=300
+battery.smartfox.state-off=2
+battery.smartfox.state-auto=0
+battery.smartfox.state-field=hidR1Mode
+battery.sync-interval=15s
 battery.auto.tick-interval=3s
 ```
 

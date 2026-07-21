@@ -3,12 +3,8 @@ package fabianaschwanden.smarthome.application.service.battery;
 import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.battery.RelayState;
 import fabianaschwanden.smarthome.domain.port.in.battery.ManualSwitchNotAllowed;
+import fabianaschwanden.smarthome.domain.model.battery.RelayReading;
 import fabianaschwanden.smarthome.domain.port.out.battery.RelaySwitch;
-import fabianaschwanden.smarthome.domain.service.battery.SurplusChargePolicy;
-import fabianaschwanden.smarthome.domain.model.energy.EnergySnapshot;
-import fabianaschwanden.smarthome.domain.model.energy.PowerReading;
-import fabianaschwanden.smarthome.domain.model.energy.PowerSource;
-import fabianaschwanden.smarthome.domain.port.in.energy.CurrentEnergyQuery;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
@@ -28,21 +24,17 @@ class BatteryControlServiceTest {
 
     private final Instant now = Instant.parse("2026-06-19T12:00:00Z");
     private final Clock clock = Clock.fixed(now, ZoneOffset.UTC);
-    private final SurplusChargePolicy policy = new SurplusChargePolicy(1500, 300);
-
     private final CapturingRelay relay = new CapturingRelay();
-    private double smartfoxGridWatt;
 
     private BatteryControlService service() {
-        BatteryControlService service = new BatteryControlService(
-                energyWith(() -> smartfoxGridWatt), relay, policy, PowerSource.SMARTFOX, clock);
+        BatteryControlService service = new BatteryControlService(relay, clock);
         service.initFromDevice();
         return service;
     }
 
     @Test
     void startetNeutralOhneSchaltbefehl() {
-        // Ist-Zustand nicht lesbar (Default-Relay liefert empty) -> Manuell/AUS, KEIN apply().
+        // Ist nicht lesbar (Default empty) -> Aus = (MANUAL, OFF), KEIN apply().
         BatteryControlService service = service();
         assertEquals(ControlMode.MANUAL, service.status().mode());
         assertEquals(RelayState.OFF, service.status().desiredState());
@@ -51,23 +43,53 @@ class BatteryControlServiceTest {
 
     @Test
     void uebernimmtGelesenenIstZustandOhneSchaltbefehl() {
-        // Relais meldet EIN -> Zustand wird übernommen, aber NICHT erneut geschaltet.
-        relay.readState = Optional.of(RelayState.ON);
+        relay.reading = Optional.of(new RelayReading(ControlMode.AUTO, RelayState.ON)); // Automatik/ladend
         BatteryControlService service = service();
-        assertEquals(ControlMode.MANUAL, service.status().mode());
+        assertEquals(ControlMode.AUTO, service.status().mode());
         assertEquals(RelayState.ON, service.status().desiredState());
         assertTrue(relay.calls.isEmpty(), "Start darf keinen Schaltbefehl senden");
     }
 
     @Test
-    void manuellFuehrtVeralteteAnzeigeNach() {
-        // Start: Relais liest EIN -> Anzeige EIN.
-        relay.readState = Optional.of(RelayState.ON);
+    void manuellEinAusUndAutomatikSchalten() {
+        BatteryControlService service = service();
+
+        // Manuell EIN
+        service.switchRelay(RelayState.ON);
+        assertEquals(ControlMode.MANUAL, service.status().mode());
+        assertEquals(RelayState.ON, service.status().desiredState());
+        assertEquals(new RelayReading(ControlMode.MANUAL, RelayState.ON), relay.last());
+
+        // Manuell AUS
+        service.switchRelay(RelayState.OFF);
+        assertEquals(new RelayReading(ControlMode.MANUAL, RelayState.OFF), relay.last());
+
+        // Automatik
+        service.changeMode(ControlMode.AUTO);
+        assertEquals(ControlMode.AUTO, service.status().mode());
+        assertEquals(new RelayReading(ControlMode.AUTO, RelayState.OFF), relay.last());
+    }
+
+    @Test
+    void manuellesSchaltenNurImManuellModus() {
+        BatteryControlService service = service();
+
+        service.changeMode(ControlMode.AUTO);
+        assertThrows(ManualSwitchNotAllowed.class, () -> service.switchRelay(RelayState.ON));
+
+        service.changeMode(ControlMode.MANUAL);
+        service.switchRelay(RelayState.ON);
+        assertEquals(RelayState.ON, service.status().desiredState());
+    }
+
+    @Test
+    void syncFuehrtVeralteteAnzeigeNach() {
+        relay.reading = Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.ON));
         BatteryControlService service = service();
         assertEquals(RelayState.ON, service.status().desiredState());
 
-        // Relais wird extern (native View) auf AUS gestellt.
-        relay.readState = Optional.of(RelayState.OFF);
+        // Relais extern (native View) auf Aus gestellt.
+        relay.reading = Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.OFF));
         service.syncFromDevice();
 
         assertEquals(RelayState.OFF, service.status().desiredState(), "Anzeige muss dem Ist folgen");
@@ -75,116 +97,55 @@ class BatteryControlServiceTest {
     }
 
     @Test
-    void syncGreiftImAutoModusNichtEin() {
-        smartfoxGridWatt = -2000;
+    void syncSpiegeltAutomatikSchaltvorgang() {
+        relay.reading = Optional.of(new RelayReading(ControlMode.AUTO, RelayState.OFF)); // Auto, nicht ladend
         BatteryControlService service = service();
-        service.changeMode(ControlMode.AUTO);
-        service.autoTick(); // -> ON
-        assertEquals(RelayState.ON, service.status().desiredState());
+        assertEquals(RelayState.OFF, service.status().desiredState());
 
-        // Ein einzelner Lese-Ausreisser darf im AUTO-Modus nichts überschreiben.
-        relay.readState = Optional.of(RelayState.OFF);
+        // SMARTFOX-Automatik beginnt zu laden (hidR1Mode 0 -> 1).
+        relay.reading = Optional.of(new RelayReading(ControlMode.AUTO, RelayState.ON));
         service.syncFromDevice();
 
+        assertEquals(ControlMode.AUTO, service.status().mode());
         assertEquals(RelayState.ON, service.status().desiredState());
     }
 
     @Test
-    void manuellHaeltStandBeiLesefehler() {
-        relay.readState = Optional.of(RelayState.ON);
+    void haeltStandBeiLesefehler() {
+        relay.reading = Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.ON));
         BatteryControlService service = service();
 
-        relay.readState = Optional.empty(); // Ist nicht lesbar
+        relay.reading = Optional.empty();
         service.syncFromDevice();
 
         assertEquals(RelayState.ON, service.status().desiredState(), "kein Flackern bei Lesefehler");
     }
 
     @Test
-    void autoModusSchaltetBeiUeberschussEin() {
-        smartfoxGridWatt = -2000; // 2000 W Einspeisung
-        BatteryControlService service = service();
-        service.changeMode(ControlMode.AUTO);
-
-        service.autoTick();
-
-        assertEquals(RelayState.ON, service.status().desiredState());
-        assertEquals(RelayState.ON, relay.last());
-    }
-
-    @Test
-    void autoModusSchaltetBeiBezugWiederAus() {
-        smartfoxGridWatt = -2000;
-        BatteryControlService service = service();
-        service.changeMode(ControlMode.AUTO);
-        service.autoTick();
-
-        smartfoxGridWatt = 500; // Netzbezug -> Überschuss negativ
-        service.autoTick();
-
-        assertEquals(RelayState.OFF, service.status().desiredState());
-    }
-
-    @Test
-    void manuellerModusIgnoriertAutoTick() {
-        smartfoxGridWatt = -2000;
-        BatteryControlService service = service();
-        service.changeMode(ControlMode.MANUAL);
-
-        service.autoTick();
-
-        assertEquals(RelayState.OFF, service.status().desiredState());
-    }
-
-    @Test
-    void manuellesSchaltenNurImManuellModus() {
-        BatteryControlService service = service();
-
-        // Im AUTO-Modus ist manuelles Schalten verboten.
-        service.changeMode(ControlMode.AUTO);
-        assertThrows(ManualSwitchNotAllowed.class, () -> service.switchRelay(RelayState.ON));
-
-        service.changeMode(ControlMode.MANUAL);
-        service.switchRelay(RelayState.ON);
-        assertEquals(RelayState.ON, service.status().desiredState());
-        assertEquals(RelayState.ON, relay.last());
-    }
-
-    @Test
     void schaltetNurBeiEchtemZustandswechsel() {
-        smartfoxGridWatt = -2000;
         BatteryControlService service = service();
-        service.changeMode(ControlMode.AUTO);
 
-        service.autoTick();
-        service.autoTick(); // unveränderter Überschuss
+        service.switchRelay(RelayState.ON);
+        service.switchRelay(RelayState.ON); // unverändert
 
-        // Kein Start-Befehl, dann genau 1 echter Wechsel auf ON, kein zweiter Call.
-        assertEquals(List.of(RelayState.ON), relay.calls);
-    }
-
-    private CurrentEnergyQuery energyWith(java.util.function.DoubleSupplier grid) {
-        return () -> new EnergySnapshot(
-                now,
-                List.of(PowerReading.of(PowerSource.SMARTFOX, now, grid.getAsDouble(), 0, null, 0)),
-                Optional.empty());
+        assertEquals(List.of(new RelayReading(ControlMode.MANUAL, RelayState.ON)), relay.calls);
     }
 
     private static final class CapturingRelay implements RelaySwitch {
-        private final List<RelayState> calls = new ArrayList<>();
-        private Optional<RelayState> readState = Optional.empty();
+        private final List<RelayReading> calls = new ArrayList<>();
+        private Optional<RelayReading> reading = Optional.empty();
 
         @Override
-        public void apply(RelayState state) {
-            calls.add(state);
+        public void apply(ControlMode mode, RelayState state) {
+            calls.add(new RelayReading(mode, state));
         }
 
         @Override
-        public Optional<RelayState> read() {
-            return readState;
+        public Optional<RelayReading> read() {
+            return reading;
         }
 
-        RelayState last() {
+        RelayReading last() {
             return calls.getLast();
         }
     }

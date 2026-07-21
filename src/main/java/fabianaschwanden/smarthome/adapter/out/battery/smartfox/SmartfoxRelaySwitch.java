@@ -1,6 +1,8 @@
 package fabianaschwanden.smarthome.adapter.out.battery.smartfox;
 
+import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.battery.RelayState;
+import fabianaschwanden.smarthome.domain.model.battery.RelayReading;
 import fabianaschwanden.smarthome.domain.port.out.battery.RelaySwitch;
 import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -22,13 +24,17 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 /**
- * Schaltet das SMARTFOX-Relais 1 per HTTP: {@code GET <relay-url>}, wobei
- * {@code {state}} durch den state-Code ersetzt wird. Die Codes für EIN/AUS sind
- * konfigurierbar, da firmware-abhängig (siehe SPEC §2, gegen die reale Anlage
- * verifiziert: {@code state=1} schaltet manuell EIN, {@code state=0} AUS).
+ * Schaltet das dreiwertige SMARTFOX-Relais 1 (Batterie) per HTTP: {@code GET <relay-url>}
+ * mit {@code {state}} = firmware-abhängiger Code. Gegen die reale Anlage verifiziert
+ * (setswrel.cgi?rel=1&amp;state=…):
+ * <ul>
+ *   <li>{@code state=1} → Manuell EIN</li>
+ *   <li>{@code state=2} → Aus</li>
+ *   <li>{@code state=0} → Automatik (geräteeigene Überschuss-Steuerung)</li>
+ * </ul>
  *
- * <p>{@link #read()} liest den Ist-Zustand aus {@code values.xml}: das Feld
- * {@code relais1State} liefert Klartext {@code EIN}/{@code AUS} (Relais 1 = Batterie).
+ * <p>{@link #read()} liest {@code hidR1Mode} aus {@code values.xml}: {@code x}=Aus,
+ * {@code m}=Manuell, {@code 0}=Automatik/nicht ladend, {@code 1}=Automatik/ladend.
  */
 @ApplicationScoped
 @IfBuildProperty(name = "smarthome.real-devices", stringValue = "true")
@@ -41,27 +47,31 @@ public class SmartfoxRelaySwitch implements RelaySwitch {
             .build();
 
     private final String relayUrlTemplate;
-    private final String stateOn;
+    private final String stateManualOn;
     private final String stateOff;
+    private final String stateAuto;
     private final String valuesUrl;
     private final String stateField;
 
     public SmartfoxRelaySwitch(
             @ConfigProperty(name = "battery.smartfox.relay-url") String relayUrlTemplate,
-            @ConfigProperty(name = "battery.smartfox.state-on", defaultValue = "1") String stateOn,
-            @ConfigProperty(name = "battery.smartfox.state-off", defaultValue = "0") String stateOff,
+            @ConfigProperty(name = "battery.smartfox.state-on", defaultValue = "1") String stateManualOn,
+            @ConfigProperty(name = "battery.smartfox.state-off", defaultValue = "2") String stateOff,
+            @ConfigProperty(name = "battery.smartfox.state-auto", defaultValue = "0") String stateAuto,
             @ConfigProperty(name = "energy.smartfox.base-url") String baseUrl,
-            @ConfigProperty(name = "battery.smartfox.state-field", defaultValue = "relais1State") String stateField) {
+            @ConfigProperty(name = "battery.smartfox.state-field", defaultValue = "hidR1Mode") String stateField) {
         this.relayUrlTemplate = relayUrlTemplate;
-        this.stateOn = stateOn;
+        this.stateManualOn = stateManualOn;
         this.stateOff = stateOff;
+        this.stateAuto = stateAuto;
         this.valuesUrl = baseUrl + "/values.xml";
         this.stateField = stateField;
     }
 
     @Override
-    public void apply(RelayState state) {
-        String url = relayUrlTemplate.replace("{state}", state == RelayState.ON ? stateOn : stateOff);
+    public void apply(ControlMode mode, RelayState state) {
+        String code = code(mode, state);
+        String url = relayUrlTemplate.replace("{state}", code);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -72,16 +82,23 @@ public class SmartfoxRelaySwitch implements RelaySwitch {
             if (response.statusCode() != 200) {
                 throw new IllegalStateException("HTTP " + response.statusCode());
             }
-            LOG.infof("SMARTFOX-Relais geschaltet: %s", state);
+            LOG.infof("SMARTFOX-Relais gestellt: Modus=%s Zustand=%s (state=%s)", mode, state, code);
         } catch (Exception e) {
             // Steuerbefehle dürfen nicht still verschwinden: hochreichen, damit der
-            // Aufrufer (REST 5xx bzw. Auto-Tick-Log) den Fehlschlag sieht.
-            throw new RelaySwitchFailed(state, e);
+            // Aufrufer (REST 5xx bzw. Log) den Fehlschlag sieht.
+            throw new RelaySwitchFailed(mode, state, e);
         }
     }
 
+    private String code(ControlMode mode, RelayState state) {
+        if (mode == ControlMode.AUTO) {
+            return stateAuto;
+        }
+        return state == RelayState.ON ? stateManualOn : stateOff;
+    }
+
     @Override
-    public Optional<RelayState> read() {
+    public Optional<RelayReading> read() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(valuesUrl))
@@ -98,11 +115,10 @@ public class SmartfoxRelaySwitch implements RelaySwitch {
             DocumentBuilder builder = factory.newDocumentBuilder();
             try (InputStream body = response.body()) {
                 Document doc = builder.parse(body);
-                String raw = valueById(doc, stateField);
-                return toState(raw);
+                return toReading(valueById(doc, stateField));
             }
         } catch (Exception e) {
-            // Lesen ist optional (Start-Initialisierung) – kein harter Fehler.
+            // Lesen ist optional (Start-Initialisierung / Sync) – kein harter Fehler.
             LOG.debugf(e, "SMARTFOX-Relais-Zustand nicht lesbar (%s)", valuesUrl);
             return Optional.empty();
         }
@@ -120,19 +136,17 @@ public class SmartfoxRelaySwitch implements RelaySwitch {
         return null;
     }
 
-    /** SMARTFOX liefert den Relais-Status als Klartext EIN/AUS (relais1State). */
-    private static Optional<RelayState> toState(String raw) {
+    /** hidR1Mode -> (Modus, Zustand). {@code x}=Aus, {@code m}=Manuell, {@code 0/1}=Automatik. */
+    private static Optional<RelayReading> toReading(String raw) {
         if (raw == null) {
             return Optional.empty();
         }
-        String v = raw.trim().toUpperCase();
-        if (v.equals("EIN") || v.equals("ON") || v.equals("1")) {
-            return Optional.of(RelayState.ON);
-        }
-        if (v.equals("AUS") || v.equals("OFF") || v.equals("0")) {
-            return Optional.of(RelayState.OFF);
-        }
-        // z. B. "x" (unbekannt/inaktiv) -> kein verlässlicher Zustand.
-        return Optional.empty();
+        return switch (raw.trim().toLowerCase()) {
+            case "x" -> Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.OFF));   // Aus
+            case "m" -> Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.ON));    // Manuell
+            case "0" -> Optional.of(new RelayReading(ControlMode.AUTO, RelayState.OFF));     // Auto, nicht ladend
+            case "1" -> Optional.of(new RelayReading(ControlMode.AUTO, RelayState.ON));      // Auto, ladend
+            default -> Optional.empty();
+        };
     }
 }

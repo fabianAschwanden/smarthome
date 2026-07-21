@@ -1,7 +1,9 @@
 package fabianaschwanden.smarthome.adapter.out.battery.smartfox;
 
 import com.sun.net.httpserver.HttpServer;
+import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.battery.RelayState;
+import fabianaschwanden.smarthome.domain.model.battery.RelayReading;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,10 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Testet den SMARTFOX-Relais-Schalter gegen einen lokalen Fake-HTTP-Server, der
- * den Schaltpfad {@code /setvalue} entgegennimmt und den {@code state}-Query
- * mitschreibt sowie {@code /values.xml} für den Ist-Zustand ausliefert (kein echtes
- * Gerät). Der Adapter wird direkt instanziiert.
+ * Testet den dreiwertigen SMARTFOX-Relais-Schalter gegen einen lokalen Fake-HTTP-Server:
+ * der Schaltpfad schreibt den {@code state}-Query mit, {@code /values.xml} liefert
+ * {@code hidR1Mode} für den Ist-Zustand. Der Adapter wird direkt instanziiert.
  *
  * <p>{@code @QuarkusTest}, damit die Coverage ins Quarkus-JaCoCo zählt.
  */
@@ -64,84 +65,97 @@ class SmartfoxRelaySwitchTest {
         return baseUrl + "/setvalue?param=relay&value={state}";
     }
 
-    private SmartfoxRelaySwitch relay(String on, String off) {
-        return new SmartfoxRelaySwitch(template(), on, off, baseUrl, "relais1State");
+    /** Standard-Codes: Manuell-Ein=1, Aus=2, Automatik=0. */
+    private SmartfoxRelaySwitch relay() {
+        return new SmartfoxRelaySwitch(template(), "1", "2", "0", baseUrl, "hidR1Mode");
+    }
+
+    private String mode(String hidR1Mode) {
+        return "<root><value id=\"hidR1Mode\">" + hidR1Mode + "</value></root>";
     }
 
     @Test
-    void schaltetEinMitStateOnCode() {
-        status = 200;
-        SmartfoxRelaySwitch relay = relay("1", "0");
-        relay.apply(RelayState.ON);
-        assertEquals(1, receivedQueries.size());
+    void schreibtManuellEin() {
+        relay().apply(ControlMode.MANUAL, RelayState.ON);
         assertEquals("param=relay&value=1", receivedQueries.get(0));
     }
 
     @Test
-    void schaltetAusMitStateOffCode() {
-        status = 200;
-        SmartfoxRelaySwitch relay = relay("1", "0");
-        relay.apply(RelayState.OFF);
-        assertEquals(1, receivedQueries.size());
-        assertEquals("param=relay&value=0", receivedQueries.get(0));
+    void schreibtAus() {
+        relay().apply(ControlMode.MANUAL, RelayState.OFF);
+        assertEquals("param=relay&value=2", receivedQueries.get(0));
     }
 
     @Test
-    void respektiertKonfigurierbareStateCodes() {
-        status = 200;
-        SmartfoxRelaySwitch relay = relay("on", "off");
-        relay.apply(RelayState.ON);
-        relay.apply(RelayState.OFF);
-        assertEquals(2, receivedQueries.size());
+    void schreibtAutomatikUndIgnoriertZustand() {
+        relay().apply(ControlMode.AUTO, RelayState.OFF);
+        relay().apply(ControlMode.AUTO, RelayState.ON);
+        assertEquals("param=relay&value=0", receivedQueries.get(0));
+        assertEquals("param=relay&value=0", receivedQueries.get(1));
+    }
+
+    @Test
+    void respektiertKonfigurierbareCodes() {
+        SmartfoxRelaySwitch relay =
+                new SmartfoxRelaySwitch(template(), "on", "off", "auto", baseUrl, "hidR1Mode");
+        relay.apply(ControlMode.MANUAL, RelayState.ON);
+        relay.apply(ControlMode.MANUAL, RelayState.OFF);
+        relay.apply(ControlMode.AUTO, RelayState.OFF);
         assertEquals("param=relay&value=on", receivedQueries.get(0));
         assertEquals("param=relay&value=off", receivedQueries.get(1));
+        assertEquals("param=relay&value=auto", receivedQueries.get(2));
     }
 
     @Test
     void httpFehlerWirftRelaySwitchFailed() {
         status = 500;
-        SmartfoxRelaySwitch relay = relay("1", "0");
-        RelaySwitchFailed ex = assertThrows(RelaySwitchFailed.class, () -> relay.apply(RelayState.ON));
-        // Statuscode steckt in der Ursachenkette.
+        RelaySwitchFailed ex = assertThrows(RelaySwitchFailed.class,
+                () -> relay().apply(ControlMode.MANUAL, RelayState.ON));
         assertEquals(IllegalStateException.class, ex.getCause().getClass());
     }
 
     @Test
     void unerreichbarerHostWirftRelaySwitchFailed() {
         SmartfoxRelaySwitch relay = new SmartfoxRelaySwitch(
-                "http://127.0.0.1:1/setvalue?value={state}", "1", "0",
-                "http://127.0.0.1:1", "relais1State");
-        assertThrows(RelaySwitchFailed.class, () -> relay.apply(RelayState.ON));
+                "http://127.0.0.1:1/setvalue?value={state}", "1", "2", "0",
+                "http://127.0.0.1:1", "hidR1Mode");
+        assertThrows(RelaySwitchFailed.class, () -> relay.apply(ControlMode.MANUAL, RelayState.ON));
     }
 
     @Test
-    void liestIstZustandEinAusValuesXml() {
-        valuesXml = "<root><value id=\"relais1State\">EIN</value></root>";
-        assertEquals(Optional.of(RelayState.ON), relay("1", "0").read());
+    void liestModusAusHidR1Mode() {
+        valuesXml = mode("x");
+        assertEquals(Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.OFF)), relay().read());
 
-        valuesXml = "<root><value id=\"relais1State\">AUS</value></root>";
-        assertEquals(Optional.of(RelayState.OFF), relay("1", "0").read());
+        valuesXml = mode("m");
+        assertEquals(Optional.of(new RelayReading(ControlMode.MANUAL, RelayState.ON)), relay().read());
+
+        valuesXml = mode("0");
+        assertEquals(Optional.of(new RelayReading(ControlMode.AUTO, RelayState.OFF)), relay().read());
+
+        valuesXml = mode("1");
+        assertEquals(Optional.of(new RelayReading(ControlMode.AUTO, RelayState.ON)), relay().read());
     }
 
     @Test
     void liefertLeerBeiUnbekanntemOderFehlendemFeld() {
-        valuesXml = "<root><value id=\"relais1State\">x</value></root>";
-        assertTrue(relay("1", "0").read().isEmpty());
+        valuesXml = mode("z");
+        assertTrue(relay().read().isEmpty());
 
-        valuesXml = "<root><value id=\"andereId\">EIN</value></root>";
-        assertTrue(relay("1", "0").read().isEmpty());
+        valuesXml = "<root><value id=\"andereId\">m</value></root>";
+        assertTrue(relay().read().isEmpty());
     }
 
     @Test
     void liefertLeerBeiHttpFehler() {
         valuesStatus = 500;
-        assertTrue(relay("1", "0").read().isEmpty());
+        assertTrue(relay().read().isEmpty());
     }
 
     @Test
     void liefertLeerBeiUnerreichbaremHost() {
         SmartfoxRelaySwitch relay = new SmartfoxRelaySwitch(
-                template(), "1", "0", "http://127.0.0.1:1", "relais1State");
+                template(), "1", "2", "0", "http://127.0.0.1:1", "hidR1Mode");
         assertTrue(relay.read().isEmpty());
     }
 }
