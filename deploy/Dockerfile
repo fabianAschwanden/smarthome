@@ -16,6 +16,11 @@ RUN chmod +x mvnw \
 # --- Runtime-Stage: schlankes JRE ---
 FROM eclipse-temurin:25-jre
 WORKDIR /app
+# Release-Metadaten (vom Release-Workflow aus dem Git-Tag gesetzt; Default fuer lokale Builds).
+ARG VERSION=dev
+ARG BUILD_DATE=
+ENV APP_VERSION=$VERSION
+ENV APP_BUILT_AT=$BUILD_DATE
 COPY --from=build /src/target/quarkus-app/ ./
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "quarkus-run.jar"]
