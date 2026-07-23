@@ -374,11 +374,15 @@ export class DashboardPage {
   protected readonly batteryOn = computed(() => this.batterySvc.control()?.desiredState === 'ON');
 
   /**
-   * Batterie-Zustand fürs Dashboard aus der GEMESSENEN Leistung (SMARTFOX-batteryWatt,
-   * + = laden / − = entladen), nicht aus dem Schaltbefehl. Sonst zeigt die Kachel
-   * „lädt", obwohl das Relais zwar ein ist, real aber 0 W fliessen (Akku voll, extern
-   * abgeschaltet, Befehl nicht gegriffen). 'idle' = Relais ein, aber ~0 W.
-   * 'unknown' bis der Steuerstand geladen ist.
+   * Batterie-Zustand fürs Dashboard.
+   *
+   * <p><b>Manuell</b> ist eine Absicht, kein Messwert: „Manuell ein" erzwingt an dieser
+   * Anlage grundsätzlich die Ladung → immer 'charging' (die Momentanleistung darf 0 sein,
+   * z. B. bei vollem Akku oder Messverzögerung – das ist trotzdem „lädt"). „Manuell aus" =
+   * 'off'.
+   *
+   * <p><b>Automatik</b> gehört der SMARTFOX; hier zeigt die GEMESSENE Leistung
+   * (SMARTFOX-batteryWatt, + = laden / − = entladen) die Realität: lädt / entlädt / bereit.
    */
   protected readonly batteryStatus = computed<
     'charging' | 'discharging' | 'idle' | 'off' | 'unknown'
@@ -387,6 +391,10 @@ export class DashboardPage {
     if (!control) {
       return 'unknown';
     }
+    if (control.mode === 'MANUAL') {
+      return control.desiredState === 'ON' ? 'charging' : 'off';
+    }
+    // Automatik: gemessene Leistung entscheidet.
     const sf = (this.energySvc.snapshot()?.readings ?? []).find(
       (r) => r.source === 'SMARTFOX' && r.status === 'OK',
     );
@@ -397,7 +405,6 @@ export class DashboardPage {
     if (watt !== null && watt < -50) {
       return 'discharging';
     }
-    // ~0 W: Relais-Zustand entscheidet zwischen „ein, lädt nicht" und „aus".
     return control.desiredState === 'ON' ? 'idle' : 'off';
   });
 
