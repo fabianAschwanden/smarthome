@@ -253,7 +253,7 @@ export class EnergyFlow {
       case 'discharging':
         return 'entlädt';
       case 'idle':
-        return 'ein · lädt nicht';
+        return 'bereit';
       case 'off':
         return 'aus';
       default:
