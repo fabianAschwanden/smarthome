@@ -194,14 +194,10 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
 
         <!-- Spalte 3: Außen-/Innentemperatur und Klimaanlage -->
         <div class="flex h-full flex-col justify-between gap-4">
-          <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
-          @if (climate(); as c) {
+          <!-- Außentemperatur: bevorzugt Außensensor, sonst AC-Außenfühler -->
+          @if (outdoor(); as o) {
             <a routerLink="/climate" class="block">
-              <app-outdoor-temp-card
-                [temp]="c.outdoorTemp"
-                [online]="c.online"
-                [powered]="c.power"
-              />
+              <app-outdoor-temp-card [temp]="o.temp" [source]="o.source" />
             </a>
           }
 
@@ -426,7 +422,38 @@ export class DashboardPage {
 
   protected readonly climate = computed(() => (this.climateSvc.climate() ?? [])[0]);
 
-  protected readonly sensor = computed(() => (this.sensorSvc.sensors() ?? [])[0]);
+  /** Innentemperatur-Kachel: erster Sensor, der NICHT der Außensensor ist. */
+  protected readonly sensor = computed(() =>
+    (this.sensorSvc.sensors() ?? []).find((s) => s.id !== 'aussen'),
+  );
+
+  /** Dedizierter Außensensor (Tuya), per Konvention id === 'aussen'. */
+  private readonly outdoorSensor = computed(() =>
+    (this.sensorSvc.sensors() ?? []).find((s) => s.id === 'aussen'),
+  );
+
+  /**
+   * Außentemperatur aus kombinierten Quellen: bevorzugt der dedizierte Außensensor;
+   * ist er nicht verfügbar (fehlt/offline/kein Wert), Fallback auf den AC-Außenfühler –
+   * aber nur bei laufender Klimaanlage (sonst unbrauchbar, siehe outdoor-temp-card).
+   * {@code temp === null} = kein Wert. {@code null} zurück = gar keine Quelle → Kachel aus.
+   */
+  protected readonly outdoor = computed<{ temp: number | null; source: string | null } | null>(
+    () => {
+      const s = this.outdoorSensor();
+      const c = this.climate();
+      if (!s && !c) {
+        return null;
+      }
+      if (s && s.online && s.temperature > -100) {
+        return { temp: s.temperature, source: s.name };
+      }
+      if (c && c.online && c.power && c.outdoorTemp > -100) {
+        return { temp: c.outdoorTemp, source: 'Klimaanlage' };
+      }
+      return { temp: null, source: null };
+    },
+  );
 
   protected readonly smoke = this.safetySvc.smokeDetectors;
 

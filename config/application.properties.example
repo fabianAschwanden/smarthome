@@ -62,6 +62,18 @@
 %dev.sensor.devices[0].local-key=<local-key>
 %dev.sensor.devices[0].version=3.4
 
+# --- Aussensensor (Temp; primaere Aussentemperatur, Fallback = AC-Aussenfuehler) ---
+# id 'aussen' + dps/scale stehen in src/main/resources/application.properties.
+# version je nach Geraet 3.3/3.4/3.5 (empirisch pruefen); address bei 3.4/3.5 setzen.
+%dev.sensor.devices[1].device-id=<device-id>
+%dev.sensor.devices[1].local-key=<local-key>
+%dev.sensor.devices[1].address=<lan-ip>
+%dev.sensor.devices[1].version=3.3
+%lan.sensor.devices[1].device-id=<device-id>
+%lan.sensor.devices[1].local-key=<local-key>
+%lan.sensor.devices[1].address=<lan-ip>
+%lan.sensor.devices[1].version=3.3
+
 # --- Rauchmelder (nur lesend; IP via Discovery) ---
 %dev.safety.smoke[0].device-id=<device-id>
 %dev.safety.smoke[0].local-key=<local-key>
