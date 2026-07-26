@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { catchError, of, startWith, switchMap, timer } from 'rxjs';
+import { catchError, of, startWith, switchMap } from 'rxjs';
+import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Weather } from '../models/weather';
 
@@ -19,7 +20,7 @@ export class WeatherService {
   private readonly intervalMs = 5 * 60 * 1000;
 
   constructor() {
-    timer(0, this.intervalMs)
+    pollingTimer(this.intervalMs)
       .pipe(
         switchMap(() => this.http.get<Weather>('/api/weather').pipe(catchError(() => of(null)))),
         startWith(null),

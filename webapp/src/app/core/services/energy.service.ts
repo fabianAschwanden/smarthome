@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, startWith, switchMap, timer } from 'rxjs';
+import { Observable, startWith, switchMap } from 'rxjs';
+import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EnergyHistory, EnergySnapshot, HistoryRange } from '../models/energy';
 
@@ -25,7 +26,7 @@ export class EnergyService {
   private readonly historyIntervalMs = 10_000; // 10 s – passt zum Sampling-Intervall
 
   constructor() {
-    timer(0, this.intervalMs)
+    pollingTimer(this.intervalMs)
       .pipe(
         switchMap(() => this.http.get<EnergySnapshot>('/api/energy/current')),
         startWith(null),
@@ -37,7 +38,7 @@ export class EnergyService {
         }
       });
 
-    timer(0, this.historyIntervalMs)
+    pollingTimer(this.historyIntervalMs)
       .pipe(
         switchMap(() => this.history('day')),
         startWith(null),
