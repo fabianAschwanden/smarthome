@@ -51,15 +51,36 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
      * an (nie blockierend). Steuerbefehle übernehmen ihre Antwort als frischen Cache.
      */
     private static final long CACHE_TTL_MS = 30_000;
+    /**
+     * Ab wann ein Cache-Wert als „offline" gilt: liegt der letzte ERFOLGREICHE Read
+     * länger zurück, meldet {@link #readState()} {@code empty} (→ Anlage offline). Ohne
+     * das würde der zuletzt bekannte Zustand ewig als online gelten, weil ein
+     * fehlgeschlagener/Offline-Read den Cache nicht überschreibt. Grosszügig bemessen
+     * (Gecko-Reads dauern ~30–60 s), damit ein einzelner langsamer Read kein Flackern
+     * auslöst.
+     */
+    private static final long OFFLINE_AFTER_MS = 300_000;
     private volatile State cachedState;
     private volatile long cachedAtMillis;
     private final AtomicBoolean refreshing = new AtomicBoolean(false);
+    private final java.util.function.LongSupplier nowMillis;
 
     public LocalGeckoApplianceDevice(
             String id, String name, String room, Set<ApplianceFunction> functions,
             boolean heated, int tempMin, int tempMax, String ip, String ident,
             String pumpKey, String massageKey, String lightKey, String filterKey,
             TuyaSidecarClient sidecar) {
+        this(id, name, room, functions, heated, tempMin, tempMax, ip, ident,
+                pumpKey, massageKey, lightKey, filterKey, sidecar, System::currentTimeMillis);
+    }
+
+    // Sichtbar fürs Testen: injizierbare Zeitquelle (Millis) für die Offline-Schwelle.
+    LocalGeckoApplianceDevice(
+            String id, String name, String room, Set<ApplianceFunction> functions,
+            boolean heated, int tempMin, int tempMax, String ip, String ident,
+            String pumpKey, String massageKey, String lightKey, String filterKey,
+            TuyaSidecarClient sidecar, java.util.function.LongSupplier nowMillis) {
+        this.nowMillis = nowMillis;
         this.id = id;
         this.name = name;
         this.room = room;
@@ -131,11 +152,17 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     @Override
     public Optional<State> readState() {
         State cached = cachedState;
-        boolean fresh = cached != null && System.currentTimeMillis() - cachedAtMillis < CACHE_TTL_MS;
-        if (!fresh) {
+        long age = nowMillis.getAsLong() - cachedAtMillis;
+        if (cached == null || age >= CACHE_TTL_MS) {
             triggerBackgroundRefresh();  // nie blockierend; Cache wird asynchron erneuert
         }
-        return Optional.ofNullable(cached);  // sofort: letzter Stand (oder leer beim Erststart)
+        // Zu lange kein erfolgreicher Read -> Anlage gilt als offline. Ein
+        // fehlgeschlagener/Offline-Read überschreibt den Cache nicht, sonst würde der
+        // letzte bekannte Zustand ewig als online gemeldet.
+        if (cached == null || age > OFFLINE_AFTER_MS) {
+            return Optional.empty();
+        }
+        return Optional.of(cached);
     }
 
     /** Liest das Spa im Hintergrund (höchstens ein Refresh gleichzeitig) und füllt den Cache. */
@@ -154,7 +181,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
 
     private void cache(State state) {
         this.cachedState = state;
-        this.cachedAtMillis = System.currentTimeMillis();
+        this.cachedAtMillis = nowMillis.getAsLong();
     }
 
     /** Parst die flache Sidecar-JSON in einen {@link State}; {@code empty} wenn nicht online. */

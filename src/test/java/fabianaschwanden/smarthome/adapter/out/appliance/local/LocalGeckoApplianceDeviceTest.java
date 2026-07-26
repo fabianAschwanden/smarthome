@@ -89,6 +89,53 @@ class LocalGeckoApplianceDeviceTest {
         assertEquals(41, state.temperature().max());
     }
 
+    /** Sidecar, dessen Read „offline" (leer) meldet; Control seedet den Cache trotzdem. */
+    private static TuyaSidecarClient offlineReadSidecar() {
+        return new TuyaSidecarClient("http://unused") {
+            @Override
+            public Optional<String> readSpa(String ip, String ident, String name) {
+                return Optional.empty(); // Spa nicht erreichbar
+            }
+
+            @Override
+            public Optional<String> controlSpa(String ip, String ident, String name,
+                    Integer target, String pumpKey, String lightKey, Boolean on) {
+                return Optional.of(SPA_JSON);
+            }
+        };
+    }
+
+    @Test
+    void meldet_offline_wenn_letzter_erfolgreicher_read_zu_alt() {
+        long[] clock = {0};
+        LocalGeckoApplianceDevice dev = new LocalGeckoApplianceDevice(
+                "pool", "Schwimmbecken", "Wellness",
+                Set.of(ApplianceFunction.LIGHT, ApplianceFunction.FILTER),
+                false, 8, 42, "1.2.3.4", "SPA", "P1", "P2", "LI", "Waterfall",
+                offlineReadSidecar(), () -> clock[0]);
+
+        // Zustand seeden (Control-Antwort wird gecacht) bei t=0 -> jetzt online.
+        dev.apply(ApplianceFunction.LIGHT, FunctionState.ON);
+        assertTrue(dev.readState().isPresent(), "frisch gecacht -> online");
+
+        // 5 min + 1 ms ohne erfolgreichen Read -> offline (Read liefert weiter leer).
+        clock[0] = 300_001;
+        assertTrue(dev.readState().isEmpty(), "zu alter Cache -> offline");
+    }
+
+    @Test
+    void bleibt_online_solange_cache_nicht_verfallen() {
+        long[] clock = {0};
+        LocalGeckoApplianceDevice dev = new LocalGeckoApplianceDevice(
+                "pool", "Schwimmbecken", "Wellness",
+                Set.of(ApplianceFunction.LIGHT), false, 8, 42, "1.2.3.4", "SPA",
+                "P1", "P2", "LI", "Waterfall", offlineReadSidecar(), () -> clock[0]);
+
+        dev.apply(ApplianceFunction.LIGHT, FunctionState.ON);
+        clock[0] = 120_000; // 2 min: TTL abgelaufen (Refresh angestossen), aber < Offline-Schwelle
+        assertTrue(dev.readState().isPresent(), "innerhalb der Offline-Schwelle -> weiter online");
+    }
+
     @Test
     void control_uebernimmt_antwort_als_frischen_cache() {
         LocalGeckoApplianceDevice dev = whirlpool(fakeSidecar(SPA_JSON));
