@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { startWith, switchMap, timer } from 'rxjs';
+import { startWith, switchMap } from 'rxjs';
+import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Cover, CoverCommand } from '../models/cover';
 
@@ -21,7 +22,7 @@ export class CoverService {
   private readonly intervalMs = 3000;
 
   constructor() {
-    timer(0, this.intervalMs)
+    pollingTimer(this.intervalMs)
       .pipe(
         switchMap(() => this.http.get<Cover[]>('/api/covers')),
         startWith(null),

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { startWith, switchMap, timer } from 'rxjs';
+import { startWith, switchMap } from 'rxjs';
+import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SmokeDetector } from '../models/safety';
 
@@ -15,7 +16,7 @@ export class SafetyService {
   private readonly intervalMs = 5000;
 
   constructor() {
-    timer(0, this.intervalMs)
+    pollingTimer(this.intervalMs)
       .pipe(
         switchMap(() => this.http.get<SmokeDetector[]>('/api/safety/smoke')),
         startWith(null),

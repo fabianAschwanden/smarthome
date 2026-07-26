@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, startWith, switchMap, timer } from 'rxjs';
+import { Observable, startWith, switchMap } from 'rxjs';
+import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Climate, ClimateMode } from '../models/climate';
 
@@ -18,7 +19,7 @@ export class ClimateService {
   private readonly intervalMs = 3000;
 
   constructor() {
-    timer(0, this.intervalMs)
+    pollingTimer(this.intervalMs)
       .pipe(
         switchMap(() => this.http.get<Climate[]>('/api/climate')),
         startWith(null),
