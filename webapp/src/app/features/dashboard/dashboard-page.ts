@@ -197,7 +197,11 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
           <!-- Außentemperatur (von der Klimaanlage gemeldet) -->
           @if (climate(); as c) {
             <a routerLink="/climate" class="block">
-              <app-outdoor-temp-card [temp]="c.outdoorTemp" [online]="c.online" />
+              <app-outdoor-temp-card
+                [temp]="c.outdoorTemp"
+                [online]="c.online"
+                [powered]="c.power"
+              />
             </a>
           }
 
