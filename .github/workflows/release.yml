@@ -2,13 +2,25 @@ name: Release
 
 # Versionierte Container-Releases: bei einem Git-Tag v* werden App- und Sidecar-Image
 # gebaut und in die GitHub Container Registry (ghcr.io) gepusht. Der Heim-Server zieht
-# sie dann per `docker compose pull` (kein lokaler Build nötig).
+# sie dann per `docker compose pull` bzw. k3s (kein lokaler Build nötig).
 #
 #   git tag v1.2.0 && git push origin v1.2.0
 #
-# Images:
+# Images – als Multi-Arch-Manifest (linux/amd64 + linux/arm64):
 #   ghcr.io/<owner>/smarthome:<version>          + :latest
 #   ghcr.io/<owner>/smarthome-sidecar:<version>  + :latest
+#
+# Warum arm64 dazu: der Mini-PC läuft auf amd64, entwickelt wird auf Apple Silicon
+# (arm64). Ein reines amd64-Image lässt sich dort weder in k3d noch in Docker als Pod
+# starten – containerd bricht mit "no match for platform in manifest" ab, und ein lokal
+# importiertes amd64-Image gilt für einen arm64-Node weiterhin als nicht vorhanden.
+#
+# Warum die Matrix statt schlicht `platforms: linux/amd64,linux/arm64`: das würde den
+# arm64-Build per QEMU emulieren – Maven + Angular unter Emulation dauert ein Vielfaches
+# des heutigen ~3-Minuten-Builds. Stattdessen baut jede Architektur nativ auf ihrem
+# eigenen Runner (ubuntu-24.04-arm ist für öffentliche Repos frei), pusht das Ergebnis
+# **ohne Tag** nur per Digest, und der merge-Job fasst die Digests je Image zu einer
+# Manifest-Liste unter den echten Tags zusammen.
 
 on:
   push:
@@ -18,12 +30,41 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  images:
-    name: Build & push images (ghcr.io)
+  # owner kleingeschrieben (ghcr verlangt lowercase) + Version aus dem Tag. Einmal
+  # zentral, damit build- und merge-Job garantiert dieselben Werte verwenden.
+  meta:
+    name: Metadaten aus dem Tag
     runs-on: ubuntu-latest
+    outputs:
+      owner: ${{ steps.meta.outputs.owner }}
+      version: ${{ steps.meta.outputs.version }}
+      built_at: ${{ steps.meta.outputs.built_at }}
+    steps:
+      - name: Compute image metadata
+        id: meta
+        run: |
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.image.repo }} (${{ matrix.platform.arch }})
+    needs: meta
+    runs-on: ${{ matrix.platform.runner }}
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { repo: smarthome, context: ., file: deploy/Dockerfile }
+          - { repo: smarthome-sidecar, context: tools/tuya-sidecar, file: tools/tuya-sidecar/Dockerfile }
+        platform:
+          - { id: linux/amd64, arch: amd64, runner: ubuntu-latest }
+          - { id: linux/arm64, arch: arm64, runner: ubuntu-24.04-arm }
     steps:
       - uses: actions/checkout@v7
 
@@ -34,41 +75,87 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # owner kleingeschrieben (ghcr verlangt lowercase) + Version aus dem Tag.
-      - name: Compute image metadata
-        id: meta
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # push-by-digest: bewusst OHNE `tags` – ein getaggter Push je Architektur würde
+      # den Tag gegenseitig überschreiben (die zweite Arch gewinnt). Die Tags setzt
+      # ausschliesslich der merge-Job auf die fertige Manifest-Liste.
+      # Die build-args nutzt nur das App-Image; der Sidecar ignoriert sie (Warnung im Log).
+      - name: Build & push (nur Digest)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
+          platforms: ${{ matrix.platform.id }}
+          build-args: |
+            VERSION=${{ needs.meta.outputs.version }}
+            BUILD_DATE=${{ needs.meta.outputs.built_at }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.meta.outputs.owner }}/${{ matrix.image.repo }},push-by-digest=true,name-canonical=true,push=true
+          # Cache je Image UND Architektur trennen – sonst verdrängen sich amd64- und
+          # arm64-Layer gegenseitig und beide Builds laufen dauerhaft kalt.
+          cache-from: type=gha,scope=${{ matrix.image.repo }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.repo }}-${{ matrix.platform.arch }}
+
+      # Der Digest wandert als leere Datei (Dateiname = Digest) zum merge-Job.
+      - name: Digest ablegen
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      # Architektur bewusst VOR dem Image-Namen: bei "digest-<repo>-<arch>" würde das
+      # Glob des merge-Jobs für repo=smarthome ("digest-smarthome-*") auch die
+      # Sidecar-Artefakte (digest-smarthome-sidecar-amd64) einsammeln und beide Images
+      # in eine Manifest-Liste mischen. So endet der Name eindeutig auf den Repo-Namen.
+      - name: Digest als Artefakt hochladen
+        uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.platform.arch }}-${{ matrix.image.repo }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Manifest-Liste ${{ matrix.repo }}
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        repo: [smarthome, smarthome-sidecar]
+    env:
+      IMAGE: ghcr.io/${{ needs.meta.outputs.owner }}/${{ matrix.repo }}
+    steps:
+      - name: Digests einsammeln
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digest-*-${{ matrix.repo }}
+          merge-multiple: true
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build & push app image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: deploy/Dockerfile
-          push: true
-          build-args: |
-            VERSION=${{ steps.meta.outputs.version }}
-            BUILD_DATE=${{ steps.meta.outputs.built_at }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome:${{ steps.meta.outputs.version }}
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      # Aus den Einzel-Digests eine Manifest-Liste bauen – erst hier entstehen die Tags.
+      - name: Manifest-Liste erzeugen (:version + :latest)
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            -t "$IMAGE:${{ needs.meta.outputs.version }}" \
+            -t "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
 
-      - name: Build & push sidecar image
-        uses: docker/build-push-action@v7
-        with:
-          context: tools/tuya-sidecar
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome-sidecar:${{ steps.meta.outputs.version }}
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/smarthome-sidecar:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Ergebnis prüfen (beide Architekturen vorhanden?)
+        run: docker buildx imagetools inspect "$IMAGE:${{ needs.meta.outputs.version }}"
