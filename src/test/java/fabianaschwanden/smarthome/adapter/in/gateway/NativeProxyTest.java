@@ -37,7 +37,8 @@ class NativeProxyTest {
                     "nativeview.targets[0].id", "fake",
                     "nativeview.targets[0].name", "Fake",
                     "nativeview.targets[0].url", "http://127.0.0.1:" + FAKE_PORT,
-                    "nativeview.targets[0].path", "/index.shtml");
+                    "nativeview.targets[0].path", "/index.shtml",
+                    "smarthome.nativeview-style-src-extra", "https://css.example");
         }
     }
 
@@ -224,7 +225,20 @@ class NativeProxyTest {
         given().when().get("/native/fake/index.shtml")
                 .then().statusCode(200)
                 .header("Content-Security-Policy", containsString("connect-src 'self'"))
+                .header("Content-Security-Policy", containsString("object-src 'none'"))
                 .header("X-Content-Type-Options", is("nosniff"));
+    }
+
+    @Test
+    void cspErlaubtKonfiguriertesFremdStylesheet() {
+        // Geraete-UIs laden ihr CSS teils beim Hersteller (SMARTFOX: my.smartfox.at).
+        // Ohne diese Ausnahme rendert die View unformatiert - genau das war nach der
+        // Einfuehrung der CSP passiert. Exfiltrationspfade (connect-src/img via
+        // default-src) bleiben trotzdem zu.
+        given().when().get("/native/fake/index.shtml")
+                .then().statusCode(200)
+                .header("Content-Security-Policy", containsString("style-src 'self' 'unsafe-inline' data: https://css.example"))
+                .header("Content-Security-Policy", containsString("connect-src 'self'"));
     }
 
     @Test

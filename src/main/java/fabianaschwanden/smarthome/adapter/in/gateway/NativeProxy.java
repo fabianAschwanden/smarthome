@@ -72,14 +72,42 @@ public class NativeProxy {
     private final Config appConfig;
     private final Map<String, URI> targets = new HashMap<>();
     private HttpClient client;
+    private String contentSecurityPolicy;
 
     public NativeProxy(Vertx vertx, Config appConfig) {
         this.vertx = vertx;
         this.appConfig = appConfig;
     }
 
+    /**
+     * Baut die CSP für Proxy-Antworten. Quellen bleiben grosszügig (Fremd-UIs nutzen
+     * Inline-Skripte/-Styles), aber die ZIELE sind auf die eigene Origin begrenzt: eine
+     * kompromittierte Firmware kann so keine Daten an einen fremden Host schicken – weder
+     * per fetch/XHR ({@code connect-src}) noch per {@code <img src="http://…">}.
+     *
+     * <p>{@code smarthome.nativeview-style-src-extra} ist das Ventil für Geräte-UIs, die ihr
+     * Stylesheet beim Hersteller laden (der SMARTFOX holt sein einziges CSS von
+     * {@code my.smartfox.at} und bringt keine eigenen {@code <style>}-Blöcke mit – ohne
+     * die Ausnahme rendert die View unformatiert). Bewusst nur {@code style-src} und
+     * bewusst per Config statt hartkodiert: der gerätespezifische Host gehört dorthin, wo
+     * auch alle anderen Geräte-Fakten stehen (gitignorte {@code config/}). Der Schlüssel
+     * liegt unter {@code smarthome.*} und nicht unter {@code nativeview.*}, weil letzteres
+     * der @ConfigMapping NativeViewConfig gehört, die fremde Unterschlüssel abweist.
+     */
+    private String buildCsp() {
+        String extraStyle = appConfig.getOptionalValue("smarthome.nativeview-style-src-extra", String.class)
+                .filter(s -> !s.isBlank())
+                .map(s -> " " + s.trim())
+                .orElse("");
+        return "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
+                + "style-src 'self' 'unsafe-inline' data:" + extraStyle + "; "
+                + "connect-src 'self'; form-action 'self'; base-uri 'self'; "
+                + "frame-ancestors 'self'; object-src 'none'";
+    }
+
     void init(@Observes StartupEvent ev) {
         client = vertx.createHttpClient(new HttpClientOptions().setIdleTimeout(0));
+        contentSecurityPolicy = buildCsp();
         // nativeview.targets[i].id / .url so lange lesen, bis kein weiterer Eintrag existiert.
         for (int i = 0; ; i++) {
             Optional<String> id = appConfig.getOptionalValue("nativeview.targets[" + i + "].id", String.class);
@@ -280,14 +308,8 @@ public class NativeProxy {
             ctx.response().putHeader(k, h.getValue());
         });
 
-        // Eigene CSP statt der entfernten des Geräts: Quellen bleiben grosszügig (die
-        // Fremd-UI nutzt Inline-Skripte/-Styles), aber ZIELE sind auf die eigene Origin
-        // begrenzt. Eine kompromittierte Firmware kann damit keine Daten an einen fremden
-        // Host schicken – weder per fetch/XHR (connect-src) noch per <img src="http://…">.
-        ctx.response().putHeader("Content-Security-Policy",
-                "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
-                        + "connect-src 'self'; form-action 'self'; base-uri 'self'; "
-                        + "frame-ancestors 'self'; object-src 'none'");
+        // Eigene CSP statt der entfernten des Geräts (siehe buildCsp()).
+        ctx.response().putHeader("Content-Security-Policy", contentSecurityPolicy);
         ctx.response().putHeader("X-Content-Type-Options", "nosniff");
 
         // Body immer vollständig puffern und mit end(buffer) senden – zuverlässiger als
