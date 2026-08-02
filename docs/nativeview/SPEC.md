@@ -28,6 +28,33 @@ Origin/Port 8080 – LAN wie remote. Zwei Eingriffe machen die iframe-Einbettung
   Fremd-UI (CSS/JS/AJAX) korrekt durch den Proxy aufgelöst werden. Assets (CSS/JS/Bilder)
   werden durchgestreamt, HTML wird gepuffert (wegen der Injektion).
 
+### Vertrauensmodell (die Fremd-UI ist Geräte-Firmware)
+
+Die eingebettete UI läuft auf der App-Origin – eine kompromittierte Firmware hätte sonst
+Zugriff auf `/api/*` mit der Session. Vier Schranken begrenzen das:
+
+- **Request-Header-Allowlist** (`FORWARDED_REQUEST_HEADERS`): `Cookie`, `Authorization`
+  und `X-Forwarded-*` erreichen das Gerät nie – sonst erntet ein loggendes Gerät Sessions.
+  Umgekehrt wird `Set-Cookie` aus der Geräteantwort entfernt (keine Cookie-Injektion in
+  die App-Domain).
+- **Referer-Fallback eng gefasst:** nur `GET`/`HEAD`, nur Endungen aus
+  `FALLBACK_EXTENSIONS`, Referer wird als URI geparst (Pfad-Präfix, nicht `indexOf`),
+  `..` wird abgelehnt. Sonst wäre er ein offener Proxy: ein gefälschter `Referer` genügte
+  für `GET /setswrel.cgi?rel=1&state=1`. **Wenn eine Fremd-UI einen absoluten Pfad mit
+  anderer Endung braucht, gehört die Endung hierher** – am direkten Pfad
+  `/native/<id>/...` ist weiterhin alles erlaubt.
+- **Cross-Site-Sperre:** Requests mit `Sec-Fetch-Site: cross-site` werden mit 403
+  abgewiesen (CSRF per präpariertem Link). Nicht via SameSite=strict gelöst – das bricht
+  den OIDC-Code-Flow.
+- **Eigene CSP + `sandbox` am iframe:** Die CSP begrenzt die *Ziele* der Fremd-UI auf die
+  eigene Origin (keine Exfiltration an fremde Hosts); `sandbox` entzieht ihr u. a.
+  Top-Level-Navigation und Downloads.
+
+> **Restrisiko:** `allow-same-origin` bleibt nötig (die UI lädt ihre Werte per XHR), damit
+> bleibt die Fremd-UI same-origin und könnte per `parent.document` aufs Dashboard
+> zugreifen. Die harte Trennung wäre eine **eigene Origin** (Subdomain/Port) für
+> `/native/*` – bewusst offen, siehe `security-review.md` (H7).
+
 ## 3. Architektur (Hexagonal)
 
 - `domain/model/nativeview/NativeView` – record `(id, name, icon)`; Invarianten im Compact-Constructor.

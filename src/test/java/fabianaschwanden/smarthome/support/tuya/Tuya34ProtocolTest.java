@@ -41,7 +41,7 @@ class Tuya34ProtocolTest {
         assertEquals((byte) 0xaa, frame[frame.length - 2]);
 
         // payloadOf liefert den eingebetteten (verschlüsselten) Payload zurück.
-        byte[] extracted = Tuya34Protocol.payloadOf(frame);
+        byte[] extracted = Tuya34Protocol.payloadOf(KEY, frame);
         assertArrayEquals(payload, extracted);
     }
 
@@ -50,13 +50,31 @@ class Tuya34ProtocolTest {
         byte[] payload = Tuya34Protocol.encrypt(KEY, "{\"dps\":{\"1\":false}}".getBytes(StandardCharsets.UTF_8));
         byte[] frame = Tuya34Protocol.frame(KEY, Tuya34Protocol.DP_QUERY, 2, payload);
 
-        byte[] extracted = Tuya34Protocol.payloadOf(frame);
+        byte[] extracted = Tuya34Protocol.payloadOf(KEY, frame);
         String json = new String(Tuya34Protocol.decrypt(KEY, extracted), StandardCharsets.UTF_8);
         assertTrue(json.contains("\"1\":false"), json);
     }
 
     @Test
+    void payloadOfVerwirftManipuliertenFrame() {
+        // M4: das HMAC ist der einzige Authentizitaetsnachweis von 3.4 - wird es beim
+        // Empfang nicht geprueft, kann ein Fake-Geraet beliebige Antworten unterschieben.
+        byte[] payload = Tuya34Protocol.encrypt(KEY, "hallo".getBytes(StandardCharsets.UTF_8));
+        byte[] frame = Tuya34Protocol.frame(KEY, Tuya34Protocol.CONTROL, 1, payload);
+        frame[20] ^= 0x01; // ein Payload-Bit kippen
+        assertEquals(0, Tuya34Protocol.payloadOf(KEY, frame).length);
+    }
+
+    @Test
+    void payloadOfVerwirftFrameMitFremdemSchluessel() {
+        byte[] payload = Tuya34Protocol.encrypt(KEY, "hallo".getBytes(StandardCharsets.UTF_8));
+        byte[] fremd = "ZZZZZZZZZZZZZZZZ".getBytes(StandardCharsets.UTF_8);
+        byte[] frame = Tuya34Protocol.frame(fremd, Tuya34Protocol.CONTROL, 1, payload);
+        assertEquals(0, Tuya34Protocol.payloadOf(KEY, frame).length);
+    }
+
+    @Test
     void payloadOfLeerBeiMuell() {
-        assertEquals(0, Tuya34Protocol.payloadOf(new byte[] {1, 2, 3}).length);
+        assertEquals(0, Tuya34Protocol.payloadOf(KEY, new byte[] {1, 2, 3}).length);
     }
 }

@@ -64,7 +64,20 @@ import { NativeView } from '../../core/models/native-view';
                 >
               </header>
               <div class="h-[70vh] w-full bg-white">
-                <iframe class="size-full border-0" [src]="frameUrl(v)" [title]="v.name"></iframe>
+                <!--
+                  sandbox: die Fremd-UI ist Geraete-Firmware, der wir nicht vertrauen.
+                  Entzieht ihr u. a. Top-Level-Navigation (sonst koennte sie das Dashboard
+                  auf eine Phishing-Seite umleiten), Downloads, Popups und Modals.
+                  allow-same-origin ist noetig, weil die UI ihre Werte per XHR nachlaedt –
+                  damit bleibt sie aber same-origin; die harte Trennung waere eine eigene
+                  Origin (siehe docs/nativeview/SPEC.md).
+                -->
+                <iframe
+                  class="size-full border-0"
+                  [src]="frameUrl(v)"
+                  [title]="v.name"
+                  sandbox="allow-scripts allow-forms allow-same-origin"
+                ></iframe>
               </div>
             </article>
           }

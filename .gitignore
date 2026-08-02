@@ -42,3 +42,8 @@ deploy/k8s/secret.yaml
 .tuya-venv/
 __pycache__/
 *.pyc
+
+# Security-Review: listet offene Schwachstellen und interne IPs. Das Repo ist
+# oeffentlich - dieses Dokument gehoert nicht hinein.
+security-review.md
+SECURITY-REVIEW.md

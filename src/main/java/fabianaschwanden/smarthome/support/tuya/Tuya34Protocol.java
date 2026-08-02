@@ -1,9 +1,12 @@
 package fabianaschwanden.smarthome.support.tuya;
 
+import org.jboss.logging.Logger;
+
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -23,6 +26,7 @@ public final class Tuya34Protocol {
     public static final int DP_QUERY = 0x10;     // 3.4: DP_QUERY_NEW
     public static final int CONTROL = 0x0d;      // 3.4: CONTROL_NEW
 
+    private static final Logger LOG = Logger.getLogger(Tuya34Protocol.class);
     private static final byte[] PREFIX = {0x00, 0x00, 0x55, (byte) 0xaa};
     private static final byte[] SUFFIX = {0x00, 0x00, (byte) 0xaa, 0x55};
 
@@ -83,8 +87,17 @@ public final class Tuya34Protocol {
         return out.array();
     }
 
-    /** Extrahiert den (noch verschlüsselten) Payload aus einer Geräteantwort. */
-    static byte[] payloadOf(byte[] response) {
+    /**
+     * Extrahiert den (noch verschlüsselten) Payload aus einer Geräteantwort und PRÜFT
+     * dabei das mitgelieferte HMAC.
+     *
+     * <p>Das HMAC ist der einzige Authentizitätsnachweis von 3.4 – wird es nur beim
+     * Senden gebildet und beim Empfang verworfen, ist es wirkungslos: ein Fake-Gerät
+     * (ARP-/Broadcast-Spoofing) könnte beliebige Antworten unterschieben, und die App
+     * hielte die Sitzung für echt. Bei Mismatch liefert die Methode einen leeren Payload,
+     * die Antwort wird also wie „unlesbar" behandelt.
+     */
+    static byte[] payloadOf(byte[] hmacKey, byte[] response) {
         int idx = indexOf(response, PREFIX);
         if (idx < 0 || response.length < idx + 16) {
             return new byte[0];
@@ -94,11 +107,22 @@ public final class Tuya34Protocol {
         int length = buf.getInt();
         int payloadLen = length - 32 - 4; // ohne hmac + suffix
         // 3.4-Antworten haben i.d.R. KEINEN retcode bei Handshake; Datenantworten ggf. schon.
-        if (payloadLen <= 0 || buf.remaining() < payloadLen) {
+        if (payloadLen <= 0 || buf.remaining() < payloadLen + 32) {
             return new byte[0];
         }
         byte[] payload = new byte[payloadLen];
         buf.get(payload);
+        byte[] received = new byte[32];
+        buf.get(received);
+
+        // HMAC deckt Header (16 Byte ab PREFIX) + Payload ab – wie beim Senden in frame().
+        byte[] headerAndPayload = new byte[16 + payloadLen];
+        System.arraycopy(response, idx, headerAndPayload, 0, 16);
+        System.arraycopy(payload, 0, headerAndPayload, 16, payloadLen);
+        if (!MessageDigest.isEqual(hmac(hmacKey, headerAndPayload), received)) {
+            LOG.warnf("Tuya 3.4: HMAC der Antwort stimmt nicht - Frame verworfen (%d Byte)", response.length);
+            return new byte[0];
+        }
         return payload;
     }
 

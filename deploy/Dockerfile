@@ -3,10 +3,11 @@
 
 # --- Build-Stage: JDK 25 + Node 22 ---
 FROM eclipse-temurin:25-jdk AS build
+# Node aus den Distro-Paketen statt "curl | bash" als root: das Setup-Skript von
+# nodesource wird unverifiziert aus dem Netz ausgefuehrt und haette im Build volle
+# Rechte (wie in src/main/docker/Dockerfile.jvm bereits geloest).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl ca-certificates \
-  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-  && apt-get install -y --no-install-recommends nodejs \
+  && apt-get install -y --no-install-recommends nodejs npm ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
@@ -23,4 +24,9 @@ ENV APP_VERSION=$VERSION
 ENV APP_BUILT_AT=$BUILD_DATE
 COPY --from=build /src/target/quarkus-app/ ./
 EXPOSE 8080
+
+# Unprivilegiert laufen: die App braucht keine Root-Rechte. Wichtig, weil der Container
+# mit Host-Netz laeuft und die gitignorte config/ (local-keys) gemountet bekommt.
+RUN useradd --system --uid 10001 --no-create-home app && chown -R 10001 /app
+USER 10001
 ENTRYPOINT ["java", "-jar", "quarkus-run.jar"]
