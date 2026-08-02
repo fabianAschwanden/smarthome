@@ -17,7 +17,11 @@ streams:
     - ffmpeg:garten#video=h264
 
 api:
-  listen: ":1984"        # HTTP-API + WebRTC-Signaling + eingebetteter Player
+  # NUR Loopback: die App proxyt /go2rtc/* selbst nach 127.0.0.1:1984 (Go2rtcProxy) und
+  # laesst dabei nur Player-Pfade durch. Auf ":1984" waere die Admin-API ungeschuetzt im
+  # LAN und im Fly-6PN erreichbar - und die kann per 'exec:'-Stream Kommandos im
+  # Container ausfuehren und die RTSP-URL preisgeben.
+  listen: "127.0.0.1:1984"
 
 webrtc:
   listen: ":8555"        # WebRTC (TCP); im LAN/6PN erreichbar

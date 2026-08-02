@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.zip.CRC32;
 
+import org.jboss.logging.Logger;
+
 /**
  * Tuya-LAN-Protokoll v3.3 (Frame {@code 55AA}, AES-128-ECB mit dem local-key).
  * Reine Kodierung/Dekodierung – kein Socket, damit unit-testbar.
@@ -20,6 +22,8 @@ import java.util.zip.CRC32;
  * Referenz: tinytuya PROTOCOL.md.
  */
 public final class TuyaProtocol {
+
+    private static final Logger LOG = Logger.getLogger(TuyaProtocol.class);
 
     public static final int CONTROL = 7;
     public static final int DP_QUERY = 0x0a;
@@ -70,6 +74,20 @@ public final class TuyaProtocol {
         buf.get(payload);
         if (returnCode != 0 && allZero(payload)) {
             return null;
+        }
+        // CRC32 der Antwort nachrechnen (Header ab PREFIX bis inkl. Payload). Es ist
+        // ungekeyed und damit KEIN Authentizitätsnachweis – ein Angreifer kann es
+        // mitberechnen. Es fängt aber verstümmelte/fehlgeleitete Frames ab, statt sie
+        // blind zu entschlüsseln. Echte Authentizität gibt es erst ab 3.4 (HMAC).
+        if (buf.remaining() >= 4) {
+            int receivedCrc = buf.getInt();
+            int headerAndPayloadLen = 16 + 4 + payloadLen; // prefix..len + retcode + payload
+            CRC32 check = new CRC32();
+            check.update(response, idx, headerAndPayloadLen);
+            if ((int) check.getValue() != receivedCrc) {
+                LOG.debugf("Tuya 3.3: CRC32 der Antwort stimmt nicht - Frame verworfen");
+                return null;
+            }
         }
         // Manche Antworten haben den 3.3-Versions-Header vorangestellt -> abschneiden.
         byte[] cipher = stripVersionHeader(payload);

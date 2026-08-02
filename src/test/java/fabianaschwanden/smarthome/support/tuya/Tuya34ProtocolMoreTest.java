@@ -49,12 +49,12 @@ class Tuya34ProtocolMoreTest {
         // gültiges Prefix, aber Längenfeld < 36 -> payloadLen <= 0 -> leer.
         byte[] frame = Tuya34Protocol.frame(KEY, Tuya34Protocol.CONTROL, 1, new byte[0]);
         // Ein 0-Byte-Payload wird (wegen +32+4 im len) korrekt als leer extrahiert.
-        assertEquals(0, Tuya34Protocol.payloadOf(frame).length);
+        assertEquals(0, Tuya34Protocol.payloadOf(KEY, frame).length);
     }
 
     @Test
     void payloadOfLeerOhnePrefix() {
-        assertEquals(0, Tuya34Protocol.payloadOf(new byte[] {9, 9, 9, 9, 9, 9, 9, 9}).length);
+        assertEquals(0, Tuya34Protocol.payloadOf(KEY, new byte[] {9, 9, 9, 9, 9, 9, 9, 9}).length);
     }
 
     @Test

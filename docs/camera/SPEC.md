@@ -55,6 +55,15 @@ Verifiziert: go2rtc lieferte ein Live-Frame (JPEG 1920×1080) von der realen Kam
   der Stream über Port 8080 und ist auch **remote** erreichbar (Fly-Login-Proxy +
   WireGuard, wo nur 8080 durchgeht); ein direkter Zugriff auf `:1984` wäre von aussen
   schwarz. go2rtc transkodiert H.265→H.264 bei Bedarf via ffmpeg.
+- **Der Proxy hat eine Allowlist** (`Go2rtcProxy.ALLOWED_GET`/`ALLOWED_POST`): durch
+  gehen nur die Player-Pfade (`stream.html`, `video-stream.js`, `video-rtc.js`,
+  `api/ws`, `api/frame.jpeg`, `api/stream.mp4`, `POST api/webrtc`), alles andere 403.
+  Sonst gäbe `GET /go2rtc/api/streams` die RTSP-URL preis (unterläuft die erste Regel
+  oben) und `PUT /go2rtc/api/streams` legte einen `exec:`-Stream an – das ist
+  Kommandoausführung im go2rtc-Container. Im `%lan`-Profil läuft die App ohne Login,
+  der Proxy ist dort die einzige Schranke. Ergänzend bindet die go2rtc-API nur auf
+  `127.0.0.1:1984`, damit sie nicht am Host-Netz (LAN/Fly-6PN) vorbei erreichbar ist.
+  Neue Player-Pfade müssen bewusst in die Allowlist – `Go2rtcProxyTest` hält das fest.
 
 ## 5. Frontend
 
