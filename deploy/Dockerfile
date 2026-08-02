@@ -3,12 +3,19 @@
 
 # --- Build-Stage: JDK 25 + Node 22 ---
 FROM eclipse-temurin:25-jdk AS build
-# Node aus den Distro-Paketen statt "curl | bash" als root: das Setup-Skript von
-# nodesource wird unverifiziert aus dem Netz ausgefuehrt und haette im Build volle
-# Rechte (wie in src/main/docker/Dockerfile.jvm bereits geloest).
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+# Node aus dem offiziellen, versionsgepinnten Node-Image kopieren statt
+# "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -": jenes Setup-Skript wird
+# unverifiziert aus dem Netz geladen und als root ausgefuehrt.
+# Die Distro-Pakete (nodejs/npm via apt) reichen NICHT: Debian/Ubuntu liefern 22.22.1,
+# Angular verlangt ^22.22.3 -> "npm run build" bricht mit EBADENGINE ab.
+COPY --from=node:22.22.3-bookworm /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22.22.3-bookworm /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+  && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && node --version && npm --version
 WORKDIR /src
 COPY . .
 RUN chmod +x mvnw \
