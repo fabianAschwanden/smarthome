@@ -9,7 +9,10 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- use-credentials: Manifest-Anfragen laufen per Default OHNE Cookies. Hinter dem
+         Login-Proxy (Fly/oauth2-proxy) landen sie dadurch auf der Google-Loginseite
+         und scheitern mit einem CORS-Fehler. -->
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials" />
     <!-- iOS: als eigenständige App vom Homescreen starten -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Smart Home" />

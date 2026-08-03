@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
@@ -36,8 +37,16 @@ public class TuyaDiscovery {
     // Global bekannter UDP-Broadcast-Key: md5("yGAdlopoPVldABfn").
     private static final byte[] UDP_KEY = md5("yGAdlopoPVldABfn");
 
+    /**
+     * Verfallszeit der gelernten Adressen. Broadcasts sind UNAUTHENTIFIZIERT – jeder im
+     * LAN kann ein Paket mit fremder {@code gwId} und beliebiger IP schicken. Ohne
+     * Verfall bliebe so ein Eintrag für immer stehen; mit Verfall muss ein Angreifer das
+     * echte Gerät dauerhaft überbieten (das sich selbst alle paar Sekunden meldet).
+     */
+    private static final Duration ENTRY_TTL = Duration.ofMinutes(10);
+
     private final boolean enabled;
-    private final Map<String, String> deviceIdToIp = new ConcurrentHashMap<>();
+    private final Map<String, Seen> deviceIdToIp = new ConcurrentHashMap<>();
     /** Zeitpunkt der letzten Broadcast-Sichtung je device-id (passiver „Online"-Beleg). */
     private final Map<String, Instant> lastSeen = new ConcurrentHashMap<>();
     private volatile boolean running;
@@ -63,12 +72,51 @@ public class TuyaDiscovery {
         running = false;
     }
 
-    /** Aktuelle IP eines Geräts, falls per Broadcast gesehen. */
+    /** Per Broadcast gesehene IP eines Geräts, sofern nicht älter als {@link #ENTRY_TTL}. */
     public Optional<String> ipOf(String deviceId) {
-        return Optional.ofNullable(deviceIdToIp.get(deviceId));
+        Seen seen = deviceIdToIp.get(deviceId);
+        if (seen == null || Duration.between(seen.at(), Instant.now()).compareTo(ENTRY_TTL) > 0) {
+            return Optional.empty();
+        }
+        return Optional.of(seen.ip());
     }
 
-    /** Zeitpunkt der letzten Broadcast-Sichtung eines Geräts (passiver „zuletzt online"). */
+    /**
+     * Effektive Adresse eines Geräts – die zentrale Vertrauensregel der Discovery.
+     *
+     * <p>Die KONFIGURIERTE Adresse gewinnt. Ein unauthentifizierter Broadcast darf eine
+     * bewusst gesetzte Adresse nicht überschreiben: ein einziges gefälschtes Paket
+     * ({@code gwId=<opfer>, ip=<angreifer>}) lenkte sonst das Gerät dauerhaft auf eine
+     * fremde Maschine um – Steuerbefehle liefen ins Leere, während die App Erfolg meldet.
+     * Die Discovery füllt nur die Lücke, wenn nichts konfiguriert ist.
+     *
+     * <p>Weicht die gesehene IP von der konfigurierten ab, wird das geloggt: entweder ist
+     * das Gerät per DHCP gewandert (dann gehört die neue IP in die Config) – oder jemand
+     * fälscht Broadcasts.
+     */
+    public String resolveAddress(String deviceId, String configuredAddress) {
+        boolean configured = configuredAddress != null && !configuredAddress.isBlank()
+                && !"0.0.0.0".equals(configuredAddress);
+        if (!configured) {
+            return ipOf(deviceId).orElse(configuredAddress);
+        }
+        ipOf(deviceId)
+                .filter(seen -> !seen.equals(configuredAddress))
+                .ifPresent(seen -> LOG.warnf(
+                        "Tuya-Broadcast meldet für device-id=%s die IP %s, konfiguriert ist %s."
+                                + " Es gilt die konfigurierte Adresse. Bei DHCP-Wechsel Config anpassen;"
+                                + " sonst faelscht jemand Broadcasts.",
+                        deviceId, seen, configuredAddress));
+        return configuredAddress;
+    }
+
+    /**
+     * Zeitpunkt der letzten Broadcast-Sichtung eines Geräts (passiver „zuletzt online").
+     *
+     * <p>ACHTUNG: unauthentifizierter Hinweis. Broadcasts sind nicht signiert, jeder im
+     * LAN kann sie mit fremder {@code gwId} erzeugen. Nur als weiche Zusatzinfo verwenden,
+     * nie als alleinigen Beleg dafür, dass ein Gerät funktioniert.
+     */
     public Optional<Instant> lastSeen(String deviceId) {
         return Optional.ofNullable(lastSeen.get(deviceId));
     }
@@ -102,12 +150,13 @@ public class TuyaDiscovery {
             return;
         }
         String deviceId = bc.get().deviceId();
-        if (bc.get().ip() != null) {
-            deviceIdToIp.put(deviceId, bc.get().ip());
+        Instant seenAt = Instant.now();
+        if (isIpv4(bc.get().ip())) {
+            deviceIdToIp.put(deviceId, new Seen(bc.get().ip(), seenAt));
         }
         // Passiver „Online"-Beleg: erste Sichtung bzw. Wiederauftauchen nach Stille
         // gut sichtbar loggen (z. B. ein aufwachender Rauchmelder).
-        Instant now = Instant.now();
+        Instant now = seenAt;
         Instant previous = lastSeen.put(deviceId, now);
         if (previous == null || java.time.Duration.between(previous, now).toMinutes() >= 1) {
             LOG.infof("Tuya-Broadcast gesehen: device-id=%s ip=%s", deviceId, bc.get().ip());
@@ -161,6 +210,35 @@ public class TuyaDiscovery {
         return end < 0 ? null : json.substring(start, end);
     }
 
+    /**
+     * Akzeptiert nur syntaktisch gültige IPv4-Adressen aus dem Datagramm. Das {@code ip}-Feld
+     * ist frei wählbarer Text aus dem Netz – ohne Prüfung landete er unbesehen als
+     * Verbindungsziel in der Map.
+     */
+    static boolean isIpv4(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String[] parts = value.split("\\.", -1);
+        if (parts.length != 4) {
+            return false;
+        }
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) {
+                return false;
+            }
+            for (int i = 0; i < part.length(); i++) {
+                if (part.charAt(i) < '0' || part.charAt(i) > '9') {
+                    return false;
+                }
+            }
+            if (Integer.parseInt(part) > 255) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static byte[] md5(String s) {
         try {
             return MessageDigest.getInstance("MD5").digest(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -179,5 +257,9 @@ public class TuyaDiscovery {
 
     /** Aufgelöste Broadcast-Daten. */
     record TuyaBroadcast(String deviceId, String ip) {
+    }
+
+    /** Gelernte Adresse mit Sichtungszeitpunkt (für {@link #ENTRY_TTL}). */
+    private record Seen(String ip, Instant at) {
     }
 }

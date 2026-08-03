@@ -70,7 +70,7 @@ public class LocalMideaClimateDevice implements ClimateDevice {
 
     private String address() {
         // Midea-Geräte tauchen nicht in der Tuya-Discovery auf; configuredAddress ist führend.
-        return discovery.ipOf(deviceId).orElse(configuredAddress);
+        return discovery.resolveAddress(deviceId, configuredAddress);
     }
 
     @Override

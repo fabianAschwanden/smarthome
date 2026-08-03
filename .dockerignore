@@ -7,3 +7,14 @@ target
 webapp/dist
 .git
 .tuya-venv
+
+# Secrets: deploy/Dockerfile macht COPY . . mit dem Repo-Root als Build-Context. Ohne
+# diese Zeilen landen echte local-keys, DB-Passwörter, die Kamera-RTSP-URL und
+# WireGuard-Keys in der Build-Stage und in den Cache-Layern. Das finale Image ist zwar
+# sauber (es kopiert nur target/quarkus-app), lokal gebaute Zwischen-Images und ein
+# exportierter Build-Cache wären es nicht.
+config/
+deploy/.env
+deploy/**/.env
+deploy/go2rtc/go2rtc.yaml
+**/*.conf

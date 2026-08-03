@@ -28,6 +28,51 @@ Origin/Port 8080 – LAN wie remote. Zwei Eingriffe machen die iframe-Einbettung
   Fremd-UI (CSS/JS/AJAX) korrekt durch den Proxy aufgelöst werden. Assets (CSS/JS/Bilder)
   werden durchgestreamt, HTML wird gepuffert (wegen der Injektion).
 
+### Vertrauensmodell (die Fremd-UI ist Geräte-Firmware)
+
+Die eingebettete UI läuft auf der App-Origin – eine kompromittierte Firmware hätte sonst
+Zugriff auf `/api/*` mit der Session. Vier Schranken begrenzen das:
+
+- **Request-Header-Allowlist** (`FORWARDED_REQUEST_HEADERS`): `Cookie`, `Authorization`
+  und `X-Forwarded-*` erreichen das Gerät nie – sonst erntet ein loggendes Gerät Sessions.
+  Umgekehrt wird `Set-Cookie` aus der Geräteantwort entfernt (keine Cookie-Injektion in
+  die App-Domain).
+- **Referer-Fallback eng gefasst:** nur `GET`/`HEAD`, nur Endungen aus
+  `FALLBACK_EXTENSIONS`, Referer wird als URI geparst (Pfad-Präfix, nicht `indexOf`),
+  `..` wird abgelehnt. Sonst wäre er ein offener Proxy: ein gefälschter `Referer` genügte
+  für `GET /setswrel.cgi?rel=1&state=1`. **Wenn eine Fremd-UI einen absoluten Pfad mit
+  anderer Endung braucht, gehört die Endung hierher** – am direkten Pfad
+  `/native/<id>/...` ist weiterhin alles erlaubt.
+- **Cross-Site-Sperre:** Requests mit `Sec-Fetch-Site: cross-site` werden mit 403
+  abgewiesen (CSRF per präpariertem Link). Nicht via SameSite=strict gelöst – das bricht
+  den OIDC-Code-Flow.
+- **Eigene CSP + `sandbox` am iframe:** Die CSP begrenzt die *Ziele* der Fremd-UI auf die
+  eigene Origin (keine Exfiltration an fremde Hosts); `sandbox` entzieht ihr u. a.
+  Top-Level-Navigation und Downloads. `smarthome.nativeview-style-src-extra` lässt gezielt
+  ein Hersteller-Stylesheet zu (der SMARTFOX lädt sein einziges CSS von `my.smartfox.at`).
+
+> **Harte Invariante: auf Proxy-Antworten darf KEIN Frame-Blocker liegen.** Weder
+> `X-Frame-Options` noch `frame-ancestors` in der CSP — die Fremd-UI wird als iframe
+> eingebettet, jeder Frame-Blocker lässt den Browser mit „Dieser Inhalt ist blockiert"
+> abbrechen. Der Proxy strippt deshalb den Header des Geräts **und** den, den die App
+> global setzt (`stripFrameBlockers`). Das ist schon zweimal schiefgegangen: einmal durch
+> den globalen `X-Frame-Options`-Header (M9), einmal durch `frame-ancestors 'self'` in der
+> eigenen CSP (H7). `NativeProxyTest` sichert beides ab — wenn ein Test hier rot wird,
+> ist die Antwort anzupassen, nicht der Test.
+
+> **Kein `sandbox` am iframe.** Sandboxed Kontexte gelten für Cookies als cross-site: Der
+> iframe-Request erreichte den Login-Proxy (Fly/oauth2-proxy) ohne Session-Cookie, wurde
+> auf die Google-Loginseite umgeleitet, und die verbietet das Einbetten — wieder „Dieser
+> Inhalt ist blockiert", diesmal nur **remote**, im LAN unauffällig. Der Schutz war ohnehin
+> gering: `allow-same-origin` ist für die XHR der UI nötig, damit bleibt die Seite
+> same-origin und käme weiterhin an `parent.document` und `/api/*`. Wirksam ist die CSP
+> auf den Proxy-Antworten.
+
+> **Restrisiko:** `allow-same-origin` bleibt nötig (die UI lädt ihre Werte per XHR), damit
+> bleibt die Fremd-UI same-origin und könnte per `parent.document` aufs Dashboard
+> zugreifen. Die harte Trennung wäre eine **eigene Origin** (Subdomain/Port) für
+> `/native/*` – bewusst offen, siehe `security-review.md` (H7).
+
 ## 3. Architektur (Hexagonal)
 
 - `domain/model/nativeview/NativeView` – record `(id, name, icon)`; Invarianten im Compact-Constructor.

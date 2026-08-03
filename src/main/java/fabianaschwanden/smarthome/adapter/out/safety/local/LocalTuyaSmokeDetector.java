@@ -70,7 +70,7 @@ public class LocalTuyaSmokeDetector implements SmokeDetectorDevice {
     }
 
     private String address() {
-        return discovery.ipOf(deviceId).orElse(configuredAddress);
+        return discovery.resolveAddress(deviceId, configuredAddress);
     }
 
     @Override
