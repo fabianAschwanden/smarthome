@@ -17,10 +17,11 @@ services:
     image: postgres:18
     network_mode: host
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
     environment:
       POSTGRES_DB: smarthome
       POSTGRES_USER: smarthome
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt in deploy/.env}
       # Postgres 18: Mount auf /var/lib/postgresql, Daten in Unterverzeichnis (PGDATA).
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
@@ -35,14 +36,21 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/smarthome-sidecar:${IMAGE_TAG:-latest}
     network_mode: host
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
     environment:
-      HOST: 0.0.0.0
+      # Nur Loopback: der Sidecar hat keine eigene Auth, /spa/control steuert Geräte und
+      # /read testet beliebige (ip, local-key)-Paare. Die App läuft im selben Host-Netz
+      # und erreicht ihn weiterhin über http://127.0.0.1:8765.
+      HOST: 127.0.0.1
       PORT: 8765
 
   go2rtc:
-    image: alexxit/go2rtc:latest
+    # Version gepinnt: :latest zieht bei jedem Neustart ungeprueft neuen Code in
+    # einen Container mit Host-Netz.
+    image: alexxit/go2rtc:1.9.14@sha256:675c318b23c06fd862a61d262240c9a63436b4050d177ffc68a32710d9e05bae
     network_mode: host
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
     volumes:
       - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml:ro
 
@@ -50,6 +58,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/smarthome:${IMAGE_TAG:-latest}
     network_mode: host
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
     depends_on:
       - db
       - sidecar
@@ -57,7 +66,7 @@ services:
       QUARKUS_PROFILE: lan
       DB_URL: jdbc:postgresql://localhost:5432/smarthome
       DB_USERNAME: smarthome
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt in deploy/.env}
       SMARTHOME_TUYA_SIDECAR_URL: http://localhost:8765
     volumes:
       - ../config:/app/config:ro

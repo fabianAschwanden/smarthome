@@ -46,7 +46,16 @@ final class SmartfoxValues {
             throw new IllegalStateException("HTTP " + response.statusCode());
         }
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        // XXE/DoS: Die values.xml kommt per Plain-HTTP aus dem LAN – ein MitM oder eine
+        // kompromittierte Firmware koennte ein DOCTYPE mitschicken. disallow-doctype-decl
+        // erschlaegt sowohl externe Entities als auch interne Entity-Expansion
+        // ("billion laughs"); die beiden external-*-Features sind der Guertel dazu.
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
         factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
         DocumentBuilder builder = factory.newDocumentBuilder();
         try (InputStream body = response.body()) {
             Document doc = builder.parse(body);

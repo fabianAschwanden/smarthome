@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 
 /**
@@ -53,9 +54,26 @@ public final class Tuya34Session implements AutoCloseable {
         byte[] respFrame = exchange(start);
 
         // Schritt 2: RESP enthält (verschlüsselt) remoteNonce + HMAC(localNonce).
-        byte[] respPayload = Tuya34Protocol.decrypt(localKey, Tuya34Protocol.payloadOf(respFrame));
+        // payloadOf prüft das Frame-HMAC (Schlüssel im Handshake = local-key).
+        byte[] rawPayload = Tuya34Protocol.payloadOf(localKey, respFrame);
+        if (rawPayload.length == 0) {
+            throw new IllegalStateException("Tuya 3.4: Handshake-Antwort nicht authentisch (HMAC)");
+        }
+        byte[] respPayload = Tuya34Protocol.decrypt(localKey, rawPayload);
+        if (respPayload.length < 16 + 32) {
+            throw new IllegalStateException("Tuya 3.4: Handshake-Antwort zu kurz");
+        }
         byte[] remoteNonce = new byte[16];
         System.arraycopy(respPayload, 0, remoteNonce, 0, 16);
+
+        // Die Gegenstelle beweist mit HMAC(localNonce), dass sie den local-key kennt.
+        // Ohne diese Prüfung könnte ein Fake-Gerät den Handshake formal abschliessen –
+        // die App hielte die Sitzung dann für echt.
+        byte[] provenHmac = new byte[32];
+        System.arraycopy(respPayload, 16, provenHmac, 0, 32);
+        if (!MessageDigest.isEqual(Tuya34Protocol.hmac(localKey, localNonce), provenHmac)) {
+            throw new IllegalStateException("Tuya 3.4: Gegenstelle kennt den local-key nicht");
+        }
 
         // Schritt 3: FINISH mit HMAC(remoteNonce).
         byte[] finishPayload = Tuya34Protocol.encrypt(localKey, Tuya34Protocol.hmac(localKey, remoteNonce));
@@ -77,7 +95,7 @@ public final class Tuya34Session implements AutoCloseable {
         byte[] payload = Tuya34Protocol.encrypt(sessionKey, Tuya34Protocol.utf8(json));
         byte[] frame = Tuya34Protocol.frame(sessionKey, command, sequence++, payload);
         byte[] response = exchange(frame);
-        byte[] respPayload = Tuya34Protocol.payloadOf(response);
+        byte[] respPayload = Tuya34Protocol.payloadOf(sessionKey, response);
         if (respPayload.length == 0) {
             return null;
         }

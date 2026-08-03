@@ -11,6 +11,15 @@ set -eu
 
 PROVIDER="${OAUTH_PROVIDER:-google}"
 
+# --pass-access-token bewusst NICHT gesetzt: der Upstream wertet den Google-Access-Token
+# nicht aus, er landete nur in dessen Logs/Traces. Was gebraucht wird, liefert
+# --set-xauthrequest (X-Auth-Request-Email) – ohne Token-Material.
+#
+# --cookie-samesite: bewusst 'lax', NICHT 'strict'. Bei 'strict' schickt der Browser den
+# CSRF-Cookie beim Rücksprung des Providers auf /oauth2/callback nicht mit, der Login
+# scheitert mit "unable to obtain CSRF cookie" (oauth2-proxy/oauth2-proxy#1663). 'lax'
+# blockt Cross-Site-POSTs und Subresource-GETs und ist explizit statt browserabhängig.
+
 set -- \
   --http-address="0.0.0.0:4180" \
   --provider="$PROVIDER" \
@@ -21,7 +30,7 @@ set -- \
   --reverse-proxy="true" \
   --skip-provider-button="true" \
   --cookie-secure="true" \
-  --pass-access-token="true" \
+  --cookie-samesite="lax" \
   --set-xauthrequest="true"
 
 # Generischer OIDC-Provider braucht zusätzlich die Issuer-URL (Google nicht).

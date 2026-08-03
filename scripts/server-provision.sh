@@ -47,7 +47,12 @@ ufw allow from "$LAN_CIDR" to any port 8080 proto tcp
 # und der Proxy läuft in i/o timeout (502). Eingehenden Verkehr auf 'fly' erlauben.
 # || true: das 'fly'-Interface existiert beim Provisioning ggf. noch nicht (Tunnel kommt
 # später) – die Regel wird gespeichert und greift, sobald das Interface da ist.
-ufw allow in on fly || true
+#
+# NUR Port 8080: das 6PN ist das private Netz der GANZEN Fly-Org, nicht nur der eigenen
+# Proxy-App. Ohne Port-Einschränkung wären dort auch die Dienste erreichbar, die wegen
+# hostNetwork/network_mode:host auf 0.0.0.0 lauschen – go2rtc :1984, Sidecar :8765,
+# k3s-API :6443. Der oauth2-proxy braucht ausschliesslich 8080.
+ufw allow in on fly to any port 8080 proto tcp || true
 ufw --force enable
 
 echo "==> Automatische Sicherheitsupdates aktivieren"

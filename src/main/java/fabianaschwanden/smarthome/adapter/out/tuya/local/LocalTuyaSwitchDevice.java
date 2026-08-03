@@ -66,9 +66,9 @@ public class LocalTuyaSwitchDevice implements SwitchDevice {
         this.discovery = discovery;
     }
 
-    /** Effektive IP: per Discovery gefundene (aktuelle) bevorzugt, sonst die konfigurierte. */
+    /** Effektive IP: konfigurierte gewinnt, Discovery fuellt nur die Luecke (siehe TuyaDiscovery). */
     private String address() {
-        return discovery.ipOf(deviceId).orElse(configuredAddress);
+        return discovery.resolveAddress(deviceId, configuredAddress);
     }
 
     @Override

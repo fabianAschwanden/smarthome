@@ -130,11 +130,31 @@ sind.
 
 - Nur die Fly-App ist öffentlich; sie erzwingt Login. Der Heim-Server hat **keinen**
   öffentlich erreichbaren Port und **kein** Router-Forwarding.
-- Der Remote-Port bindet nur auf das WireGuard-Interface → selbst im LAN nicht
-  erreichbar.
+- Die App bindet `0.0.0.0:8080`; getrennt wird **nicht** per Bind-Adresse, sondern per
+  Firewall: ufw lässt 8080 nur aus dem LAN-CIDR und über das `fly`-Interface durch
+  (`scripts/server-provision.sh`). Auf `fly` ist ausschliesslich 8080 offen – das 6PN ist
+  das private Netz der ganzen Fly-Org, dort dürfen go2rtc/Sidecar/k3s-API nicht hängen.
 - TLS terminiert Fly (automatische Zertifikate). Cookies signiert (oauth2-proxy).
 - Zugriff ist über `ALLOWED_EMAILS` auf die erlaubten Google-Konten beschränkt; der
   Proxy startet nicht ohne eine solche Beschränkung (sonst käme jedes Google-Konto rein).
+
+### Vertrauensmodell: der Heim-Server prüft NICHT selbst
+
+Bewusster Trade-off: Der Heim-Quarkus läuft im `lan`-Profil **ohne Login** und validiert
+auch keine Proxy-Header. Die gesamte Authentifizierung sitzt im oauth2-proxy auf Fly.
+Wer also `:8080` auf der `fdaa:`-Adresse erreicht, umgeht OIDC vollständig — in Frage
+kommen eine andere App in derselben Fly-Org (das 6PN ist org-weit) oder ein
+kompromittierter Proxy. Getragen wird das von genau zwei Annahmen:
+
+1. Die ufw-Regel lässt auf dem `fly`-Interface **nur** Port 8080 durch (nicht Postgres,
+   go2rtc, Sidecar, k3s-API) — siehe `scripts/server-provision.sh`.
+2. In der Fly-Org läuft nichts Fremdes.
+
+Härtung, falls Annahme 2 wegfällt: `X-Auth-Request-Email` (setzt der Proxy via
+`--set-xauthrequest`) oder ein Shared-Secret-Header in der App auf dem Tunnel-Pfad
+prüfen. Der Google-Access-Token wird bewusst **nicht** durchgereicht
+(`--pass-access-token` ist nicht gesetzt) — der Upstream wertet ihn nicht aus, er
+landete nur in dessen Logs.
 
 ## Alternative ohne Fly (kurz)
 
