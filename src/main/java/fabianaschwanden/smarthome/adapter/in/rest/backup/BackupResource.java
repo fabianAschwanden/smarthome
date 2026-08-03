@@ -38,6 +38,14 @@ public class BackupResource {
                 .build();
     }
 
+    /**
+     * Der Restore ersetzt den Bestand je Kategorie und löscht dazu vorher alles
+     * Vorhandene – die destruktivste Operation der App. Die Admin-Pflicht steht
+     * bewusst NICHT als {@code @RolesAllowed} hier, sondern als HTTP-Policy im
+     * {@code %prod}-Profil (application.properties): die Annotation griffe auch im
+     * {@code %lan}-Betrieb ohne OIDC und sperrte dort den legitimen Nutzer aus (401),
+     * weil es ohne IdP gar keine Rollen gibt.
+     */
     @POST
     public Response restore(BackupFileDto file) {
         try {

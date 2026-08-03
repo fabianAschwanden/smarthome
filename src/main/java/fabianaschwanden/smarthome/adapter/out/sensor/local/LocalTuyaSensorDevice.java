@@ -87,7 +87,7 @@ public class LocalTuyaSensorDevice implements SensorDevice {
     }
 
     private String address() {
-        return discovery.ipOf(deviceId).orElse(configuredAddress);
+        return discovery.resolveAddress(deviceId, configuredAddress);
     }
 
     @Override
