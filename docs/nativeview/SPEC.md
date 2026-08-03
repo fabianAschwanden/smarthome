@@ -48,7 +48,17 @@ Zugriff auf `/api/*` mit der Session. Vier Schranken begrenzen das:
   den OIDC-Code-Flow.
 - **Eigene CSP + `sandbox` am iframe:** Die CSP begrenzt die *Ziele* der Fremd-UI auf die
   eigene Origin (keine Exfiltration an fremde Hosts); `sandbox` entzieht ihr u. a.
-  Top-Level-Navigation und Downloads.
+  Top-Level-Navigation und Downloads. `smarthome.nativeview-style-src-extra` lässt gezielt
+  ein Hersteller-Stylesheet zu (der SMARTFOX lädt sein einziges CSS von `my.smartfox.at`).
+
+> **Harte Invariante: auf Proxy-Antworten darf KEIN Frame-Blocker liegen.** Weder
+> `X-Frame-Options` noch `frame-ancestors` in der CSP — die Fremd-UI wird als iframe
+> eingebettet, jeder Frame-Blocker lässt den Browser mit „Dieser Inhalt ist blockiert"
+> abbrechen. Der Proxy strippt deshalb den Header des Geräts **und** den, den die App
+> global setzt (`stripFrameBlockers`). Das ist schon zweimal schiefgegangen: einmal durch
+> den globalen `X-Frame-Options`-Header (M9), einmal durch `frame-ancestors 'self'` in der
+> eigenen CSP (H7). `NativeProxyTest` sichert beides ab — wenn ein Test hier rot wird,
+> ist die Antwort anzupassen, nicht der Test.
 
 > **Restrisiko:** `allow-same-origin` bleibt nötig (die UI lädt ihre Werte per XHR), damit
 > bleibt die Fremd-UI same-origin und könnte per `parent.document` aufs Dashboard

@@ -16,6 +16,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 /**
  * Integrationstest des Native-Reverse-Proxys gegen einen lokalen Fake-HTTP-Server
@@ -115,13 +116,25 @@ class NativeProxyTest {
 
     @Test
     void frameBlockerHeaderWirdEntfernt() {
-        // Das DENY des Geraets muss weg, sonst lehnt der Browser das iframe ab. Was
-        // ankommt, ist das SAMEORIGIN der App (globaler Security-Header) – die
-        // nativeview laeuft auf derselben Origin, das erlaubt die Einbettung.
+        // Invariante: auf Proxy-Antworten darf KEIN Frame-Blocker liegen - weder das DENY
+        // des Geraets noch das SAMEORIGIN, das die App global setzt. Die Fremd-UI wird als
+        // iframe eingebettet; jeder Frame-Blocker laesst den Browser mit "Dieser Inhalt ist
+        // blockiert" abbrechen. Genau das war passiert, nachdem der globale Header
+        // eingefuehrt und dieser Test darauf angepasst wurde - der Test hatte die
+        // Invariante vorher korrekt geschuetzt.
         given()
                 .when().get("/native/fake/index.shtml")
                 .then().statusCode(200)
-                .header("X-Frame-Options", is("SAMEORIGIN"));
+                .header("X-Frame-Options", is((String) null));
+    }
+
+    @Test
+    void cspDerProxyAntwortVerbietetDasFramenNicht() {
+        // frame-ancestors ist der moderne Frame-Blocker - in dieser CSP hat er nichts
+        // verloren, sonst blockiert der Browser die Einbettung.
+        given().when().get("/native/fake/index.shtml")
+                .then().statusCode(200)
+                .header("Content-Security-Policy", not(containsString("frame-ancestors")));
     }
 
     @Test

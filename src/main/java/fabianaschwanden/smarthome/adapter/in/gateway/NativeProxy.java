@@ -99,10 +99,13 @@ public class NativeProxy {
                 .filter(s -> !s.isBlank())
                 .map(s -> " " + s.trim())
                 .orElse("");
+        // BEWUSST OHNE frame-ancestors: die Fremd-UI wird als iframe eingebettet, und
+        // frame-ancestors ist genau der Mechanismus, der das verbietet. Diese Antworten
+        // duerfen keinen Frame-Blocker tragen (siehe stripFrameBlockers).
         return "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
                 + "style-src 'self' 'unsafe-inline' data:" + extraStyle + "; "
                 + "connect-src 'self'; form-action 'self'; base-uri 'self'; "
-                + "frame-ancestors 'self'; object-src 'none'";
+                + "object-src 'none'";
     }
 
     void init(@Observes StartupEvent ev) {
@@ -311,6 +314,7 @@ public class NativeProxy {
         // Eigene CSP statt der entfernten des Geräts (siehe buildCsp()).
         ctx.response().putHeader("Content-Security-Policy", contentSecurityPolicy);
         ctx.response().putHeader("X-Content-Type-Options", "nosniff");
+        stripFrameBlockers(ctx);
 
         // Body immer vollständig puffern und mit end(buffer) senden – zuverlässiger als
         // pipeTo (sonst lieferten kleine Geräte-Antworten wie language_de.xml 0 Bytes,
@@ -324,6 +328,23 @@ public class NativeProxy {
                 ctx.response().end(body);
             }
         }).onFailure(err -> fail(ctx, err, id));
+    }
+
+    /**
+     * Entfernt Frame-Blocker aus der Antwort – auch die, die die APP global setzt.
+     *
+     * <p>{@code quarkus.http.header."X-Frame-Options"} gilt fuer jede Antwort, also auch
+     * fuer diese hier. Genau das lehnt der Browser aber ab: die Fremd-UI wird als iframe
+     * eingebettet, und ein Frame-Blocker auf der eingebetteten Antwort laesst Chrome mit
+     * "Dieser Inhalt ist blockiert" abbrechen. Der Proxy strippt den Header des Geraets
+     * seit jeher aus genau diesem Grund – die globale App-Regel darf ihn nicht durch die
+     * Hintertuer wieder hereinbringen.
+     *
+     * <p>Der Schutz der APP selbst bleibt davon unberuehrt: die globale Regel wirkt
+     * weiterhin auf alle anderen Pfade.
+     */
+    private static void stripFrameBlockers(RoutingContext ctx) {
+        ctx.response().headers().remove("X-Frame-Options");
     }
 
     /** Fügt den {@code <base>}-Tag direkt nach {@code <head>} ein (sonst am Anfang). */
