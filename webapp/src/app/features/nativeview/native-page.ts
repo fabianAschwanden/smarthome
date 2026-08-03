@@ -65,19 +65,18 @@ import { NativeView } from '../../core/models/native-view';
               </header>
               <div class="h-[70vh] w-full bg-white">
                 <!--
-                  sandbox: die Fremd-UI ist Geraete-Firmware, der wir nicht vertrauen.
-                  Entzieht ihr u. a. Top-Level-Navigation (sonst koennte sie das Dashboard
-                  auf eine Phishing-Seite umleiten), Downloads, Popups und Modals.
-                  allow-same-origin ist noetig, weil die UI ihre Werte per XHR nachlaedt –
-                  damit bleibt sie aber same-origin; die harte Trennung waere eine eigene
-                  Origin (siehe docs/nativeview/SPEC.md).
+                  BEWUSST OHNE sandbox: Die Geraete-UI liegt hinter dem Login-Proxy
+                  (Fly/oauth2-proxy). Sandboxed Kontexte gelten fuer Cookies als
+                  cross-site, der iframe-Request kam dort ohne Session-Cookie an, wurde
+                  auf die Google-Loginseite umgeleitet - und die verbietet das Einbetten
+                  (X-Frame-Options: DENY). Ergebnis: "Dieser Inhalt ist blockiert".
+                  Der Schutz war ohnehin gering: mit allow-same-origin (noetig fuer die
+                  XHR der UI) bleibt die Seite same-origin und kaeme weiterhin an
+                  parent.document und /api/*. Die wirksame Schranke ist die CSP, die der
+                  NativeProxy auf diese Antworten setzt (connect-src 'self' & Co.).
+                  Die harte Trennung waere eine eigene Origin - siehe SPEC.
                 -->
-                <iframe
-                  class="size-full border-0"
-                  [src]="frameUrl(v)"
-                  [title]="v.name"
-                  sandbox="allow-scripts allow-forms allow-same-origin"
-                ></iframe>
+                <iframe class="size-full border-0" [src]="frameUrl(v)" [title]="v.name"></iframe>
               </div>
             </article>
           }

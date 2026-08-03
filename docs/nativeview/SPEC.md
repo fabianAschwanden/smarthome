@@ -60,6 +60,14 @@ Zugriff auf `/api/*` mit der Session. Vier Schranken begrenzen das:
 > eigenen CSP (H7). `NativeProxyTest` sichert beides ab — wenn ein Test hier rot wird,
 > ist die Antwort anzupassen, nicht der Test.
 
+> **Kein `sandbox` am iframe.** Sandboxed Kontexte gelten für Cookies als cross-site: Der
+> iframe-Request erreichte den Login-Proxy (Fly/oauth2-proxy) ohne Session-Cookie, wurde
+> auf die Google-Loginseite umgeleitet, und die verbietet das Einbetten — wieder „Dieser
+> Inhalt ist blockiert", diesmal nur **remote**, im LAN unauffällig. Der Schutz war ohnehin
+> gering: `allow-same-origin` ist für die XHR der UI nötig, damit bleibt die Seite
+> same-origin und käme weiterhin an `parent.document` und `/api/*`. Wirksam ist die CSP
+> auf den Proxy-Antworten.
+
 > **Restrisiko:** `allow-same-origin` bleibt nötig (die UI lädt ihre Werte per XHR), damit
 > bleibt die Fremd-UI same-origin und könnte per `parent.document` aufs Dashboard
 > zugreifen. Die harte Trennung wäre eine **eigene Origin** (Subdomain/Port) für
