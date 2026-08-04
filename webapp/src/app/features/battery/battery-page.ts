@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BatteryService } from '../../core/services/battery.service';
+import { ForecastService } from '../../core/services/forecast.service';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ItemImage } from '../../shared/item-image';
 
@@ -64,6 +65,43 @@ import { ItemImage } from '../../shared/item-image';
           </div>
         </article>
 
+        <!-- Ladeempfehlung aus der PV-Prognose (Use Case 15) -->
+        @if (recommendation(); as rec) {
+          <article class="glass-card space-y-4 p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-medium">Ladeempfehlung</h3>
+              @if (rec.confidence === 'ROUGH') {
+                <!-- Ohne gelerntes Anlagenprofil ist die Empfehlung eine Faustformel. -->
+                <span
+                  class="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] text-amber-300"
+                  title="Noch kein gelerntes Anlagenprofil – Schätzung aus der Nennleistung"
+                  >grob</span
+                >
+              }
+            </div>
+            <p class="text-sm text-[color:var(--ink-soft)]">
+              Erwarteter Überschuss
+              <span class="font-semibold text-[color:var(--ink)]"
+                >{{ zeit(rec.from) }}–{{ zeit(rec.to) }}</span
+              >
+              , rund
+              <span class="font-semibold text-[color:var(--ink)]">{{ rec.expectedKwh }} kWh</span>
+              (Spitze {{ rec.peakWatt }} W).
+            </p>
+            <button
+              type="button"
+              class="glass rounded-full px-5 py-2 text-sm disabled:opacity-50"
+              [disabled]="applying()"
+              (click)="uebernehmen()"
+            >
+              {{ applying() ? 'Wird übernommen …' : 'Als Zeitplan übernehmen' }}
+            </button>
+            @if (applyResult(); as msg) {
+              <p class="text-xs text-[color:var(--ink-soft)]">{{ msg }}</p>
+            }
+          </article>
+        }
+
         <!-- Steuerung -->
         <article class="glass-card space-y-5 p-5">
           <div>
@@ -103,9 +141,41 @@ import { ItemImage } from '../../shared/item-image';
 })
 export class BatteryPage {
   private readonly battery = inject(BatteryService);
+  private readonly forecast = inject(ForecastService);
 
   protected readonly control = this.battery.control;
   protected readonly manual = computed(() => this.control()?.mode === 'MANUAL');
+
+  protected readonly recommendation = computed(
+    () => this.forecast.surplus()?.recommendation ?? null,
+  );
+  protected readonly applying = signal(false);
+  protected readonly applyResult = signal<string | null>(null);
+
+  /** ISO-Zeitstempel als lokale Uhrzeit "HH:mm". */
+  protected zeit(iso: string): string {
+    return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  protected uebernehmen(): void {
+    this.applying.set(true);
+    this.applyResult.set(null);
+    this.forecast.applyRecommendation().subscribe({
+      next: () => {
+        this.applying.set(false);
+        this.applyResult.set('Zeitplan angelegt – sichtbar unter Zeitsteuerung.');
+      },
+      error: (err: { status?: number }) => {
+        this.applying.set(false);
+        // 409 ist ein Fachfall, kein Fehler: die Empfehlung ist zwischenzeitlich weg.
+        this.applyResult.set(
+          err?.status === 409
+            ? 'Derzeit liegt keine Empfehlung mehr vor.'
+            : 'Übernehmen fehlgeschlagen.',
+        );
+      },
+    });
+  }
 
   protected setMode(mode: 'MANUAL' | 'AUTO'): void {
     this.battery.changeMode(mode);
