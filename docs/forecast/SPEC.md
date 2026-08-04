@@ -175,8 +175,15 @@ Frontend: `features/dashboard` (Prognose-Kurve in der Energie-Karte, Chart.js vo
 ## 8. Offene Punkte / TODO
 
 - [ ] Neigung/Azimut der realen Anlage ermitteln und in der lokalen Config eintragen.
-- [ ] Prüfen, ob `global_tilted_irradiance` bei `past_days` zuverlässig Ist-Werte liefert
-      (sonst Fallback: `shortwave_radiation` + eigener Neigungsfaktor im Profil).
+- [x] **Geklärt (2026-08-04): `global_tilted_irradiance` liefert bei `past_days` Werte.**
+      Gegen die echte API geprüft (Standort aus `weather.*`, `tilt=30&azimuth=0`,
+      `past_days=3`): 72 Vergangenheits-Stunden, davon 45 ungleich null, Maximum
+      917 W/m² – plausibel über `shortwave_radiation` (822 W/m²), wie es für eine
+      geneigte Südfläche sein muss. Der Fallback auf `shortwave_radiation` + eigenen
+      Neigungsfaktor wird **nicht** gebraucht.
+      Einschränkung: Es sind Modell-/Reanalyse-Werte, keine Messung am Standort – für
+      das Lernen des Verhältnisses GTI→Leistung ist das die richtige Grössenordnung,
+      ersetzt aber keinen Einstrahlungssensor.
 - [ ] `min-watt`/`min-duration` gegen das reale Lastprofil kalibrieren (Batterie-Ladeleistung?).
 - [ ] Entscheiden, ob die Empfehlung „morgen" schon in v1 per Apply übernehmbar ist
       oder nur heute (Zeitplan-Semantik UC 14 prüfen).
