@@ -180,7 +180,11 @@ Frontend: `features/dashboard` (Prognose-Kurve in der Energie-Karte, Chart.js vo
 
 ## 8. Offene Punkte / TODO
 
-- [ ] Neigung/Azimut der realen Anlage ermitteln und in der lokalen Config eintragen.
+- [x] **Geklärt (2026-08-04):** Anlage 8 kWp, Neigung 30°, Ausrichtung Süd (azimuth 0),
+      Standort Seedorf UR (46.875 / 8.607). Steht in der gitignorten `config/`. Die
+      neutralen Defaults in `application.properties` sind zufällig identisch – deshalb
+      stehen die echten Werte dort explizit, sonst wäre nicht unterscheidbar, ob sie
+      bestätigt oder nur nicht gesetzt sind.
 - [x] **Geklärt (2026-08-04): `global_tilted_irradiance` liefert bei `past_days` Werte.**
       Gegen die echte API geprüft (Standort aus `weather.*`, `tilt=30&azimuth=0`,
       `past_days=3`): 72 Vergangenheits-Stunden, davon 45 ungleich null, Maximum
