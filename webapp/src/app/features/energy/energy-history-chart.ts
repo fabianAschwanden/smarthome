@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { EnergyHistory } from '../../core/models/energy';
+import { ForecastHour } from '../../core/models/forecast';
 
 Chart.register(...registerables);
 
@@ -17,6 +18,7 @@ export const ENERGY_COLORS = {
   production: '#f2a33c', // Erzeugung (orange)
   selfUse: '#f5d040', // Eigennutzung (gelb)
   consumption: '#8fb8d8', // Verbrauch (hellblau)
+  forecast: '#7fd8c0', // Prognose (mint) – klar von den Ist-Farben unterscheidbar
 } as const;
 
 const PRODUCTION_FILL = 'rgba(242, 163, 60, 0.75)';
@@ -42,6 +44,8 @@ const TICK_COLOR = 'rgba(159, 176, 195, 0.9)';
 })
 export class EnergyHistoryChart implements OnDestroy {
   readonly history = input<EnergyHistory | null>(null);
+  /** Optionale PV-Prognose des Tages; wird als gestrichelte Linie ueberlagert. */
+  readonly forecast = input<ForecastHour[] | null>(null);
   readonly compact = input<boolean>(false);
   /** Optionale Höhe in px; Default 260 (voll) bzw. 64 (compact). */
   readonly height = input<number | null>(null);
@@ -52,6 +56,8 @@ export class EnergyHistoryChart implements OnDestroy {
   constructor() {
     effect(() => {
       const history = this.history();
+      // Auch auf die Prognose reagieren, sonst bleibt die Kurve beim ersten Render stehen.
+      this.forecast();
       const ref = this.canvasRef();
       if (ref) {
         this.render(history, ref.nativeElement);
@@ -76,6 +82,49 @@ export class EnergyHistoryChart implements OnDestroy {
       history.range === 'day' && history.samples.length > 0
         ? this.dayCurve(ctx, history)
         : this.kwhBars(ctx, history);
+  }
+
+  /**
+   * Die Prognose als gestrichelte Linie ueber der Ist-Kurve.
+   *
+   * <p>Die Ist-Kurve haengt an den Roh-Messpunkten (10-Sekunden-Takt), die Prognose
+   * liefert einen Wert je Stunde. Deshalb wird je Prognosestunde der erste passende
+   * Messpunkt gesucht und der Wert dort gesetzt; dazwischen bleibt null und
+   * {@code spanGaps} verbindet die Punkte. So teilen sich beide Kurven dieselbe Achse,
+   * ohne dass die Ist-Aufloesung leidet.
+   */
+  private forecastDataset(
+    samples: { timestamp: string }[],
+  ): ChartConfiguration<'line'>['data']['datasets'] {
+    const forecast = this.forecast();
+    if (!forecast || forecast.length === 0 || samples.length === 0) {
+      return [];
+    }
+    const werte: (number | null)[] = new Array(samples.length).fill(null);
+    for (const stunde of forecast) {
+      const ziel = new Date(stunde.hour).getTime();
+      const index = samples.findIndex((s) => new Date(s.timestamp).getTime() >= ziel);
+      if (index >= 0) {
+        werte[index] = stunde.expectedPvWatt / 1000;
+      }
+    }
+    if (werte.every((w) => w === null)) {
+      return []; // Prognose liegt ausserhalb des angezeigten Tages
+    }
+    return [
+      {
+        label: 'Prognose',
+        data: werte,
+        fill: false,
+        borderColor: ENERGY_COLORS.forecast,
+        borderWidth: 2,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        spanGaps: true,
+        tension: 0.3,
+        order: 0,
+      },
+    ];
   }
 
   /** Tagesansicht: Leistungskurve in kW aus den Roh-Messpunkten. */
@@ -123,6 +172,7 @@ export class EnergyHistoryChart implements OnDestroy {
             tension: 0.2,
             order: 1,
           },
+          ...this.forecastDataset(samples),
         ],
       },
       options: {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { EnergyHistory, PowerReading } from '../../core/models/energy';
+import { PvForecast } from '../../core/models/forecast';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ENERGY_COLORS, EnergyHistoryChart } from '../energy/energy-history-chart';
 
@@ -165,8 +166,32 @@ import { ENERGY_COLORS, EnergyHistoryChart } from '../energy/energy-history-char
               <span class="text-xs text-[color:var(--ink-faint)]">Heute</span>
             </div>
             <div class="pointer-events-none">
-              <app-energy-history-chart [history]="dh" [height]="170" />
+              <app-energy-history-chart
+                [history]="dh"
+                [forecast]="forecast()?.hours ?? null"
+                [height]="170"
+              />
             </div>
+            @if (forecast(); as f) {
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
+                  <span class="size-2 rounded-full" [style.background]="colors.forecast"></span>
+                  Prognose heute
+                  @if (f.confidence === 'ROUGH') {
+                    <!-- Ohne gelerntes Anlagenprofil beruht die Zahl auf einer Faustformel -
+                         das muss man sehen, sonst wirkt sie belastbarer als sie ist. -->
+                    <span
+                      class="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] text-amber-300"
+                      title="Noch kein gelerntes Anlagenprofil – Schätzung aus der Nennleistung"
+                      >grob</span
+                    >
+                  }
+                </span>
+                <span class="font-semibold tabular-nums"
+                  >{{ f.todayKwh.toFixed(1) }} <span class="text-xs font-normal">kWh</span></span
+                >
+              </div>
+            }
             <div class="space-y-1.5 pt-1">
               <div class="flex items-center justify-between">
                 <span class="flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
@@ -228,6 +253,8 @@ export class EnergyFlow {
 
   /** Tagesverlauf für Leistungskurve + kWh-Summen; null solange nicht geladen. */
   readonly dayHistory = input<EnergyHistory | null>(null);
+  /** Optionale PV-Prognose des Tages – als gestrichelte Linie im Verlauf. */
+  readonly forecast = input<PvForecast | null>(null);
 
   protected readonly colors = ENERGY_COLORS;
 

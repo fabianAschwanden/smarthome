@@ -9,6 +9,7 @@ import { SensorService } from '../../core/services/sensor.service';
 import { SafetyService } from '../../core/services/safety.service';
 import { BatteryService } from '../../core/services/battery.service';
 import { WeatherService } from '../../core/services/weather.service';
+import { ForecastService } from '../../core/services/forecast.service';
 import { RoomService } from '../../core/services/room.service';
 import { PowerReading } from '../../core/models/energy';
 import { ClimateMode } from '../../core/models/climate';
@@ -72,6 +73,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
             [batteryStatus]="batteryStatus()"
             [batteryOn]="batteryOn()"
             [dayHistory]="energyHistory()"
+            [forecast]="pvForecast()"
             (batteryToggle)="batterySwitch($event)"
           />
         </div>
@@ -353,6 +355,7 @@ export class DashboardPage {
   private readonly safetySvc = inject(SafetyService);
   private readonly batterySvc = inject(BatteryService);
   private readonly weatherSvc = inject(WeatherService);
+  private readonly forecastSvc = inject(ForecastService);
   /** Raumfilter (geteilt mit der App-Shell): steuert, welche Kacheln sichtbar sind. */
   protected readonly room = inject(RoomService);
 
@@ -360,6 +363,7 @@ export class DashboardPage {
 
   /** Tagesverlauf (kWh je Stunde) für die Energie-Kachel-Sparkline. */
   protected readonly energyHistory = this.energySvc.dayHistory;
+  protected readonly pvForecast = this.forecastSvc.pv;
 
   /** Energie-Kennzahl fürs Dashboard: Fronius bevorzugt, sonst erste OK-Quelle. */
   protected readonly energy = computed<PowerReading | undefined>(() => {
