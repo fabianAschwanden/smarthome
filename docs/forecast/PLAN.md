@@ -32,8 +32,14 @@ berechnet werden; noch keine Ports nötig.
    (`load(): Optional<PlantProfile>`, `save(...)`).
 2. `adapter/out/irradiance/openmeteo/OpenMeteoIrradianceGateway`
    (`@IfBuildProperty(smarthome.real-devices, "true")`): ein HTTP-Call gemäss SPEC §2.1;
-   Config-Klasse `IrradianceConfig` (tilt/azimuth aus `forecast.plant.*`, Standort aus
-   der bestehenden `WeatherConfig`). Muster: `OpenMeteoWeatherGateway`.
+   Config-Klasse `IrradianceConfig` (tilt/azimuth aus `forecast.plant.*`). Muster:
+   `OpenMeteoWeatherGateway`.
+   **Korrektur zum ursprünglichen Plan:** Den Standort NICHT über die bestehende
+   `WeatherConfig` beziehen – das wäre eine Adapter→Adapter-Abhängigkeit, die ArchUnit
+   bricht (Blueprint §3.4). Stattdessen `weather.latitude`/`weather.longitude` als rohe
+   Schlüssel lesen (Muster: `NativeProxy`); die beiden stehen dafür jetzt explizit in
+   `application.properties`, weil `@ConfigProperty` die `@WithDefault` eines
+   `@ConfigMapping` nicht sieht.
 3. `adapter/out/irradiance/mock/MockIrradianceGateway` (`@UnlessBuildProperty`,
    enableIfMissing): synthetische Glockenkurve, deterministisch.
 4. Tests: Adapter direkt instanziieren gegen lokalen Fake-HTTP-Server mit
