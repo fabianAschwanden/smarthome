@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 15: gelerntes Anlagenprofil (GTI -> PV-Leistung je Stunden-Slot).
+
+         Genau EINE Zeile: Das Profil beschreibt den aktuellen Zustand der Anlage,
+         neu lernen ueberschreibt. Eine Historie haette fachlich keinen Nutzen, deshalb
+         eine feste id statt einer Sequenz - so ist der Upsert trivial und es kann
+         strukturell keine zweite Zeile geben.
+
+         Die Faktoren stehen als JSONB-Snapshot statt in 24 Spalten: sie sind ein
+         zusammengehoeriger Wert, der nur als Ganzes gelesen und geschrieben wird
+         (Blueprint §6). -->
+    <changeSet id="0009-create-plant-profile" author="smarthome">
+        <createTable tableName="plant_profile">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="profile" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="learned_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
