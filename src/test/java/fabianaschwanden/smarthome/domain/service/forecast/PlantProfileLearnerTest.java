@@ -110,9 +110,22 @@ class PlantProfileLearnerTest {
         PlantProfile profile = learner.coldStart(10.0, learnedAt);
 
         assertEquals(Confidence.ROUGH, profile.confidence());
-        assertEquals(10.0 * 0.85 / 1000.0, profile.factorAt(0), 0.000001);
-        assertEquals(10.0 * 0.85 / 1000.0, profile.factorAt(23), 0.000001);
+        // 10 kWp liefern bei 1000 W/m² rund 8500 W -> Faktor 8.5 W je W/m².
+        assertEquals(8.5, profile.factorAt(0), 0.000001);
+        assertEquals(8.5, profile.factorAt(23), 0.000001);
         assertEquals(10_000, profile.maxObservedPvWatt(), 0.0001);
+    }
+
+    @Test
+    void coldStartProgostiziertEinePlausibleLeistung() {
+        // Regressionsschutz: die Formel war anfangs um Faktor 1000 zu klein (8.5 W statt
+        // 8500 W bei voller Sonne) - dimensional plausibel bleibt sie nur so.
+        PlantProfile profile = learner.coldStart(10.0, learnedAt);
+
+        double beiVollerSonne = profile.factorAt(12) * 1000.0;
+
+        assertTrue(beiVollerSonne > 7000 && beiVollerSonne < 9000,
+                "10 kWp muessen bei 1000 W/m² rund 8.5 kW ergeben, waren: " + beiVollerSonne);
     }
 
     @Test

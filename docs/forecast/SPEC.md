@@ -72,8 +72,14 @@ Statt kWp/Wirkungsgrad zu konfigurieren, lernt die App den Zusammenhang
 - Robustheit: nur Stunden mit `gti ≥ 50 W/m²` verwenden (Dämmerung/Nacht raus),
   Median statt Mittelwert (Schnee-/Ausreissertage), Slot ohne genügend Datenpunkte
   (`< 5`) erbt den Nachbar-Median.
-- **Cold Start:** solange kein Profil gelernt ist, gilt der konfigurierte Fallback
-  `forecast.plant.kwp × 0.85 / 1000` als globaler Faktor (Prognose als „grob" markiert).
+- **Cold Start:** solange kein Profil gelernt ist, gilt ein globaler Faktor aus der
+  Nennleistung (Prognose als „grob" markiert):
+  `factor = kwp × 1000 × 0.85 / 1000` (W pro W/m²) – für 10 kWp also **8.5**.
+  Herleitung: Bei Standard-Testbedingung (1000 W/m²) liefert die Anlage ihre
+  Nennleistung, abzüglich Wirkungsgrad.
+  *Korrektur (2026-08-04):* Hier stand ursprünglich `kwp × 0.85 / 1000` = 0.0085. Das ist
+  um den Faktor 1000 zu klein – die Prognose wären 8.5 W statt 8500 W gewesen. Beim Test
+  der Etappe 4 aufgefallen.
 
 Das Profil ist ein Value Object und wird als **JSONB-Snapshot** persistiert (eine Zeile,
 Konvention Blueprint §6) – neu lernen überschreibt.
