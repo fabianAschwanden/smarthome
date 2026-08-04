@@ -34,8 +34,19 @@ public final class PlantProfileLearner {
     /** Cold-Start-Annahme: Wirkungsgrad von der Nennleistung bis zur Einspeisung. */
     private static final double COLD_START_EFFICIENCY = 0.85;
 
-    /** Nennleistung in kW → W, damit der Faktor die Einheit W pro W/m² bekommt. */
+    /** Nennleistung in kW → W. */
     private static final double KW_TO_W = 1000.0;
+
+    /**
+     * Standard-Testbedingung: bei 1000 W/m² liefert eine Anlage ihre Nennleistung.
+     *
+     * <p>Der Faktor hat die Einheit W pro W/m² – für 10 kWp also
+     * {@code 10 × 1000 × 0.85 / 1000 = 8.5}. Die SPEC notiert an dieser Stelle
+     * {@code kwp × 0.85 / 1000}; das ergibt 0.0085 und wäre um den Faktor 1000 zu klein
+     * (die Anlage prognostizierte 8.5 W statt 8500 W). Die Formel dort rechnet
+     * offenbar in kW, während das ganze Modell in Watt arbeitet.
+     */
+    private static final double STC_IRRADIANCE = 1000.0;
 
     /**
      * Lernt ein Profil. Liefert {@code empty}, wenn kein einziger Slot genug brauchbare
@@ -85,7 +96,7 @@ public final class PlantProfileLearner {
         if (kwp <= 0) {
             throw new IllegalArgumentException("kwp muss positiv sein: " + kwp);
         }
-        double factor = kwp * COLD_START_EFFICIENCY / KW_TO_W;
+        double factor = kwp * KW_TO_W * COLD_START_EFFICIENCY / STC_IRRADIANCE;
         return new PlantProfile(
                 Collections.nCopies(PlantProfile.SLOTS, factor),
                 kwp * KW_TO_W,

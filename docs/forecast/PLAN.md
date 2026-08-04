@@ -68,7 +68,9 @@ berechnet werden; noch keine Ports nötig.
    Fenster rechnen, im RAM halten (`computedAt`); implementiert die Query-Ports.
    Gateway leer → letzte Prognose behalten (SPEC §6).
 3. `ProfileLearningService`: `@Scheduled(cron = "{forecast.learning.cron}")` →
-   Samples der `window-days` über den Energy-Port lesen, `PlantProfileLearner`,
+   Samples der `window-days` über den Energy-Port lesen
+   (**Korrektur:** `EnergySampleRepository`, nicht `EnergyHistoryQuery` – letzterer kann
+   strukturell nur DAY/WEEK/MONTH und liefert keine 21 Tage Roh-Stundenwerte), `PlantProfileLearner`,
    speichern, danach `ForecastService` neu rechnen lassen. Beim Start: Profil laden,
    fehlt es → Cold-Start-Fallback.
 4. `ApplyRecommendation`-Implementierung: delegiert an `ManageBatterySchedules`
