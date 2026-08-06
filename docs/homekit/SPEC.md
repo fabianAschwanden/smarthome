@@ -156,7 +156,8 @@ Frontend: keine Änderung.
       wirklich stehen bleibt, ist an der realen Anlage noch nicht beobachtet.
 - [x] Storen: Richtung der Positionsskala. **Geklärt (2026-08-06): keine Invertierung** –
       REST/Domäne rechnen 0 = zu / 100 = offen, genau wie HomeKit. Nur das Dashboard
-      zeigt «% zu» und spiegelt dafür selbst.
+      zeigt «% zu» und spiegelt dafür selbst. **An der Anlage gegengeprüft:** beide
+      Storen komplett zu, API meldet `position: 0`.
 - [ ] Klima: exaktes Modus-Mapping an der realen Midea verifizieren (Auto/Fan).
 - [x] Aussensensor: liefert Feuchte, aber ohne verlässliche Kalibrierung – entscheiden,
       ob nur TemperatureSensor exponiert wird.
