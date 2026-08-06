@@ -1,0 +1,23 @@
+{
+  "name": "homebridge-smarthome",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HomeKit-Bruecke zur eigenen Smarthome-App (Use Case 16). Spricht ausschliesslich deren REST-API.",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20",
+    "homebridge": ">=1.8.0"
+  },
+  "keywords": ["homebridge-plugin", "homekit", "smarthome"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "homebridge": "^2.2.1",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.10"
+  },
+  "files": ["dist", "config.schema.json"]
+}

@@ -44,6 +44,26 @@ jobs:
       - run: npm run lint
       - run: npm test -- --watch=false
 
+  # Das HomeKit-Plugin ist ein eigenes Deployable (laeuft in Homebridge, nicht in der App),
+  # deshalb ein eigener Job - aber im selben Gate: Die Mapping-Logik lebt hier in TypeScript
+  # statt in getestetem Java und braucht denselben Schutz.
+  homebridge:
+    name: HomeKit-Plugin (tsc, Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: homebridge-smarthome
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: homebridge-smarthome/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
   # E2E (Playwright gegen das gebaute Artefakt) bewusst als eigener, nicht-blockierender Job.
   # Aktivieren, sobald die App einen sinnvollen E2E-Umfang hat.
   # e2e:
