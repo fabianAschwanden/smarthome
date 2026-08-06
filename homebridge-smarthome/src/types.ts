@@ -17,8 +17,19 @@ export interface SwitchDto extends DeviceBase {
 }
 
 export interface CoverDto extends DeviceBase {
-  /** Domaenen-Semantik: 100 = ZU. HomeKit rechnet umgekehrt (siehe cover.ts). */
+  /**
+   * Geraeteskala: 0 = ZU, 100 = OFFEN - dieselbe Richtung wie HomeKit, es wird NICHT
+   * invertiert. Das Dashboard zeigt "% zu" und spiegelt dafuer selbst; diese Spiegelung
+   * gehoert der Oberflaeche, nicht der API. {@link POSITION_UNKNOWN} = unbekannt.
+   */
   position: number;
+}
+
+/** Die Domaene meldet -1, wenn die Store keine Position liefert. */
+export const POSITION_UNKNOWN = -1;
+
+export function hasPosition(cover: CoverDto): boolean {
+  return cover.position >= 0;
 }
 
 export interface ClimateDto extends DeviceBase {

@@ -8,6 +8,7 @@ import type {
   Service,
 } from 'homebridge';
 import { ApiClient } from './api-client';
+import { CoverHandler } from './accessories/cover';
 import { SensorHandler } from './accessories/sensor';
 import { SmokeHandler } from './accessories/smoke';
 import { SwitchHandler } from './accessories/switch';
@@ -142,7 +143,14 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
         create: (accessory) => new SmokeHandler(this, accessory, device),
       });
     }
-    // Storen und Klima folgen in den Etappen 4 und 5.
+    for (const device of snapshot.covers) {
+      result.push({
+        device,
+        kind: 'cover',
+        create: (accessory) => new CoverHandler(this, accessory, this.client, device),
+      });
+    }
+    // Klima folgt in Etappe 5.
     return result;
   }
 

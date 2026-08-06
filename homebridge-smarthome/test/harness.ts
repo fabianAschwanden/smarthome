@@ -93,6 +93,7 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
       TemperatureSensor: 'TemperatureSensor',
       HumiditySensor: 'HumiditySensor',
       SmokeSensor: 'SmokeSensor',
+      WindowCovering: 'WindowCovering',
     },
     Characteristic: {
       Manufacturer: 'Manufacturer',
@@ -105,6 +106,14 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
       SmokeDetected: Object.assign('SmokeDetected', {
         SMOKE_NOT_DETECTED: 0,
         SMOKE_DETECTED: 1,
+      }),
+      CurrentPosition: 'CurrentPosition',
+      TargetPosition: 'TargetPosition',
+      HoldPosition: 'HoldPosition',
+      PositionState: Object.assign('PositionState', {
+        DECREASING: 0,
+        INCREASING: 1,
+        STOPPED: 2,
       }),
       StatusLowBattery: Object.assign('StatusLowBattery', {
         BATTERY_LEVEL_NORMAL: 0,
