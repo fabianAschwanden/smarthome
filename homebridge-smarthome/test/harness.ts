@@ -23,11 +23,17 @@ export class FakeService {
 
   constructor(public readonly type: string) {}
 
+  /**
+   * Schluessel ist immer der primitive String: Die Attrappe reicht fuer Merkmale mit
+   * Konstanten (SmokeDetected) String-Objekte herein, und die waeren als Map-Schluessel
+   * nie gleich einem Literal aus dem Test.
+   */
   getCharacteristic(name: string): FakeCharacteristic {
-    let characteristic = this.characteristics.get(name);
+    const key = String(name);
+    let characteristic = this.characteristics.get(key);
     if (!characteristic) {
       characteristic = new FakeCharacteristic();
-      this.characteristics.set(name, characteristic);
+      this.characteristics.set(key, characteristic);
     }
     return characteristic;
   }
@@ -58,6 +64,10 @@ export class FakeAccessory {
     this.services.set(type, service);
     return service;
   }
+
+  removeService(service: FakeService): void {
+    this.services.delete(service.type);
+  }
 }
 
 export class HapStatusError extends Error {
@@ -77,12 +87,29 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
   const warnings: string[] = [];
   return {
     warnings,
-    Service: { AccessoryInformation: 'AccessoryInformation', Switch: 'Switch' },
+    Service: {
+      AccessoryInformation: 'AccessoryInformation',
+      Switch: 'Switch',
+      TemperatureSensor: 'TemperatureSensor',
+      HumiditySensor: 'HumiditySensor',
+      SmokeSensor: 'SmokeSensor',
+    },
     Characteristic: {
       Manufacturer: 'Manufacturer',
       Model: 'Model',
       SerialNumber: 'SerialNumber',
       On: 'On',
+      CurrentTemperature: 'CurrentTemperature',
+      CurrentRelativeHumidity: 'CurrentRelativeHumidity',
+      // Die Konstanten entsprechen den HAP-Werten.
+      SmokeDetected: Object.assign('SmokeDetected', {
+        SMOKE_NOT_DETECTED: 0,
+        SMOKE_DETECTED: 1,
+      }),
+      StatusLowBattery: Object.assign('StatusLowBattery', {
+        BATTERY_LEVEL_NORMAL: 0,
+        BATTERY_LEVEL_LOW: 1,
+      }),
     },
     log: {
       debug: () => {},
