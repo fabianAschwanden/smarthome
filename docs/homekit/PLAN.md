@@ -89,8 +89,13 @@ Die drei einfachen Profile:
 
 ## Etappe 4 – Storen (WindowCovering)
 
-1. **Invertierung an genau einer Stelle:** Die Domäne rechnet 100 % = zu, HomeKit
-   100 % = offen → `homekit = 100 − domain`. Mit Tests für 0, 100 und Zwischenwerte.
+1. ~~**Invertierung an genau einer Stelle:** Die Domäne rechnet 100 % = zu, HomeKit
+   100 % = offen → `homekit = 100 − domain`.~~ **Falsche Annahme, korrigiert am
+   2026-08-06:** Die REST-API rechnet in der Geräteskala **0 = zu, 100 = offen** – wie
+   HomeKit. Es wird **nicht** invertiert (belegt im `Cover`-Record, im Port
+   `ControlCovers` und in `docs/cover/SPEC.md` §2). Der Plan hatte die Anzeige des
+   Dashboards («% zu», dort gespiegelt) für die Schnittstelle gehalten. Tests für 0, 100
+   und Zwischenwerte halten die Richtung fest.
 2. Zielposition über `POST /{id}/position`, Stopp über `/{id}/command`.
 3. `PositionState` (öffnet/schliesst/steht) aus dem Vergleich Ist↔Ziel ableiten.
 

@@ -97,6 +97,9 @@ Adapter-Querverweis – ArchUnit-konform).
 
 - [ ] Reale Storen identifizieren (tinytuya scan + device-id/local-key auslesen,
       wie bei den Lampen). IP per DHCP-Reservierung fixieren.
-- [ ] Belegte dps je Store bestätigen (1/2/3 vs. 101 …) und ggf. Positionsrichtung
-      invertieren.
+- [ ] Belegte dps je Store bestätigen (1/2/3 vs. 101 …).
+- [x] Positionsrichtung. **An der Anlage bestätigt (2026-08-06):** Beide Storen waren
+      komplett zu, die API meldete `position: 0`. Die Geräteskala stimmt also mit der
+      Dokumentation überein (0 = zu, 100 = offen) – **keine Invertierung nötig**, weder
+      im Backend noch in der HomeKit-Bridge.
 - [x] Zeitsteuerung der Storen (eigene Slice `cover-schedule`, je Store, SCHEDULE + COUNTDOWN).

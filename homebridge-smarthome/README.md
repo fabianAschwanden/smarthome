@@ -44,13 +44,14 @@ npm run build   # nach dist/
 Die Tests decken die Abbildungslogik ab und arbeiten gegen eine HAP-Attrappe
 (`test/harness.ts`) – Homebridge wird dafür nicht gestartet.
 
-## Geräteklassen (Stand Etappe 3)
+## Geräteklassen (Stand Etappe 4)
 
 | Klasse | HomeKit | Besonderheit |
 |---|---|---|
 | Schalter | `Switch` | Kritische Schalter siehe `allowCriticalOff` |
 | Sensor | `TemperatureSensor` (+ `HumiditySensor`) | Feuchte nur, wenn der Sensor eine meldet |
 | Rauchmelder | `SmokeSensor` (+ `StatusLowBattery`) | Batteriestatus nur bei bekanntem Wert |
+| Store | `WindowCovering` | **Keine Invertierung** – REST und HomeKit zählen beide 0 = zu |
 
 Der Rauchmelder ist die dokumentierte **Ausnahme** von der Regel «offline → nicht
 erreichbar»: Batteriemelder funken sporadisch, ein dauerhaftes «keine Antwort» würde die
@@ -58,8 +59,7 @@ Kachel entwerten. Er meldet deshalb den zuletzt bekannten Alarmzustand weiter.
 
 ## Grenzen
 
-- **Storen und Klima** liest der Poll-Zyklus bereits mit, sie bekommen ihre Handler in
-  den Etappen 4 und 5.
+- **Klima** liest der Poll-Zyklus bereits mit, es bekommt seinen Handler in Etappe 5.
 - Ausgeliefert wird das Plugin noch nicht: Das Container-Image mit dem Plugin entsteht in
   Etappe 6. Bis dahin läuft in der Bridge das generische HTTP-Plugin aus Etappe 1.
 - Zustände kommen per Poll, nicht per Push – eine Änderung am Gerät erscheint mit bis zu

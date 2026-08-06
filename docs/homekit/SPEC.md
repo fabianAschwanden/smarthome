@@ -152,6 +152,12 @@ Frontend: keine Änderung.
         Ausschlaggebend: aktiv gepflegte Bibliothek statt Fork einer seit 2023
         stillstehenden, und kein BouncyCastle 1.51 (2014) im Klassenpfad der App.
 - [ ] Storen: Verhalten von «Halten» (HoldPosition) mit den Tuya-Covern prüfen.
+      Umgesetzt als `POST /{id}/command {"command":"STOP"}`; ob die Store daraufhin
+      wirklich stehen bleibt, ist an der realen Anlage noch nicht beobachtet.
+- [x] Storen: Richtung der Positionsskala. **Geklärt (2026-08-06): keine Invertierung** –
+      REST/Domäne rechnen 0 = zu / 100 = offen, genau wie HomeKit. Nur das Dashboard
+      zeigt «% zu» und spiegelt dafür selbst. **An der Anlage gegengeprüft:** beide
+      Storen komplett zu, API meldet `position: 0`.
 - [ ] Klima: exaktes Modus-Mapping an der realen Midea verifizieren (Auto/Fan).
 - [x] Aussensensor: liefert Feuchte, aber ohne verlässliche Kalibrierung – entscheiden,
       ob nur TemperatureSensor exponiert wird.
