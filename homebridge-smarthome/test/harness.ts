@@ -4,8 +4,14 @@ import type { SmarthomePlatform } from '../src/platform';
 
 export class FakeCharacteristic {
   value: unknown;
+  props?: Record<string, unknown>;
   getHandler?: () => unknown;
   setHandler?: (value: unknown) => Promise<void>;
+
+  setProps(props: Record<string, unknown>): this {
+    this.props = props;
+    return this;
+  }
 
   onGet(handler: () => unknown): this {
     this.getHandler = handler;
@@ -94,6 +100,7 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
       HumiditySensor: 'HumiditySensor',
       SmokeSensor: 'SmokeSensor',
       WindowCovering: 'WindowCovering',
+      HeaterCooler: 'HeaterCooler',
     },
     Characteristic: {
       Manufacturer: 'Manufacturer',
@@ -108,6 +115,20 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
         SMOKE_DETECTED: 1,
       }),
       CurrentPosition: 'CurrentPosition',
+      CoolingThresholdTemperature: 'CoolingThresholdTemperature',
+      HeatingThresholdTemperature: 'HeatingThresholdTemperature',
+      Active: Object.assign('Active', { INACTIVE: 0, ACTIVE: 1 }),
+      CurrentHeaterCoolerState: Object.assign('CurrentHeaterCoolerState', {
+        INACTIVE: 0,
+        IDLE: 1,
+        HEATING: 2,
+        COOLING: 3,
+      }),
+      TargetHeaterCoolerState: Object.assign('TargetHeaterCoolerState', {
+        AUTO: 0,
+        HEAT: 1,
+        COOL: 2,
+      }),
       TargetPosition: 'TargetPosition',
       HoldPosition: 'HoldPosition',
       PositionState: Object.assign('PositionState', {

@@ -34,11 +34,24 @@ export function hasPosition(cover: CoverDto): boolean {
 
 export interface ClimateDto extends DeviceBase {
   power: boolean;
+  /** COOL | HEAT | AUTO | FAN (Domaenen-Enum ClimateMode). */
   mode: string;
+  /** {@link CLIMATE_TEMP_UNKNOWN}, wenn das Geraet nichts meldet. */
   currentTemp: number;
   targetTemp: number;
   outdoorTemp: number | null;
+  /** Turbo. Bleibt dem Dashboard vorbehalten - HomeKit hat kein Gegenstueck. */
   boost: boolean;
+}
+
+export const CLIMATE_TEMP_UNKNOWN = -1;
+
+/** Invarianten der Domaene (Climate.MIN_TEMP/MAX_TEMP) - HomeKit bekommt dieselben Grenzen. */
+export const CLIMATE_MIN_TEMP = 16;
+export const CLIMATE_MAX_TEMP = 30;
+
+export function hasCurrentTemp(climate: ClimateDto): boolean {
+  return climate.currentTemp !== CLIMATE_TEMP_UNKNOWN;
 }
 
 export interface SensorDto extends DeviceBase {
