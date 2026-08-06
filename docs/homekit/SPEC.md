@@ -153,8 +153,13 @@ Frontend: keine Änderung.
         stillstehenden, und kein BouncyCastle 1.51 (2014) im Klassenpfad der App.
 - [ ] Storen: Verhalten von «Halten» (HoldPosition) mit den Tuya-Covern prüfen.
 - [ ] Klima: exaktes Modus-Mapping an der realen Midea verifizieren (Auto/Fan).
-- [ ] Aussensensor: liefert Feuchte, aber ohne verlässliche Kalibrierung – entscheiden,
+- [x] Aussensensor: liefert Feuchte, aber ohne verlässliche Kalibrierung – entscheiden,
       ob nur TemperatureSensor exponiert wird.
+      - **Entschieden (2026-08-06): Feuchte wird exponiert** (Etappe 3). Home-App und
+        Dashboard sollen denselben Wert nennen; zwei verschiedene Zahlen für dieselbe
+        Messung wären die grössere Zumutung als eine ungenaue. Über den Dienst
+        entscheidet der Sensor selbst: Meldet er `humidity = -1` (unbekannt), bekommt er
+        keinen HumiditySensor.
 - [ ] ufw-Regeln (HAP-Port + mDNS 5353/udp) ins Provisioning des Infra-Repos.
 - [ ] Pairing-Zustand liegt auf einem PVC und damit **ausserhalb** des DB-Backups –
       mitsichern oder den Verlust bewusst akzeptieren (§4).
