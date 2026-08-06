@@ -8,6 +8,8 @@ import type {
   Service,
 } from 'homebridge';
 import { ApiClient } from './api-client';
+import { SensorHandler } from './accessories/sensor';
+import { SmokeHandler } from './accessories/smoke';
 import { SwitchHandler } from './accessories/switch';
 import { DEFAULT_POLL_SECONDS, MIN_POLL_SECONDS, PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { DeviceBase, Snapshot } from './types';
@@ -126,7 +128,21 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
           new SwitchHandler(this, accessory, this.client, device, this.allowCriticalOff),
       });
     }
-    // Sensoren, Rauchmelder, Storen und Klima folgen in den Etappen 3–5.
+    for (const device of snapshot.sensors) {
+      result.push({
+        device,
+        kind: 'sensor',
+        create: (accessory) => new SensorHandler(this, accessory, device),
+      });
+    }
+    for (const device of snapshot.smoke) {
+      result.push({
+        device,
+        kind: 'smoke',
+        create: (accessory) => new SmokeHandler(this, accessory, device),
+      });
+    }
+    // Storen und Klima folgen in den Etappen 4 und 5.
     return result;
   }
 
