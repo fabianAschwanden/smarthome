@@ -1,0 +1,38 @@
+{
+  "pluginAlias": "Smarthome",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Bruecke zur eigenen Smarthome-App. Das Plugin spricht ausschliesslich deren REST-API - es redet nie direkt mit Geraeten.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Smarthome",
+        "required": true
+      },
+      "baseUrl": {
+        "title": "Basis-URL der App",
+        "type": "string",
+        "format": "uri",
+        "placeholder": "http://192.168.1.10:8080",
+        "required": true,
+        "description": "Ohne abschliessenden Schraegstrich."
+      },
+      "pollIntervalSeconds": {
+        "title": "Poll-Intervall (Sekunden)",
+        "type": "integer",
+        "default": 10,
+        "minimum": 2,
+        "description": "Wie oft die App abgefragt wird. Haeufiger als alle 2 Sekunden liefert keine frischeren Daten."
+      },
+      "allowCriticalOff": {
+        "title": "Kritische Schalter aus HomeKit ausschalten erlauben",
+        "type": "boolean",
+        "default": false,
+        "description": "Als kritisch markierte Schalter (z. B. Homecinema) verlangen im Dashboard eine Bestaetigung beim Ausschalten. HomeKit kann nicht nachfragen - eingeschaltet umgeht dieses Plugin die Sicherung, und auch Siri oder eine Automation koennen den Schalter dann ausschalten."
+      }
+    }
+  }
+}
