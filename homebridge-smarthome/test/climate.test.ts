@@ -128,6 +128,14 @@ describe('ClimateHandler – Temperaturen', () => {
     expect(heating.getHandler!()).toBe(17);
   });
 
+  it('setzt den Startwert in die Grenzen, statt HAPs Vorgabe stehen zu lassen', () => {
+    // HAP legt die Schwellwerte mit 10 bzw. 0 °C an - beides unter unserem Minimum.
+    // Ohne gesetzten Startwert meldet HomeKit das bei jedem Start als illegalen Wert.
+    const { cooling, heating } = setup();
+    expect(cooling.value).toBe(17);
+    expect(heating.value).toBe(17);
+  });
+
   it('rundet auf ganze Grad, weil die App nur solche annimmt', async () => {
     const { cooling, client } = setup();
     await cooling.setHandler!(21.5);

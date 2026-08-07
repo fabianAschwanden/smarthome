@@ -13,6 +13,11 @@ export class FakeCharacteristic {
     return this;
   }
 
+  updateValue(value: unknown): this {
+    this.value = value;
+    return this;
+  }
+
   onGet(handler: () => unknown): this {
     this.getHandler = handler;
     return this;

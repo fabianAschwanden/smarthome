@@ -69,6 +69,10 @@ export class ClimateHandler implements DeviceHandler {
       service
         .getCharacteristic(threshold)
         .setProps({ minValue: CLIMATE_MIN_TEMP, maxValue: CLIMATE_MAX_TEMP, minStep: 1 })
+        // Der Startwert muss NACH setProps gesetzt werden: HAP legt die Merkmale mit
+        // ihren eigenen Vorgaben an (10 °C bzw. 0 °C), und die liegen unter unserem
+        // Minimum - HomeKit protokolliert das sonst bei jedem Start als illegalen Wert.
+        .updateValue(initial.targetTemp)
         .onGet(() => this.state.targetTemp)
         .onSet(async (value) => this.writeTarget(Math.round(Number(value))));
     }
