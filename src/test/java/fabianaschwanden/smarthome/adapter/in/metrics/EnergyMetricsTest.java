@@ -36,6 +36,18 @@ class EnergyMetricsTest {
     private final FixedBattery battery = new FixedBattery();
     private final MeterRegistry registry = new SimpleMeterRegistry();
 
+    /**
+     * Hält den Adapter am Leben. Micrometer referenziert das über
+     * {@code Gauge.builder(name, this, …)} übergebene Objekt nur <b>schwach</b>: Wird
+     * die Instanz sonst nirgends gehalten, darf die GC sie einsammeln, und der Gauge
+     * liefert danach {@code NaN}, <b>ohne</b> die Messfunktion je aufzurufen. Die
+     * NaN-Erwartungen blieben dabei erfüllt – auffliegen würde es nur an der Zahl der
+     * Abfragen, und das rein zufällig. In Produktion hält der CDI-Container die
+     * {@code @ApplicationScoped}-Bean; im Test müssen wir das selbst tun.
+     */
+    @SuppressWarnings("unused")
+    private EnergyMetrics metrics;
+
     private double gauge(String name, PowerSource source) {
         return registry.get(name)
                 .tag("source", source.name().toLowerCase(java.util.Locale.ROOT))
@@ -47,7 +59,7 @@ class EnergyMetricsTest {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(
                 PowerReading.of(PowerSource.FRONIUS, NOW, -300.0, 5000.0, null, 1200.0),
                 PowerReading.error(PowerSource.SMARTFOX, NOW)), Optional.empty());
-        new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery);
 
         assertEquals(5000.0, gauge("smarthome.pv.watt", PowerSource.FRONIUS));
         assertEquals(1200.0, gauge("smarthome.consumption.watt", PowerSource.FRONIUS));
@@ -59,7 +71,7 @@ class EnergyMetricsTest {
     @Test
     void relais_zustand_als_null_oder_eins() {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(), Optional.empty());
-        new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery);
 
         battery.control = new BatteryControl(ControlMode.MANUAL, RelayState.ON, NOW);
         assertEquals(1.0, registry.get("smarthome.battery.relay.state").gauge().value());
@@ -72,7 +84,7 @@ class EnergyMetricsTest {
     void ein_scrape_befragt_die_geraete_nur_einmal() {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(
                 PowerReading.of(PowerSource.FRONIUS, NOW, 0.0, 4200.0, null, 800.0)), Optional.empty());
-        new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery);
 
         gauge("smarthome.pv.watt", PowerSource.FRONIUS);
         gauge("smarthome.consumption.watt", PowerSource.FRONIUS);
@@ -84,7 +96,7 @@ class EnergyMetricsTest {
     @Test
     void geraetestoerung_ergibt_nan_statt_scrape_fehler() {
         energyQuery.snapshot = null; // Query wirft
-        new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery);
 
         assertTrue(Double.isNaN(gauge("smarthome.pv.watt", PowerSource.FRONIUS)));
         assertTrue(Double.isNaN(gauge("smarthome.consumption.watt", PowerSource.SMARTFOX)));
