@@ -31,6 +31,13 @@ const UEBERSCHUSS: Surplus = {
   },
 };
 
+const AUTOMATIK = {
+  enabled: false,
+  lastRunDay: null,
+  lastOutcome: null,
+  lastDetail: '',
+};
+
 describe('ForecastService', () => {
   let service: ForecastService;
   let httpMock: HttpTestingController;
@@ -44,6 +51,9 @@ describe('ForecastService', () => {
     // Der Service pollt über timer(0, …) asynchron; ein Makrotask-Tick löst den
     // ersten Abruf aus (zoneless Test, daher kein fakeAsync).
     await new Promise((resolve) => setTimeout(resolve, 0));
+    // Der Zustand der Lade-Automatik wird einmal beim Start geholt, damit die
+    // Nachrichtenzentrale ihn kennt, ohne dass jemand die Batterie-Seite geöffnet hat.
+    httpMock.expectOne('/api/forecast/auto-apply').flush(AUTOMATIK);
   });
 
   it('stellt Prognose und Überschuss als Signals bereit', () => {
@@ -63,6 +73,21 @@ describe('ForecastService', () => {
     httpMock.expectOne('/api/forecast/surplus').flush(UEBERSCHUSS);
 
     expect(service.pv()).toBeNull();
+  });
+
+  it('schaltet die Lade-Automatik per PUT um', () => {
+    httpMock.expectOne('/api/forecast/pv').flush(PROGNOSE);
+    httpMock.expectOne('/api/forecast/surplus').flush(UEBERSCHUSS);
+    expect(service.autoApply()?.enabled).toBe(false);
+
+    service.setAutoApply(true);
+
+    const request = httpMock.expectOne('/api/forecast/auto-apply');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ enabled: true });
+    request.flush({ ...AUTOMATIK, enabled: true });
+
+    expect(service.autoApply()?.enabled).toBe(true);
   });
 
   it('übernimmt die Empfehlung per POST', () => {
