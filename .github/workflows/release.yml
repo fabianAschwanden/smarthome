@@ -9,6 +9,7 @@ name: Release
 # Images – als Multi-Arch-Manifest (linux/amd64 + linux/arm64):
 #   ghcr.io/<owner>/smarthome:<version>          + :latest
 #   ghcr.io/<owner>/smarthome-sidecar:<version>  + :latest
+#   ghcr.io/<owner>/smarthome-homebridge:<version> + :latest
 #
 # Warum arm64 dazu: der Mini-PC läuft auf amd64, entwickelt wird auf Apple Silicon
 # (arm64). Ein reines amd64-Image lässt sich dort weder in k3d noch in Docker als Pod
@@ -62,6 +63,10 @@ jobs:
         image:
           - { repo: smarthome, context: ., file: deploy/Dockerfile }
           - { repo: smarthome-sidecar, context: tools/tuya-sidecar, file: tools/tuya-sidecar/Dockerfile }
+          # Die HomeKit-Bruecke: offizielles Homebridge-Image plus unser Plugin.
+          # Kontext ist das Repo-Wurzelverzeichnis, weil das Dockerfile aus
+          # homebridge-smarthome/ baut.
+          - { repo: smarthome-homebridge, context: ., file: deploy/Dockerfile.homebridge }
         platform:
           - { id: linux/amd64, arch: amd64, runner: ubuntu-latest }
           - { id: linux/arm64, arch: arm64, runner: ubuntu-24.04-arm }
@@ -127,7 +132,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        repo: [smarthome, smarthome-sidecar]
+        repo: [smarthome, smarthome-sidecar, smarthome-homebridge]
     env:
       IMAGE: ghcr.io/${{ needs.meta.outputs.owner }}/${{ matrix.repo }}
     steps:

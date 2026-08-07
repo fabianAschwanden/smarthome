@@ -171,12 +171,17 @@ Frontend: keine Änderung.
         Messung wären die grössere Zumutung als eine ungenaue. Über den Dienst
         entscheidet der Sensor selbst: Meldet er `humidity = -1` (unbekannt), bekommt er
         keinen HumiditySensor.
-- [ ] ufw-Regeln (HAP-Port + mDNS 5353/udp) ins Provisioning des Infra-Repos.
-- [ ] Pairing-Zustand liegt auf einem PVC und damit **ausserhalb** des DB-Backups –
-      mitsichern oder den Verlust bewusst akzeptieren (§4).
-- [ ] Entscheiden: Homebridge-Web-UI (Port 8581) an oder aus. Bequem, aber eine
-      weitere Admin-Oberfläche im LAN – wenn an, dann mit Passwort.
-- [ ] Mapping-Tests im Plugin: Storen-Invertierung und Klima-Modi liegen ausserhalb
-      des Java-Testbestands (§7) und brauchen dort eigene Abdeckung.
+- [x] ufw-Regeln (HAP-Port + mDNS 5353/udp) ins Provisioning des Infra-Repos.
+      **Erledigt (2026-08-07):** `51826/tcp` und `5353/udp` aus dem LAN in
+      `scripts/provision-host.sh`.
+- [x] Pairing-Zustand liegt auf einem PVC und damit **ausserhalb** des DB-Backups.
+      **Entschieden (2026-08-07): mitsichern.** `backup.sh` packt `persist/`,
+      `accessories/` und `config.json` aus dem PVC. Ein Verlust hätte sonst auch alle
+      Raumzuordnungen, Szenen und Automationen gekostet, nicht nur die Kopplung.
+- [x] Homebridge-Web-UI (Port 8581). **Entschieden (2026-08-07): bleibt aus.** Die
+      Konfiguration kommt deklarativ aus dem Secret; eine zweite Admin-Oberfläche im LAN
+      wäre ein Zugang mehr, den niemand braucht und den man absichern müsste.
+- [x] Mapping-Tests im Plugin. **Erledigt:** 58 Vitest-Tests, im CI-Gate als eigener
+      Job (`HomeKit-Plugin`) und zusätzlich im Image-Build.
 - [ ] Entscheiden, ob der Rauchmelder in HomeKit als «kritischer Alarm» auch
       Apple-seitige Notfall-Benachrichtigungen nutzen soll (Home-App-Einstellung).

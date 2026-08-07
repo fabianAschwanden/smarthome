@@ -1,0 +1,38 @@
+# Bild der HomeKit-Bruecke: offizielles Homebridge-Image plus unser Plugin (Use Case 16).
+#
+# Warum das Plugin als Tarball unter /opt und nicht direkt in node_modules:
+# Homebridge laeuft mit "-P /var/lib/homebridge/node_modules --strict-plugin-resolution",
+# und genau dieses Verzeichnis liegt auf dem PVC. Alles, was das Image dorthin legt,
+# waere vom Mount verdeckt. Der Tarball liegt deshalb ausserhalb des Volumes; die
+# package.json der Bruecke verweist per "file:" darauf, und Homebridge installiert ihn
+# bei jedem Start ins Volume - derselbe Weg, den auch die Plugins aus der Registry gehen.
+
+FROM node:22.22.3-bookworm AS build
+WORKDIR /plugin
+
+# Erst die Manifeste: so bleibt der Abhaengigkeits-Layer erhalten, solange sich nur
+# Quellcode aendert.
+COPY homebridge-smarthome/package.json homebridge-smarthome/package-lock.json ./
+RUN npm ci
+
+COPY homebridge-smarthome/tsconfig.json ./
+COPY homebridge-smarthome/src ./src
+COPY homebridge-smarthome/test ./test
+COPY homebridge-smarthome/config.schema.json homebridge-smarthome/README.md ./
+
+# Das Gate laeuft auch hier: Ein Image mit rotem Test soll gar nicht erst entstehen.
+RUN npm run lint && npm test && npm run build
+RUN npm pack && mv homebridge-smarthome-*.tgz /plugin/homebridge-smarthome.tgz
+
+FROM homebridge/homebridge:2026-08-05@sha256:540484a2f15b61184804daeacc705dc86d3db811182d4b46d3deb524647ff29a
+
+ARG VERSION=dev
+ARG BUILD_DATE
+LABEL org.opencontainers.image.title="smarthome-homebridge" \
+      org.opencontainers.image.description="HomeKit-Bruecke zur Smarthome-App (Homebridge + eigenes Plugin)" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
+# Fester Pfad ohne Version im Namen: Die package.json der Bruecke liegt im Secret und
+# soll nicht bei jedem Release mitgeaendert werden muessen.
+COPY --from=build /plugin/homebridge-smarthome.tgz /opt/smarthome/homebridge-smarthome.tgz

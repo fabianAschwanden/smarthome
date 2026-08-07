@@ -113,16 +113,53 @@ Richtungen.
 
 ## Etappe 6 – Betrieb
 
-1. Plugin-Image in der CI bauen (eigenes `Dockerfile` auf Basis des Homebridge-Images
-   mit dem Plugin) und nach ghcr pushen – wie die anderen Images.
-2. k3s-Manifest ins Infra-Repo, ufw-Regeln ins Provisioning.
-3. **Backup:** Der Pairing-Zustand liegt im PVC, nicht in unserer DB – er fehlt damit im
-   bestehenden Backup. Entweder ins Backup aufnehmen oder bewusst akzeptieren, dass ein
-   Volume-Verlust ein Neu-Koppeln bedeutet (dokumentieren).
-4. Doku: README-Use-Case-Tabelle, «Koppeln»-Abschnitt, Troubleshooting (mDNS,
-   «keine Antwort»).
-5. Entscheiden: Homebridge-Web-UI (Port 8581) an oder aus. Sie ist bequem, aber eine
-   weitere Admin-Oberfläche im LAN – wenn an, dann mit Passwort.
+1. ✅ **Image in der CI** – [`deploy/Dockerfile.homebridge`](../../deploy/Dockerfile.homebridge)
+   baut das Plugin, lässt Lint und Tests laufen und legt das fertige Paket als Tarball
+   unter `/opt/smarthome/` ins offizielle Homebridge-Image. Der Release-Workflow baut es
+   als drittes Image (`ghcr.io/…/smarthome-homebridge`) multi-arch mit.
+
+   > **Warum ein Tarball und nicht direkt `node_modules`:** Homebridge startet mit
+   > `-P /var/lib/homebridge/node_modules --strict-plugin-resolution`, und dieses
+   > Verzeichnis liegt auf dem PVC. Alles, was das Image dorthin legt, wäre vom Mount
+   > verdeckt. Die `package.json` der Brücke verweist deshalb per `file:` auf den
+   > Tarball – derselbe Weg, den auch Plugins aus der Registry gehen.
+
+2. ✅ **ufw** – `51826/tcp` (HAP) und `5353/udp` (mDNS) aus dem LAN, im Provisioning des
+   Infra-Repos.
+3. ✅ **Backup** – der Kopplungszustand wird **mitgesichert**: `backup.sh` packt
+   `persist/`, `accessories/` und `config.json` aus dem PVC. Ein Volume-Verlust hätte
+   sonst nicht nur ein Neu-Koppeln bedeutet, sondern auch jedes Gerät wieder von Hand in
+   seinen Raum – samt Szenen und Automationen. Die paar Kilobyte sind das billiger.
+4. ✅ **Doku** – Use-Case-Tabelle (16), «Koppeln»-Abschnitt und Troubleshooting im
+   README, Plugin-README unter `homebridge-smarthome/`.
+5. ✅ **Web-UI bleibt aus.** Die Konfiguration kommt deklarativ aus dem Secret; eine
+   zweite Admin-Oberfläche im LAN wäre ein Zugang mehr, den niemand braucht und den man
+   absichern müsste. Wer etwas ändern will, ändert die `config.json` und deployt.
+
+### Der Wechsel auf das eigene Plugin
+
+Bis hierher ist alles vorbereitet, aber **noch nicht scharf**: In der Brücke läuft
+weiterhin das generische HTTP-Plugin aus Etappe 1 mit der einen Stehlampe. Das Manifest
+allein schaltet nicht um – es zieht nur das neue Image, das den Tarball ungenutzt
+mitbringt. Scharf wird es erst mit diesen beiden Änderungen an der (gitignorten)
+Brücken-Konfiguration im Infra-Repo:
+
+1. `homebridge-package.json`: `homebridge-http-switch` raus,
+   `"homebridge-smarthome": "file:/opt/smarthome/homebridge-smarthome.tgz"` rein.
+2. `homebridge-config.json`: den `accessories`-Eintrag entfernen und stattdessen
+   ```json
+   "platforms": [{ "platform": "Smarthome", "baseUrl": "http://127.0.0.1:8080" }]
+   ```
+   Der **`bridge`-Block bleibt unverändert** – Name, `username` und `pin` sind die
+   Identität der Brücke.
+
+Danach `pre-deploy.sh` (erzeugt das Secret neu) und `kubectl apply -k`.
+
+**Erwartung, die zu prüfen ist:** Die Kopplung überlebt, weil sie an `username`/`pin`
+hängt und in `persist/` liegt – dort ändert sich nichts. Die *Stehlampe* dagegen war
+bisher ein Accessory des HTTP-Plugins und kommt neu über die Plattform; sie erscheint
+in der Home-App als **neues Gerät** und muss ihrem Raum wieder zugewiesen werden. Ein
+Release-Tag muss vorher gebaut sein, sonst zeigt `:latest` ins Leere.
 
 ---
 
