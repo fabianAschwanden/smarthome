@@ -1,7 +1,6 @@
 package fabianaschwanden.smarthome.application.service.forecast;
 
-import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
-import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
+import fabianaschwanden.smarthome.application.config.WellnessSurplusConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.SurplusWindow;
 import fabianaschwanden.smarthome.domain.port.in.applianceschedule.ManageApplianceSchedules;
@@ -10,7 +9,6 @@ import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.WellnessSurplusPlan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
@@ -28,10 +26,15 @@ import java.util.Optional;
  * Wellness-Zeitsteuerung an – wie die Ladeempfehlung über die Batterie-Zeitsteuerung
  * geht und der Hitzeschutz über die der Storen.
  *
- * <p><b>Ausgeschaltet wird am Fensterende auch dann, wenn die Heizung schon vorher
- * lief.</b> Das ist die unangenehme Seite der Sache und der Grund, warum es beim
- * Knopfdruck bleibt und nicht automatisch läuft: Wer die Heizung von Hand angestellt
- * hat, wird sie so am Abend abgestellt finden.
+ * <p><b>Geregelt wird über die Soll-Temperatur, nicht über einen Schalter.</b> Die
+ * Heizung eines Gecko-Spas lässt sich nicht ein- und ausschalten; sie ist dauerhaft
+ * aktiv und folgt der Soll-Temperatur. Zu Fensterbeginn wird deshalb auf die
+ * Überschusstemperatur gestellt, am Ende zurück auf die Grundtemperatur.
+ *
+ * <p><b>Am Fensterende wird auf die Grundtemperatur zurückgestellt – auch dann, wenn
+ * jemand zwischendurch von Hand etwas anderes eingestellt hat.</b> Das ist die
+ * unangenehme Seite der Sache und der Grund, warum es beim Knopfdruck bleibt und nicht
+ * automatisch läuft.
  */
 @ApplicationScoped
 public class WellnessSurplusService implements WellnessSurplusPlan {
@@ -40,16 +43,14 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
 
     private final SurplusQuery surplus;
     private final ManageApplianceSchedules schedules;
-    private final List<String> applianceIds;
+    private final WellnessSurplusConfig config;
 
     @Inject
     public WellnessSurplusService(
-            SurplusQuery surplus,
-            ManageApplianceSchedules schedules,
-            @ConfigProperty(name = "forecast.wellness.appliance-ids") List<String> applianceIds) {
+            SurplusQuery surplus, ManageApplianceSchedules schedules, WellnessSurplusConfig config) {
         this.surplus = surplus;
         this.schedules = schedules;
-        this.applianceIds = List.copyOf(applianceIds);
+        this.config = config;
     }
 
     @Override
@@ -60,11 +61,11 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
                 .orElseThrow(NoRecommendationAvailable::new);
 
         List<ApplianceSchedule> created = new ArrayList<>();
-        for (String applianceId : applianceIds) {
-            created.add(schedules.save(ApplianceSchedule.countdown(
-                    applianceId, ApplianceFunction.HEATER, FunctionState.ON, window.from())));
-            created.add(schedules.save(ApplianceSchedule.countdown(
-                    applianceId, ApplianceFunction.HEATER, FunctionState.OFF, window.to())));
+        for (WellnessSurplusConfig.Entry entry : config.appliances()) {
+            created.add(schedules.save(
+                    ApplianceSchedule.countdown(entry.id(), entry.surplusTemp(), window.from())));
+            created.add(schedules.save(
+                    ApplianceSchedule.countdown(entry.id(), entry.baseTemp(), window.to())));
         }
         LOG.infof("Wellness-Heizung ins Überschussfenster gelegt: %s bis %s, erwartet %.1f kWh",
                 window.from(), window.to(), window.expectedKwh());

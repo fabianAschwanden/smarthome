@@ -22,11 +22,9 @@ public class ApplianceScheduleEntity {
     @Column(name = "appliance_id", nullable = false)
     public String applianceId;
 
-    @Column(name = "function", nullable = false, length = 32)
-    public String function;
-
-    @Column(name = "state", nullable = false, length = 8)
-    public String state;
+    /** Soll-Temperatur in °C - die Heizung ist kein Schalter (siehe Domaenen-Record). */
+    @Column(name = "target_temp", nullable = false)
+    public int targetTemp;
 
     @Column(name = "fire_at", nullable = false)
     public Instant fireAt;

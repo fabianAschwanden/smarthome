@@ -18,9 +18,10 @@ import {
  * kennt Massage, das Becken nicht. Deshalb wird ueber die gemeldeten Funktionen
  * iteriert, statt sie hier aufzuzaehlen.
  *
- * <p>Der Thermostat kennt nur AUS und HEIZEN. Kuehlen kann keine der Anlagen, und
- * HomeKit einen Modus anzubieten, den das Geraet nicht hat, waere ein Versprechen, das
- * beim Antippen bricht.
+ * <p>Der Thermostat kennt <b>nur HEIZEN</b> - weder Kuehlen noch Aus. Die Heizung eines
+ * Gecko-Spas laesst sich gar nicht schalten: Sie ist dauerhaft aktiv und folgt der
+ * Soll-Temperatur; die App weist ein Ein/Aus mit 503 zurueck. Einen Modus anzubieten,
+ * den das Geraet nicht hat, waere ein Versprechen, das beim Antippen bricht.
  */
 export class ApplianceHandler implements DeviceHandler {
   private state: ApplianceDto;
@@ -48,9 +49,9 @@ export class ApplianceHandler implements DeviceHandler {
     }
 
     for (const fn of Object.keys(initial.functions)) {
-      if (fn === HEATER_FUNCTION && this.hasThermostat) {
-        // Die Heizung steckt schon im Thermostat. Sie zusaetzlich als Schalter zu
-        // zeigen, ergaebe zwei Bedienelemente fuer dieselbe Sache.
+      if (fn === HEATER_FUNCTION) {
+        // Nie als Schalter: Die Heizung laesst sich nicht schalten, ein Knopf dafuer
+        // koennte nur scheitern. Bedient wird sie ueber die Soll-Temperatur.
         continue;
       }
       this.setUpFunction(initial, fn);
@@ -71,21 +72,10 @@ export class ApplianceHandler implements DeviceHandler {
       .onGet(() => this.heatingState());
     service
       .getCharacteristic(platform.Characteristic.TargetHeatingCoolingState)
-      // Nur AUS und HEIZEN: Kuehlen kann die Anlage nicht, und AUTO haette ohne
-      // Kuehlung keine Bedeutung.
-      .setProps({
-        validValues: [
-          platform.Characteristic.TargetHeatingCoolingState.OFF,
-          platform.Characteristic.TargetHeatingCoolingState.HEAT,
-        ],
-      })
-      .onGet(() => this.heatingState())
-      .onSet(async (value) =>
-        this.writeFunction(
-          HEATER_FUNCTION,
-          value === platform.Characteristic.TargetHeatingCoolingState.HEAT,
-        ),
-      );
+      // Nur HEIZEN: Die Anlage kann weder kuehlen noch ihre Heizung abschalten.
+      // HomeKit zeigt den Modus damit als feststehend und bietet kein Umschalten an.
+      .setProps({ validValues: [platform.Characteristic.TargetHeatingCoolingState.HEAT] })
+      .onGet(() => platform.Characteristic.TargetHeatingCoolingState.HEAT);
     service
       .getCharacteristic(platform.Characteristic.CurrentTemperature)
       .onGet(() => this.currentTemp());
@@ -135,10 +125,6 @@ export class ApplianceHandler implements DeviceHandler {
       this.platform.Characteristic.CurrentHeatingCoolingState,
       this.heatingState(),
     );
-    service?.updateCharacteristic(
-      this.platform.Characteristic.TargetHeatingCoolingState,
-      this.heatingState(),
-    );
     if (next.temperature && next.temperature.current !== CLIMATE_TEMP_UNKNOWN) {
       service?.updateCharacteristic(
         this.platform.Characteristic.CurrentTemperature,
@@ -167,7 +153,7 @@ export class ApplianceHandler implements DeviceHandler {
    */
   private heatingState(): number {
     const states = this.platform.Characteristic.CurrentHeatingCoolingState;
-    return this.state.functions[HEATER_FUNCTION] === 'ON' ? states.HEAT : states.OFF;
+    return this.state.functions[HEATER_FUNCTION] === 'OFF' ? states.OFF : states.HEAT;
   }
 
   private currentTemp(): number {

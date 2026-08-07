@@ -26,8 +26,17 @@ SoC-basierte Steuerung.
 
 **Nachgeliefert (F4, 2026-08-07):** Wellness im Überschussfenster.
 `POST /api/forecast/wellness-surplus/apply` legt je Anlage aus
-`forecast.wellness.appliance-ids` einen Auftrag zum Ein- und einen zum Ausschalten der
-Heizung an; ausgeführt werden sie von der neuen **Wellness-Zeitsteuerung**
+`wellness-surplus.appliances[i]` einen Auftrag an, der zu Fensterbeginn auf
+`surplus-temp` und am Ende zurück auf `base-temp` stellt.
+
+> **Korrektur vom selben Tag:** Zuerst schalteten die Aufträge die Funktion `HEATER` ein
+> und aus. Beim echten Gecko-Spa ist die Heizung aber **kein Schalter** – sie ist
+> dauerhaft aktiv und wird ausschliesslich über die Soll-Temperatur geregelt; der Adapter
+> weist ein Schalten mit 503 zurück. Die Funktion lief im Mock und tat an der Anlage
+> nichts. Seither lehnt auch der Mock das Schalten der Heizung ab: Eine Attrappe, die
+> mehr kann als das Gerät, ist schlimmer als gar keine.
+
+Ausgeführt werden die Aufträge von der Wellness-Zeitsteuerung; ausgeführt werden sie von der neuen **Wellness-Zeitsteuerung**
 (`/api/appliance-schedules`, Tabelle `appliance_schedule`, Ticker
 `appliance-schedule.tick-interval`). Nur Countdowns – der Anlass ist ein Fenster von
 heute. Liegt keine Ladeempfehlung vor, taugt das erste Überschussfenster trotzdem: Die

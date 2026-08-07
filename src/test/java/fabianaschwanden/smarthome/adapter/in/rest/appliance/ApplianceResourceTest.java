@@ -27,10 +27,21 @@ class ApplianceResourceTest {
     @Test
     void schaltet_eine_funktion() {
         given().contentType("application/json").body("{\"state\":\"ON\"}")
-                .when().post("/api/appliances/whirlpool/functions/HEATER")
+                .when().post("/api/appliances/whirlpool/functions/PUMP")
                 .then().statusCode(200)
                 .body("id", is("whirlpool"))
-                .body("functions.HEATER", is("ON"));
+                .body("functions.PUMP", is("ON"));
+    }
+
+    @Test
+    void die_heizung_laesst_sich_nicht_schalten() {
+        // Beim Gecko-Spa ist die Heizung kein Schalter: Sie ist dauerhaft aktiv und folgt
+        // der Soll-Temperatur. Dieser Test stand frueher andersherum da - er erwartete
+        // ein erfolgreiches Schalten und ging nur durch, weil der Mock mehr erlaubte als
+        // das Geraet. Auf dieser falschen Annahme wurde eine ganze Funktion gebaut.
+        given().contentType("application/json").body("{\"state\":\"OFF\"}")
+                .when().post("/api/appliances/whirlpool/functions/HEATER")
+                .then().statusCode(503);
     }
 
     @Test

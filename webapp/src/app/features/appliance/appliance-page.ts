@@ -245,12 +245,22 @@ export class AppliancePage {
     });
   }
 
+  /**
+   * Die schaltbaren Funktionen – ohne die Heizung.
+   *
+   * <p>Die Heizung eines Gecko-Spas ist kein Schalter: Sie ist dauerhaft aktiv und wird
+   * ausschliesslich über die Soll-Temperatur geregelt; die App weist ein Schalten mit
+   * 503 zurück. Ein Knopf, der nur scheitern kann, gehört nicht auf die Kachel – die
+   * Temperatur darüber ist die Heizungsbedienung.
+   */
   protected functionsOf(a: Appliance): { key: ApplianceFunction; label: string; on: boolean }[] {
-    return Object.keys(a.functions).map((k) => ({
-      key: k as ApplianceFunction,
-      label: FUNCTION_LABELS[k as ApplianceFunction] ?? k,
-      on: a.functions[k] === 'ON',
-    }));
+    return Object.keys(a.functions)
+      .filter((k) => k !== 'HEATER')
+      .map((k) => ({
+        key: k as ApplianceFunction,
+        label: FUNCTION_LABELS[k as ApplianceFunction] ?? k,
+        on: a.functions[k] === 'ON',
+      }));
   }
 
   protected onFunction(id: string, fn: ApplianceFunction, on: boolean): void {

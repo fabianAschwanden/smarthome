@@ -1,7 +1,5 @@
 package fabianaschwanden.smarthome.adapter.out.persistence;
 
-import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
-import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.port.out.applianceschedule.ApplianceScheduleRepository;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
@@ -28,8 +26,7 @@ public class PanacheApplianceScheduleRepository
                 findByIdOptional(schedule.id()).orElseGet(ApplianceScheduleEntity::new);
         entity.id = schedule.id();
         entity.applianceId = schedule.applianceId();
-        entity.function = schedule.function().name();
-        entity.state = schedule.state().name();
+        entity.targetTemp = schedule.targetTemp();
         entity.fireAt = schedule.fireAt();
         entity.enabled = schedule.enabled();
         persist(entity);
@@ -56,8 +53,7 @@ public class PanacheApplianceScheduleRepository
         return new ApplianceSchedule(
                 entity.id,
                 entity.applianceId,
-                ApplianceFunction.valueOf(entity.function),
-                FunctionState.valueOf(entity.state),
+                entity.targetTemp,
                 entity.fireAt,
                 entity.enabled);
     }

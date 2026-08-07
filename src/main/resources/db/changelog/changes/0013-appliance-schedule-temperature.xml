@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Korrektur zu 0012: Die Wellness-Zeitsteuerung schaltete eine Funktion ein und
+         aus. Beim echten Gecko-Spa ist die Heizung aber kein Schalter - sie ist
+         dauerhaft aktiv und wird ausschliesslich ueber die Soll-Temperatur geregelt;
+         der Adapter weist ein Schalten mit 503 zurueck. Statt Funktion und Zustand
+         traegt ein Auftrag deshalb eine Soll-Temperatur.
+
+         Ohne Datenuebernahme: Die Tabelle ist seit ihrer Anlage leer geblieben (die
+         Auftraege liessen sich ja gar nicht ausfuehren). -->
+    <changeSet id="0013-appliance-schedule-temperature" author="smarthome">
+        <delete tableName="appliance_schedule"/>
+        <dropColumn tableName="appliance_schedule" columnName="function"/>
+        <dropColumn tableName="appliance_schedule" columnName="state"/>
+        <addColumn tableName="appliance_schedule">
+            <column name="target_temp" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

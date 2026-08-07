@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Der Ticker der Wellness-Zeitsteuerung. */
+/** Der Ticker der Wellness-Zeitsteuerung: Er stellt Soll-Temperaturen, nicht Schalter. */
 class ApplianceScheduleServiceTest {
 
     private static final Instant JETZT = Instant.parse("2026-08-07T12:00:00Z");
@@ -41,18 +41,16 @@ class ApplianceScheduleServiceTest {
 
     @Test
     void schaltet_einen_faelligen_auftrag() {
-        service.save(ApplianceSchedule.countdown(
-                "whirlpool", ApplianceFunction.HEATER, FunctionState.ON, JETZT.minusSeconds(60)));
+        service.save(ApplianceSchedule.countdown("whirlpool", 38, JETZT.minusSeconds(60)));
 
         service.tick();
 
-        assertEquals(List.of("whirlpool:HEATER:ON"), appliances.calls);
+        assertEquals(List.of("whirlpool:38"), appliances.calls);
     }
 
     @Test
     void laesst_einen_zukuenftigen_auftrag_liegen() {
-        service.save(ApplianceSchedule.countdown(
-                "whirlpool", ApplianceFunction.HEATER, FunctionState.ON, JETZT.plusSeconds(3600)));
+        service.save(ApplianceSchedule.countdown("whirlpool", 38, JETZT.plusSeconds(3600)));
 
         service.tick();
 
@@ -62,8 +60,7 @@ class ApplianceScheduleServiceTest {
 
     @Test
     void schaltet_einen_auftrag_nur_einmal() {
-        service.save(ApplianceSchedule.countdown(
-                "whirlpool", ApplianceFunction.HEATER, FunctionState.ON, JETZT.minusSeconds(60)));
+        service.save(ApplianceSchedule.countdown("whirlpool", 38, JETZT.minusSeconds(60)));
 
         service.tick();
         service.tick();
@@ -77,8 +74,7 @@ class ApplianceScheduleServiceTest {
         // Sonst versuchte es der Ticker alle paar Sekunden erneut, und ein defektes
         // Geraet fuellte das Log.
         appliances.fail = true;
-        service.save(ApplianceSchedule.countdown(
-                "whirlpool", ApplianceFunction.HEATER, FunctionState.ON, JETZT.minusSeconds(60)));
+        service.save(ApplianceSchedule.countdown("whirlpool", 38, JETZT.minusSeconds(60)));
 
         service.tick();
         service.tick();
@@ -123,16 +119,16 @@ class ApplianceScheduleServiceTest {
 
         @Override
         public Appliance switchFunction(String id, ApplianceFunction function, FunctionState state) {
-            calls.add(id + ":" + function + ":" + state);
-            if (fail) {
-                throw new IllegalStateException("Anlage nicht erreichbar");
-            }
-            return null;
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public Appliance setTargetTemperature(String id, int target) {
-            throw new UnsupportedOperationException();
+            calls.add(id + ":" + target);
+            if (fail) {
+                throw new IllegalStateException("Anlage nicht erreichbar");
+            }
+            return null;
         }
 
         @Override
