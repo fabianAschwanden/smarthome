@@ -117,6 +117,25 @@ Backend sind umgesetzt:
 - Mock hält die Soll-Temp und simuliert eine Ist-Temperatur; der echte Adapter
   schreibt später den passenden Geräte-Datenpunkt.
 
+
+## Soll-Temperatur: verzögerte Übernahme
+
+Der Gecko-Befehl wirkt nicht sofort – unmittelbar nach dem Setzen meldet die Anlage noch
+den alten Wert. Wird nur einmal gesendet und danach die Rückmeldung angezeigt, springt
+die Anzeige zurück, und der nächste Schritt rechnet wieder vom alten Wert: Man kommt nie
+mehr als ein Grad weit.
+
+Deshalb merkt sich der Anwendungsdienst den Wunsch und **wiederholt ihn**
+(`appliance-target.retry-interval`), bis die Anlage ihn meldet oder
+`appliance-target.max-attempts` aufgebraucht sind. Solange er offen ist, steht er im DTO
+als `temperature.pending`; die Oberfläche zeigt ihn als Soll an und rechnet ihre Schritte
+darauf. `pending` ist bewusst ein eigenes Feld und kein überschriebenes `target` – der
+Unterschied zwischen «eingestellt» und «wird gerade gestellt» soll sichtbar bleiben.
+
+> Die Schlüssel heissen `appliance-target.*` und nicht `appliance.target.*`: Den Teilbaum
+> `appliance` beansprucht das `@ConfigMapping` der Gerätekonfiguration vollständig, ein
+> Unterschlüssel darin lässt den Start mit `SRCFG00050` scheitern.
+
 ## 8. Offene Punkte / TODO
 
 - [x] Temperatur-Steuerung im Backend (Domäne + Port + REST) – umgesetzt (§7).

@@ -10,6 +10,12 @@ export interface ApplianceTemperature {
   current: number;
   min: number;
   max: number;
+  /**
+   * Gewünschte Soll-Temperatur, solange die Anlage sie noch nicht übernommen hat –
+   * sonst null. Der Gecko-Befehl wirkt verzögert; ohne diesen Wert zeigte die
+   * Oberfläche den alten an, und der nächste Schritt rechnete wieder von dort.
+   */
+  pending?: number | null;
 }
 
 export interface Appliance {

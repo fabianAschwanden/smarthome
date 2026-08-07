@@ -5,6 +5,7 @@ import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * Treiber-Port (Use Case): Wellness-Anlagen verwalten – auflisten und eine einzelne
@@ -30,4 +31,15 @@ public interface ControlAppliances {
      * @throws IllegalArgumentException wenn die Temperatur ausserhalb des Sollbereichs liegt.
      */
     Appliance setTargetTemperature(String id, int target);
+
+    /**
+     * Die gewünschte Soll-Temperatur, solange die Anlage sie noch nicht übernommen hat –
+     * sonst leer.
+     *
+     * <p>Der Gecko-Befehl wirkt verzögert: Unmittelbar nach dem Setzen meldet die Anlage
+     * noch den alten Wert. Ohne diese Auskunft zeigte die Oberfläche den alten Wert an,
+     * und der nächste Schritt rechnete wieder von dort – man käme nie mehr als ein Grad
+     * weit.
+     */
+    OptionalInt pendingTarget(String id);
 }
