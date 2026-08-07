@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.domain.model.batteryschedule.BatterySchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.AutoApplyOutcome;
 import fabianaschwanden.smarthome.domain.model.forecast.AutoApplyState;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ApplyRecommendation;
+import fabianaschwanden.smarthome.domain.port.in.forecast.ChargingBlockedByWellness;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ForecastAccuracyQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ManageAutoApply;
 import fabianaschwanden.smarthome.domain.port.in.forecast.NoRecommendationAvailable;
@@ -123,6 +124,11 @@ public class AutoApplyService implements ManageAutoApply {
             // zu uebernehmen.
             repository.save(state.ranOn(today, AutoApplyOutcome.NO_RECOMMENDATION,
                     "Heute kein Überschussfenster"));
+        } catch (ChargingBlockedByWellness e) {
+            // Ebenfalls ein Fachfall, und ein gewollter: Beides zusammen zoege mehr, als
+            // die Anlage liefert.
+            repository.save(state.ranOn(today, AutoApplyOutcome.BLOCKED_BY_WELLNESS,
+                    "Der Whirlpool heizt im Überschussfenster"));
         }
     }
 

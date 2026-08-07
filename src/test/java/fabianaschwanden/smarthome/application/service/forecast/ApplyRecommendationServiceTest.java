@@ -33,6 +33,27 @@ class ApplyRecommendationServiceTest {
     private static final Instant FROM = Instant.parse("2026-08-04T09:00:00Z");
     private static final Instant TO = Instant.parse("2026-08-04T13:00:00Z");
 
+    /** Keine anstehende Wellness-Heizung - der Regelfall fuer diese Tests. */
+    private static final class FakeWellnessSchedules
+            implements fabianaschwanden.smarthome.domain.port.in.applianceschedule.ManageApplianceSchedules {
+
+        @Override
+        public java.util.List<fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule> all() {
+            return java.util.List.of();
+        }
+
+        @Override
+        public fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule save(
+                fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule schedule) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void delete(java.util.UUID id) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
     private static final class FakeSurplus implements SurplusQuery {
         Optional<ChargeRecommendation> recommendation = Optional.empty();
 
@@ -60,7 +81,7 @@ class ApplyRecommendationServiceTest {
     private final FakeSurplus surplus = new FakeSurplus();
     private final FakeSchedules schedules = new FakeSchedules();
     private final ApplyRecommendationService service =
-            new ApplyRecommendationService(surplus, schedules);
+            new ApplyRecommendationService(surplus, schedules, new FakeWellnessSchedules());
 
     private void empfehlungLiegtVor() {
         surplus.recommendation = Optional.of(new ChargeRecommendation(

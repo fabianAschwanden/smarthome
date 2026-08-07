@@ -36,6 +36,16 @@ SoC-basierte Steuerung.
 > nichts. Seither lehnt auch der Mock das Schalten der Heizung ab: Eine Attrappe, die
 > mehr kann als das Gerät, ist schlimmer als gar keine.
 
+**Heizen und erzwungenes Laden schliessen sich aus.** Ein Batterie-Countdown setzt den
+Manuell-Modus und lädt unabhängig vom tatsächlichen Überschuss; zusammen mit der
+Whirlpool-Heizung käme der Rest aus dem Netz. Deshalb: Wird die Heizung eingeplant, werden
+Ladeaufträge im selben Fenster abgeschaltet; und `POST /recommendation/apply` antwortet mit
+409, wenn im Fenster geheizt wird (die Automatik vermerkt `BLOCKED_BY_WELLNESS`). Geprüft
+wird der Zeitraum, nicht bloss «ist überhaupt etwas geplant» – eine Heizung für morgen darf
+das Laden heute nicht verhindern. Die Batterie lädt in dieser Zeit über den
+Automatik-Modus: Der SMARTFOX regelt nach dem echten Überschuss und nimmt sich, was die
+Heizung übrig lässt.
+
 Ausgeführt werden die Aufträge von der Wellness-Zeitsteuerung; ausgeführt werden sie von der neuen **Wellness-Zeitsteuerung**
 (`/api/appliance-schedules`, Tabelle `appliance_schedule`, Ticker
 `appliance-schedule.tick-interval`). Nur Countdowns – der Anlass ist ein Fenster von
