@@ -141,5 +141,10 @@ Nach Etappe 5 ist der Use Case per API/Swagger nutzbar – Frontend kann getrenn
   Aggregation wie das Energie-Diagramm, damit beide Anzeigen nicht auseinanderlaufen.
 - **F2 Auto-Apply:** Empfehlung automatisch als Zeitplan anlegen (Opt-in-Toggle),
   Nachrichtenzentrale meldet das Fenster.
-- **F3 Storen-Hitzeschutz:** GTI + Innentemperatur (UC 8) → Storen-Schedule (UC 5).
+- ✅ **F3 Storen-Hitzeschutz** *(2026-08-07)*: GTI + Innentemperatur (UC 8) →
+  Storen-Countdowns (UC 5). Beschattet wird nur, wenn **beides** zusammenkommt – ein
+  strahlender Wintertag heizt das Haus nicht auf. Zugefahren wird auf **Geräte-Position 2
+  («98 % zu»)**, nicht auf 0: Ein Spalt bleibt offen, der Behang sitzt nicht auf dem
+  Anschlag auf und der Raum wird nicht völlig dunkel. Übernommen wird auf Knopfdruck;
+  automatisch wird es erst mit F2.
 - **F4 Wellness-Fenster:** Whirlpool-/Becken-Heizung (UC 6) in Überschussfenster legen.

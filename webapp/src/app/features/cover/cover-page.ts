@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CoverService } from '../../core/services/cover.service';
+import { ForecastService } from '../../core/services/forecast.service';
 import { Cover } from '../../core/models/cover';
 import { ItemImage } from '../../shared/item-image';
 
@@ -18,6 +19,37 @@ import { ItemImage } from '../../shared/item-image';
         <h2 class="text-2xl font-semibold">Storen</h2>
         <a routerLink="/covers/schedule" class="seg px-3 py-1.5 text-sm">Zeitsteuerung</a>
       </div>
+
+      <!-- Hitzeschutz (Use Case 15 / F3): nur sichtbar, wenn es heute etwas zu
+           beschatten gibt - starke Einstrahlung UND warme Raeume. -->
+      @if (heatProtection(); as hp) {
+        <article class="glass-card border-l-4 border-l-[color:var(--accent)] p-5">
+          <h3 class="font-medium">Hitzeschutz empfohlen</h3>
+          <p class="mt-1 text-sm text-[color:var(--ink-soft)]">
+            {{ time(hp.from) }} bis {{ time(hp.to) }} · bis {{ hp.peakGti.toFixed(0) }} W/m² · innen
+            {{ hp.indoorTemp.toFixed(1) }} °C
+          </p>
+          <p class="mt-2 text-sm">
+            Die Storen fahren auf <strong>{{ hp.closedPercent }} % zu</strong> und öffnen danach
+            wieder. Ein Spalt bleibt offen – ganz unten sitzt der Behang auf dem Anschlag auf.
+          </p>
+          <div class="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              class="seg px-4 py-1.5 text-sm"
+              [disabled]="applying()"
+              (click)="applyHeatProtection()"
+            >
+              {{ applying() ? 'Wird übernommen …' : 'Übernehmen' }}
+            </button>
+            @if (applied(); as count) {
+              <span class="text-sm text-[color:var(--ink-soft)]"
+                >{{ count }} Zeitsteuerungen angelegt</span
+              >
+            }
+          </div>
+        </article>
+      }
 
       @if (covers(); as list) {
         @if (list.length === 0) {
@@ -137,8 +169,33 @@ import { ItemImage } from '../../shared/item-image';
 })
 export class CoverPage {
   private readonly api = inject(CoverService);
+  private readonly forecast = inject(ForecastService);
 
   protected readonly covers = this.api.covers;
+  protected readonly heatProtection = this.forecast.heatProtection;
+  protected readonly applying = signal(false);
+  protected readonly applied = signal<number | null>(null);
+
+  constructor() {
+    // Einmal beim Öffnen: Das Fenster stammt aus der stündlich gerechneten Prognose.
+    this.forecast.loadHeatProtection();
+  }
+
+  /** Uhrzeit ohne Datum – das Fenster liegt immer heute. */
+  protected time(iso: string): string {
+    return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  protected applyHeatProtection(): void {
+    this.applying.set(true);
+    this.forecast.applyHeatProtection().subscribe({
+      next: (schedules) => {
+        this.applied.set(schedules.length);
+        this.applying.set(false);
+      },
+      error: () => this.applying.set(false),
+    });
+  }
 
   /**
    * „% geschlossen" für die UI (100 = zu). Das Gerät meldet die Position invertiert

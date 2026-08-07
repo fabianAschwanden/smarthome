@@ -4,7 +4,8 @@ import { Observable, startWith, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { pollingTimer } from '../polling';
 import { BatterySchedule } from '../models/battery-schedule';
-import { Accuracy, PvForecast, Surplus } from '../models/forecast';
+import { CoverSchedule } from '../models/cover-schedule';
+import { Accuracy, HeatProtection, PvForecast, Surplus } from '../models/forecast';
 
 /**
  * Holt PV-Prognose und Überschussfenster vom eigenen Backend (BFF) und exponiert sie als
@@ -57,6 +58,25 @@ export class ForecastService {
    * Lädt die Prognosegüte nach. Bewusst nicht gepollt: Der Wert ändert sich einmal je
    * Tag, ein Timer wäre reine Beschäftigung.
    */
+  private readonly heatProtectionState = signal<HeatProtection | null>(null);
+  /** Beschattungsfenster; null, wenn keines vorliegt – an kühlen Tagen der Normalfall. */
+  readonly heatProtection = this.heatProtectionState.asReadonly();
+
+  /**
+   * Lädt das Beschattungsfenster. Antwortet das Backend mit 204, liegt keines vor; der
+   * Signal-Wert wird dann bewusst auf null gesetzt statt den alten Stand zu behalten.
+   */
+  loadHeatProtection(): void {
+    this.http
+      .get<HeatProtection>('/api/forecast/heat-protection', { observe: 'response' })
+      .subscribe((response) => this.heatProtectionState.set(response.body ?? null));
+  }
+
+  /** Übernimmt das Fenster als Storen-Zeitsteuerung (Use Case 5). 409 = kein Fenster. */
+  applyHeatProtection(): Observable<CoverSchedule[]> {
+    return this.http.post<CoverSchedule[]>('/api/forecast/heat-protection/apply', {});
+  }
+
   loadAccuracy(): void {
     this.http
       .get<Accuracy>('/api/forecast/accuracy')

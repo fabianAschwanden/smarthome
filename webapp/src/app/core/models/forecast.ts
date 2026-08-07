@@ -63,3 +63,16 @@ export interface Accuracy {
   ratedDays: number;
   days: AccuracyDay[];
 }
+
+/** Fenster, in dem Beschatten gegen die Hitze lohnt (UC 15 / F3). */
+export interface HeatProtection {
+  from: string;
+  /** Exklusiv – dann wird wieder geöffnet. */
+  to: string;
+  peakGti: number;
+  indoorTemp: number;
+  /** Geräteskala (0 = zu, 100 = offen). */
+  shadedPosition: number;
+  /** Dieselbe Angabe in der Sprache der Oberfläche – das Backend rechnet um. */
+  closedPercent: number;
+}
