@@ -61,18 +61,23 @@ export class FakeService {
 }
 
 export class FakeAccessory {
+  /** Schluessel ist "typ" bzw. "typ:subtype" - eine Anlage haelt mehrere Schalter. */
   readonly services = new Map<string, FakeService>();
   displayName = '';
   context: Record<string, unknown> = {};
 
   getService(type: string): FakeService | undefined {
-    return this.services.get(type);
+    return this.services.get(String(type));
   }
 
-  addService(type: string, name: string): FakeService {
-    const service = new FakeService(type);
+  getServiceById(type: string, subtype: string): FakeService | undefined {
+    return this.services.get(`${String(type)}:${subtype}`);
+  }
+
+  addService(type: string, name: string, subtype?: string): FakeService {
+    const service = new FakeService(String(type));
     service.setCharacteristic('Name', name);
-    this.services.set(type, service);
+    this.services.set(subtype ? `${String(type)}:${subtype}` : String(type), service);
     return service;
   }
 
@@ -106,6 +111,8 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
       SmokeSensor: 'SmokeSensor',
       WindowCovering: 'WindowCovering',
       HeaterCooler: 'HeaterCooler',
+      Thermostat: 'Thermostat',
+      Lightbulb: 'Lightbulb',
     },
     Characteristic: {
       Manufacturer: 'Manufacturer',
@@ -113,6 +120,19 @@ export function fakePlatform(): SmarthomePlatform & FakePlatform {
       SerialNumber: 'SerialNumber',
       On: 'On',
       CurrentTemperature: 'CurrentTemperature',
+      TargetTemperature: 'TargetTemperature',
+      ConfiguredName: 'ConfiguredName',
+      CurrentHeatingCoolingState: Object.assign('CurrentHeatingCoolingState', {
+        OFF: 0,
+        HEAT: 1,
+        COOL: 2,
+      }),
+      TargetHeatingCoolingState: Object.assign('TargetHeatingCoolingState', {
+        OFF: 0,
+        HEAT: 1,
+        COOL: 2,
+        AUTO: 3,
+      }),
       CurrentRelativeHumidity: 'CurrentRelativeHumidity',
       // Die Konstanten entsprechen den HAP-Werten.
       SmokeDetected: Object.assign('SmokeDetected', {

@@ -44,7 +44,7 @@ npm run build   # nach dist/
 Die Tests decken die Abbildungslogik ab und arbeiten gegen eine HAP-Attrappe
 (`test/harness.ts`) – Homebridge wird dafür nicht gestartet.
 
-## Geräteklassen (Stand Etappe 5)
+## Geräteklassen
 
 | Klasse | HomeKit | Besonderheit |
 |---|---|---|
@@ -53,6 +53,7 @@ Die Tests decken die Abbildungslogik ab und arbeiten gegen eine HAP-Attrappe
 | Rauchmelder | `SmokeSensor` (+ `StatusLowBattery`) | Batteriestatus nur bei bekanntem Wert |
 | Store | `WindowCovering` | **Keine Invertierung** – REST und HomeKit zählen beide 0 = zu |
 | Klima | `HeaterCooler` | `FAN` wird als `AUTO` gezeigt und nie gesetzt; Boost bleibt im Dashboard |
+| Wellness | `Thermostat` + `Lightbulb`/`Switch` je Funktion | Ein Accessory pro Anlage; welche Funktionen es gibt, sagt das Gerät |
 
 Der Rauchmelder ist die dokumentierte **Ausnahme** von der Regel «offline → nicht
 erreichbar»: Batteriemelder funken sporadisch, ein dauerhaftes «keine Antwort» würde die
@@ -60,6 +61,8 @@ Kachel entwerten. Er meldet deshalb den zuletzt bekannten Alarmzustand weiter.
 
 ## Grenzen
 
+- Der Wellness-**Thermostat** kennt nur AUS und HEIZEN. Kühlen kann keine der Anlagen,
+  und ein Modus, den das Gerät nicht hat, wäre ein Versprechen, das beim Antippen bricht.
 - **Boost** (Turbo der Klimaanlage) und der Modus **FAN** haben in HomeKit kein
   Gegenstück und bleiben dem Dashboard vorbehalten. FAN wird als `AUTO` angezeigt –
   «aus» wäre falscher –, aber aus HomeKit nie gesetzt.

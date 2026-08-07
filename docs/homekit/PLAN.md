@@ -189,7 +189,10 @@ Nach Etappe 3 ist die Bridge alltagstauglich; Storen und Klima kommen inkremente
 
 - **F1 Push statt Poll:** SSE- oder WebSocket-Endpunkt in der App, damit Zustandswechsel
   ohne Poll-Verzögerung in der Home-App landen.
-- **F2 Wellness:** Whirlpool/Becken als HeaterCooler + Switches.
+- ✅ **F2 Wellness** *(2026-08-07)*: Whirlpool und Becken je als ein Accessory –
+  Heizung als **Thermostat** (nur AUS/HEIZEN, kühlen kann keine der Anlagen), Licht als
+  **Lampe**, Pumpe/Massage/Filter als Schalter. Welche Funktionen es gibt, sagt das Gerät:
+  Der Whirlpool kennt Massage, das Becken nicht.
 - **F3 Kameras:** HomeKit Secure Video über go2rtc – eigenes Projekt.
 - **F4 PV-Prognose sichtbar machen:** HomeKit kennt keine Energie-Profile; denkbar wäre
   ein virtueller Schalter «Überschuss erwartet» als Automations-Auslöser.
