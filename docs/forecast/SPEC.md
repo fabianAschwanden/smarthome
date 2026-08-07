@@ -24,6 +24,13 @@ Out of Scope (Folgestufen, siehe PLAN.md §Folgestufen): automatisches Schalten 
 Nutzeraktion, Storen-Hitzeschutz nach Sonnenstand, Wellness-Heizung in Überschussfenster,
 SoC-basierte Steuerung.
 
+**Nachgeliefert (F3, 2026-08-07):** Storen-Hitzeschutz. `GET /api/forecast/heat-protection`
+liefert das Fenster, `POST .../apply` legt je Store zwei Countdowns an (zufahren, öffnen).
+Bedingung ist **beides**: Einstrahlung ≥ `forecast.heat-protection.gti-threshold` und
+Innentemperatur ≥ `forecast.heat-protection.indoor-temp`. Zugefahren wird auf
+Geräte-Position 2 – in der Anzeige «98 % zu». Ohne Messwert des Innensensors gibt es
+keine Empfehlung; zu raten hiesse, an einem kühlen Apriltag zu beschatten.
+
 **Nachgeliefert (F1, 2026-08-07):** Genauigkeits-Tracking. `GET /api/forecast/accuracy`
 liefert Prognose gegen Ist je Tag samt MAPE. Ein Tag zählt nur mit, wenn der Fehler
 definiert ist: offene Tage und solche ganz ohne Ertrag bleiben draussen – bei 0 kWh Ist
