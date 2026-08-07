@@ -31,15 +31,14 @@ public class PanacheAutoApplyStateRepository
     @Override
     @Transactional
     public void save(AutoApplyState state) {
-        AutoApplyStateEntity entity = findById(AutoApplyStateEntity.SINGLETON_ID);
-        if (entity == null) {
-            entity = new AutoApplyStateEntity();
-            entity.id = AutoApplyStateEntity.SINGLETON_ID;
-            persist(entity);
-        }
+        // Erst füllen, dann persistieren - siehe PanacheForecastAccuracyRepository.
+        AutoApplyStateEntity entity = findByIdOptional(AutoApplyStateEntity.SINGLETON_ID)
+                .orElseGet(AutoApplyStateEntity::new);
+        entity.id = AutoApplyStateEntity.SINGLETON_ID;
         entity.enabled = state.enabled();
         entity.lastRunDay = state.lastRunDay();
         entity.lastOutcome = state.lastOutcome() == null ? null : state.lastOutcome().name();
         entity.lastDetail = state.lastDetail();
+        persist(entity);
     }
 }

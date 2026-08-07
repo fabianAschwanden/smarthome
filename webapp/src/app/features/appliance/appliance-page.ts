@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ApplianceService } from '../../core/services/appliance.service';
+import { ForecastService } from '../../core/services/forecast.service';
 import { Appliance, ApplianceFunction, ApplianceTemperature } from '../../core/models/appliance';
 import { TempDial } from '../../shared/temp-dial';
 import { ItemImage } from '../../shared/item-image';
@@ -23,6 +24,34 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
   template: `
     <section class="space-y-5">
       <h2 class="text-2xl font-semibold">Wellness</h2>
+
+      <!-- Aufheizen im Ueberschussfenster (Use Case 15 / F4). Nur sichtbar, wenn die
+           Prognose heute ein Fenster erwartet. -->
+      @if (surplusWindow(); as fenster) {
+        <article class="glass-card space-y-3 p-5">
+          <h3 class="font-medium">Mit dem PV-Überschuss aufheizen</h3>
+          <p class="text-sm text-[color:var(--ink-soft)]">
+            Erwartetes Fenster {{ zeit(fenster.from) }}–{{ zeit(fenster.to) }}, rund
+            {{ fenster.expectedKwh }} kWh. Die Heizung geht zu Beginn an und am Ende aus.
+          </p>
+          <p class="text-xs text-amber-300/90">
+            Am Fensterende wird auch dann ausgeschaltet, wenn die Heizung vorher schon lief.
+          </p>
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="seg px-4 py-1.5 text-sm"
+              [disabled]="planning()"
+              (click)="ueberschussNutzen()"
+            >
+              {{ planning() ? 'Wird geplant …' : 'Einplanen' }}
+            </button>
+            @if (planResult(); as msg) {
+              <span class="text-sm text-[color:var(--ink-soft)]">{{ msg }}</span>
+            }
+          </div>
+        </article>
+      }
 
       @if (appliances(); as list) {
         @if (list.length === 0) {
@@ -189,8 +218,32 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
 })
 export class AppliancePage {
   private readonly api = inject(ApplianceService);
+  private readonly forecast = inject(ForecastService);
 
   protected readonly appliances = this.api.appliances;
+  protected readonly planning = signal(false);
+  protected readonly planResult = signal<string | null>(null);
+
+  /** Das erste erwartete Überschussfenster; null, wenn heute keines vorliegt. */
+  protected readonly surplusWindow = computed(() => this.forecast.surplus()?.windows?.[0] ?? null);
+
+  protected zeit(iso: string): string {
+    return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  protected ueberschussNutzen(): void {
+    this.planning.set(true);
+    this.forecast.applyWellnessSurplus().subscribe({
+      next: (schedules) => {
+        this.planResult.set(`${schedules.length} Schaltaufträge angelegt`);
+        this.planning.set(false);
+      },
+      error: () => {
+        this.planResult.set('Derzeit kein Überschussfenster');
+        this.planning.set(false);
+      },
+    });
+  }
 
   protected functionsOf(a: Appliance): { key: ApplianceFunction; label: string; on: boolean }[] {
     return Object.keys(a.functions).map((k) => ({

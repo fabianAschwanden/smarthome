@@ -5,7 +5,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { pollingTimer } from '../polling';
 import { BatterySchedule } from '../models/battery-schedule';
 import { CoverSchedule } from '../models/cover-schedule';
-import { Accuracy, AutoApply, HeatProtection, PvForecast, Surplus } from '../models/forecast';
+import {
+  Accuracy,
+  ApplianceSchedule,
+  AutoApply,
+  HeatProtection,
+  PvForecast,
+  Surplus,
+} from '../models/forecast';
 
 /**
  * Holt PV-Prognose und Überschussfenster vom eigenen Backend (BFF) und exponiert sie als
@@ -84,6 +91,16 @@ export class ForecastService {
   private readonly autoApplyState = signal<AutoApply | null>(null);
   /** Zustand der Lade-Automatik; treibt auch die Meldung in der Nachrichtenzentrale. */
   readonly autoApply = this.autoApplyState.asReadonly();
+
+  /**
+   * Legt die Wellness-Heizung ins Überschussfenster. 409 = kein Fenster vorhanden.
+   *
+   * <p>Achtung: Am Fensterende wird auch dann ausgeschaltet, wenn die Heizung vorher
+   * schon lief – deshalb bleibt es beim Knopfdruck und läuft nicht automatisch.
+   */
+  applyWellnessSurplus(): Observable<ApplianceSchedule[]> {
+    return this.http.post<ApplianceSchedule[]>('/api/forecast/wellness-surplus/apply', {});
+  }
 
   loadAutoApply(): void {
     this.http
