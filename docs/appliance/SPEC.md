@@ -118,6 +118,18 @@ Backend sind umgesetzt:
   schreibt später den passenden Geräte-Datenpunkt.
 
 
+## Die Heizung ist kein Schalter
+
+`HEATER` erscheint in der Funktionsliste, lässt sich aber **nicht schalten**: Beim
+Gecko-Spa ist die Heizung dauerhaft aktiv und folgt ausschliesslich der Soll-Temperatur.
+Der Adapter weist ein Ein/Aus ausdrücklich zurück (HTTP 503), und der Zustand wird
+konstant als `ON` gemeldet.
+
+Bedient wird sie deshalb über die Temperatur – in der Weboberfläche wie in HomeKit. Die
+Kacheln zeigen für die Heizung keinen Schalter, und der HomeKit-Thermostat bietet nur
+den Modus «Heizen» an. Auch der Mock lehnt das Schalten ab: Eine Attrappe, die mehr kann
+als das Gerät, lässt Funktionen entstehen, die nur im Test laufen.
+
 ## Soll-Temperatur: verzögerte Übernahme
 
 Der Gecko-Befehl wirkt nicht sofort – unmittelbar nach dem Setzen meldet die Anlage noch

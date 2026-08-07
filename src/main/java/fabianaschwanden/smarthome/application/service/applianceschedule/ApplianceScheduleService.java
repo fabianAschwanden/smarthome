@@ -70,9 +70,9 @@ public class ApplianceScheduleService implements ManageApplianceSchedules {
                 continue;
             }
             try {
-                appliances.switchFunction(schedule.applianceId(), schedule.function(), schedule.state());
-                LOG.infof("Wellness-Zeitsteuerung: %s %s -> %s",
-                        schedule.applianceId(), schedule.function(), schedule.state());
+                appliances.setTargetTemperature(schedule.applianceId(), schedule.targetTemp());
+                LOG.infof("Wellness-Zeitsteuerung: %s -> Soll %d °C",
+                        schedule.applianceId(), schedule.targetTemp());
             } catch (Exception e) {
                 // Auch ein Fehlschlag deaktiviert den Auftrag: Sonst versuchte der Ticker
                 // es alle paar Sekunden erneut, und ein defektes Geraet fuellte das Log.

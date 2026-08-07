@@ -36,6 +36,32 @@ describe('AppliancePage', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Whirlpool');
     expect(el.textContent).toContain('Pumpe');
-    expect(el.textContent).toContain('Heizung');
+  });
+
+  it('zeigt keinen Schalter für die Heizung', async () => {
+    // Die Heizung eines Gecko-Spas lässt sich nicht schalten – sie folgt der
+    // Soll-Temperatur, und die App weist ein Ein/Aus mit 503 zurück. Ein Knopf, der nur
+    // scheitern kann, gehört nicht auf die Kachel.
+    const fixture = TestBed.createComponent(AppliancePage);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const list: Appliance[] = [
+      {
+        id: 'whirlpool',
+        name: 'Whirlpool',
+        room: 'Wellness',
+        online: true,
+        observedAt: 'x',
+        functions: { PUMP: 'OFF', HEATER: 'ON' },
+      },
+    ];
+    httpMock.expectOne('/api/appliances').flush(list);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Pumpe');
+    expect(el.textContent).not.toContain('Heizung');
   });
 });

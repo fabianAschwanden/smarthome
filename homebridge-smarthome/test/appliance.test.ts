@@ -56,8 +56,8 @@ describe('ApplianceHandler – Aufbau', () => {
     expect(fake.getServiceById('Switch', 'FILTER')).toBeDefined();
   });
 
-  it('zeigt die Heizung nur als Thermostat, nicht zusaetzlich als Schalter', () => {
-    // Zwei Bedienelemente fuer dieselbe Sache waeren eine Einladung zum Widerspruch.
+  it('legt fuer die Heizung keinen Schalter an', () => {
+    // Sie laesst sich nicht schalten - ein Knopf dafuer koennte nur scheitern.
     const { fake, thermostat } = setup();
     expect(thermostat).toBeDefined();
     expect(fake.getServiceById('Switch', 'HEATER')).toBeUndefined();
@@ -78,12 +78,12 @@ describe('ApplianceHandler – Aufbau', () => {
 });
 
 describe('ApplianceHandler – Thermostat', () => {
-  it('bietet nur AUS und HEIZEN an', () => {
-    // Kuehlen kann die Anlage nicht; einen Modus anzubieten, den das Geraet nicht hat,
-    // waere ein Versprechen, das beim Antippen bricht.
+  it('bietet nur HEIZEN an - die Heizung laesst sich gar nicht schalten', () => {
+    // Der Gecko weist ein Ein/Aus mit 503 zurueck. Einen Modus anzubieten, den das
+    // Geraet nicht hat, waere ein Versprechen, das beim Antippen bricht.
     const { thermostat } = setup();
     expect(thermostat.getCharacteristic('TargetHeatingCoolingState').props).toEqual({
-      validValues: [0, 1],
+      validValues: [1],
     });
   });
 
@@ -107,10 +107,10 @@ describe('ApplianceHandler – Thermostat', () => {
     expect(thermostat.getCharacteristic('CurrentHeatingCoolingState').getHandler!()).toBe(0);
   });
 
-  it('schaltet die Heizung ueber den Modus', async () => {
+  it('bietet gar keinen Schreibweg fuer den Modus an', async () => {
     const { thermostat, client } = setup();
-    await thermostat.getCharacteristic('TargetHeatingCoolingState').setHandler!(0);
-    expect(client.setApplianceFunction).toHaveBeenCalledWith('whirlpool', 'HEATER', false);
+    expect(thermostat.getCharacteristic('TargetHeatingCoolingState').setHandler).toBeUndefined();
+    expect(client.setApplianceFunction).not.toHaveBeenCalled();
   });
 
   it('rundet die Soll-Temperatur auf ganze Grad', async () => {
@@ -160,7 +160,7 @@ describe('ApplianceHandler – Funktionen schalten', () => {
       temperature: { current: 32, target: 27, min: 8, max: 41 },
     });
     expect(fn('PUMP')!.getCharacteristic('On').value).toBe(true);
-    expect(thermostat.getCharacteristic('CurrentHeatingCoolingState').value).toBe(0);
+    expect(thermostat.getCharacteristic('CurrentHeatingCoolingState').value).toBe(0);  // HEATER: OFF
     expect(thermostat.getCharacteristic('TargetTemperature').value).toBe(27);
   });
 });

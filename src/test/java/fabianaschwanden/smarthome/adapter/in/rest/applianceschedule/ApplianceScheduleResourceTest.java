@@ -4,7 +4,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 /**
@@ -32,7 +31,7 @@ class ApplianceScheduleResourceTest {
         org.junit.jupiter.api.Assertions.assertEquals(200, status);
         String id = given().when().get("/api/appliance-schedules")
                 .then().statusCode(200)
-                .body("[0].function", is("HEATER"))
+                .body("[0].targetTemp", notNullValue())
                 .body("[0].fireAt", notNullValue())
                 .extract().path("[0].id");
 

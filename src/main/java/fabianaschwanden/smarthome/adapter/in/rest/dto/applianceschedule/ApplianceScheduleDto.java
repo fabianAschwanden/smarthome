@@ -4,14 +4,13 @@ import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedu
 
 /** Transport-Objekt eines Wellness-Schaltauftrags. */
 public record ApplianceScheduleDto(
-        String id, String applianceId, String function, String state, String fireAt, boolean enabled) {
+        String id, String applianceId, int targetTemp, String fireAt, boolean enabled) {
 
     public static ApplianceScheduleDto from(ApplianceSchedule schedule) {
         return new ApplianceScheduleDto(
                 schedule.id().toString(),
                 schedule.applianceId(),
-                schedule.function().name(),
-                schedule.state().name(),
+                schedule.targetTemp(),
                 schedule.fireAt().toString(),
                 schedule.enabled());
     }

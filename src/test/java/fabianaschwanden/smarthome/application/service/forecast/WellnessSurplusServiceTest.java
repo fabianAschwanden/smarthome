@@ -1,7 +1,6 @@
 package fabianaschwanden.smarthome.application.service.forecast;
 
-import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
-import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
+import fabianaschwanden.smarthome.application.config.WellnessSurplusConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.ChargeRecommendation;
 import fabianaschwanden.smarthome.domain.model.forecast.Confidence;
@@ -38,21 +37,24 @@ class WellnessSurplusServiceTest {
     void setUp() {
         surplus = new FakeSurplus();
         schedules = new FakeSchedules();
-        service = new WellnessSurplusService(surplus, schedules, List.of("whirlpool", "pool"));
+        service = new WellnessSurplusService(surplus, schedules, new FakeConfig());
     }
 
     @Test
-    void legt_je_anlage_ein_ein_und_ein_ausschalten_an() {
+    void hebt_zu_fensterbeginn_an_und_senkt_am_ende_zurueck() {
+        // Geregelt wird ueber die Soll-Temperatur: Die Heizung eines Gecko-Spas laesst
+        // sich nicht schalten, sie folgt dem Sollwert.
         surplus.recommendation = new ChargeRecommendation(FENSTER, Confidence.LEARNED);
 
         List<ApplianceSchedule> angelegt = service.applyWellnessSurplus();
 
         assertEquals(4, angelegt.size());
-        assertTrue(angelegt.stream().allMatch(s -> s.function() == ApplianceFunction.HEATER));
         assertEquals(
-                List.of("whirlpool:ON:" + VON, "whirlpool:OFF:" + BIS,
-                        "pool:ON:" + VON, "pool:OFF:" + BIS),
-                angelegt.stream().map(s -> s.applianceId() + ":" + s.state() + ":" + s.fireAt()).toList());
+                List.of("whirlpool:38:" + VON, "whirlpool:33:" + BIS,
+                        "pool:28:" + VON, "pool:24:" + BIS),
+                angelegt.stream()
+                        .map(s -> s.applianceId() + ":" + s.targetTemp() + ":" + s.fireAt())
+                        .toList());
     }
 
     @Test
@@ -64,7 +66,7 @@ class WellnessSurplusServiceTest {
         List<ApplianceSchedule> angelegt = service.applyWellnessSurplus();
 
         assertEquals(4, angelegt.size());
-        assertEquals(FunctionState.ON, angelegt.get(0).state());
+        assertEquals(38, angelegt.get(0).targetTemp());
     }
 
     @Test
@@ -90,6 +92,34 @@ class WellnessSurplusServiceTest {
         @Override
         public Optional<ChargeRecommendation> recommendation() {
             return Optional.ofNullable(recommendation);
+        }
+    }
+
+    /** Whirlpool 33 -> 38 °C, Becken 24 -> 28 °C. */
+    private static final class FakeConfig implements WellnessSurplusConfig {
+
+        @Override
+        public List<Entry> appliances() {
+            return List.of(entry("whirlpool", 33, 38), entry("pool", 24, 28));
+        }
+
+        private static Entry entry(String id, int base, int surplus) {
+            return new Entry() {
+                @Override
+                public String id() {
+                    return id;
+                }
+
+                @Override
+                public int baseTemp() {
+                    return base;
+                }
+
+                @Override
+                public int surplusTemp() {
+                    return surplus;
+                }
+            };
         }
     }
 

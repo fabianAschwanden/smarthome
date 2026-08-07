@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.adapter.out.appliance.mock;
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
+import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceUnavailable;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import org.jboss.logging.Logger;
 
@@ -67,8 +68,20 @@ public class MockApplianceDevice implements ApplianceDevice {
         return heated;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Die Heizung wird wie beim echten Gecko-Adapter abgelehnt: Sie ist kein Schalter,
+     * sondern folgt der Soll-Temperatur. Der Mock hat das frueher erlaubt - und genau
+     * deshalb konnte eine Funktion gebaut werden, die im Mock lief und an der realen
+     * Anlage mit 503 scheiterte. Eine Attrappe, die mehr kann als das Geraet, ist
+     * schlimmer als gar keine.
+     */
     @Override
     public void apply(ApplianceFunction function, FunctionState state) {
+        if (function == ApplianceFunction.HEATER) {
+            throw new ApplianceUnavailable("Heizung wird über die Soll-Temperatur gesteuert, nicht ein/aus");
+        }
         states.put(function, state);
         LOG.infof("[mock] Anlage '%s' (%s): %s -> %s", name, id, function, state);
     }
@@ -88,6 +101,10 @@ public class MockApplianceDevice implements ApplianceDevice {
         Temperature temp = heated
                 ? new Temperature(target, target - 1, tempMin, tempMax)  // simulierte Ist-Temp nahe Soll
                 : null;
-        return Optional.of(new State(new EnumMap<>(states), temp));
+        EnumMap<ApplianceFunction, FunctionState> reported = new EnumMap<>(states);
+        if (reported.containsKey(ApplianceFunction.HEATER)) {
+            reported.put(ApplianceFunction.HEATER, FunctionState.ON);  // dauerhaft aktiv, wie beim Gecko
+        }
+        return Optional.of(new State(reported, temp));
     }
 }

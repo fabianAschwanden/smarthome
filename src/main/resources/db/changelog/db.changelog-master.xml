@@ -18,5 +18,6 @@
     <include file="db/changelog/changes/0010-create-forecast-accuracy.xml"/>
     <include file="db/changelog/changes/0011-create-auto-apply.xml"/>
     <include file="db/changelog/changes/0012-create-appliance-schedule.xml"/>
+    <include file="db/changelog/changes/0013-appliance-schedule-temperature.xml"/>
 
 </databaseChangeLog>
