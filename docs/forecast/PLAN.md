@@ -134,7 +134,11 @@ Nach Etappe 5 ist der Use Case per API/Swagger nutzbar – Frontend kann getrenn
 
 ## Folgestufen (bewusst nicht in v1)
 
-- **F1 Genauigkeit:** Prognose-vs-Ist je Tag persistieren, Abweichung im UI (MAPE).
+- ✅ **F1 Genauigkeit** *(2026-08-07)*: Prognose-vs-Ist je Tag persistiert
+  (`forecast_accuracy`), MAPE auf der Energie-Seite. Die Prognose des Tages wird morgens
+  um 07:00 festgeschrieben und danach nicht mehr angefasst – sonst schmiegte sie sich im
+  Lauf des Tages an die Wirklichkeit an. Der Ist-Wert kommt nachts aus derselben
+  Aggregation wie das Energie-Diagramm, damit beide Anzeigen nicht auseinanderlaufen.
 - **F2 Auto-Apply:** Empfehlung automatisch als Zeitplan anlegen (Opt-in-Toggle),
   Nachrichtenzentrale meldet das Fenster.
 - **F3 Storen-Hitzeschutz:** GTI + Innentemperatur (UC 8) → Storen-Schedule (UC 5).

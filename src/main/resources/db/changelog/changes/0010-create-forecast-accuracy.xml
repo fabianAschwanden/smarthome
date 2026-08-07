@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 15 / F1: Prognose gegen Ist, ein Eintrag je Tag.
+
+         Der Tag ist der Primaerschluessel - keine technische id. "Fuer diesen Tag ist
+         schon etwas erfasst" wird damit von der Datenbank garantiert und nicht von der
+         Anwendung geprueft; ein zweiter Lauf kann die festgehaltene Prognose gar nicht
+         erst verdoppeln.
+
+         actual_kwh ist bewusst NULLABLE: Zwischen "Tag laeuft noch" und "Anlage hat
+         nichts produziert" muss unterschieden werden koennen. Eine 0 an dieser Stelle
+         wuerde jede Auswertung verfaelschen. -->
+    <changeSet id="0010-create-forecast-accuracy" author="smarthome">
+        <createTable tableName="forecast_accuracy">
+            <column name="day" type="date">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="forecast_kwh" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actual_kwh" type="double precision"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
