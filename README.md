@@ -71,10 +71,34 @@ bash scripts/dev-mock.sh --real   # Sidecar (:8765) + go2rtc (:1984) + echte Ger
 | 12 | **Alerts** | Push aufs Handy bei kritischem Alarm (Rauchalarm) über ntfy.sh | [alert](docs/alert/SPEC.md) |
 | 13 | **Native** | Fremde Geräte-Web-UIs (z. B. SMARTFOX) eingebettet, remote-tauglich (Reverse-Proxy) | [nativeview](docs/nativeview/SPEC.md) |
 | 14 | **Zeitsteuerung Batterie** | Schedule/Countdown fürs Lade-Relais (setzt Manuell-Modus) | [batteryschedule](docs/batteryschedule/SPEC.md) |
+| 15 | **PV-Prognose** | Ertragsvorhersage aus Wetter + gelerntem Anlagenprofil, Überschuss-Fenster | [forecast](docs/forecast/SPEC.md) |
+| 16 | **HomeKit** | Alle Geräte in der Home-App und für Siri – über eine Homebridge-Brücke | [homekit](docs/homekit/SPEC.md) |
 | – | **Item-Bilder** | Foto je Gerät hinterlegen (serverseitig, geteilt) | [itemimage](docs/itemimage/SPEC.md) |
 
 **Nachrichtenzentrale:** Geräte-Meldungen (Rauchalarm, offline, niedriger Akku) sind
 über die Glocke oben rechts einsehbar; ein aktiver Alarm lässt sie rot pulsieren.
+
+### HomeKit-Brücke
+
+Die Geräte erscheinen zusätzlich in Apples **Home-App** und lassen sich mit Siri
+bedienen. Die Brücke ist ein **eigener Prozess** neben der App: ein Homebridge-Container
+mit dem Plugin aus [`homebridge-smarthome/`](homebridge-smarthome/), das ausschliesslich
+über die REST-API mit der App spricht. Die App selbst weiss nichts von HomeKit – fällt
+die Brücke aus, merkt sie es nicht.
+
+**Koppeln:** In der Home-App «Gerät hinzufügen» → «Mehr Optionen» → Brücke «Smarthome»
+wählen und den Setup-Code scannen. Der Code steht in der `config.json` der Brücke
+(k8s-Secret `homebridge-config`); **den QR-Code verwenden** – der reine Ziffern-Code
+wird von neueren iOS-Versionen nicht mehr in jedem Dialog akzeptiert.
+
+**Wenn die Brücke nicht auftaucht:**
+
+| Symptom | Ursache | Prüfen |
+|---|---|---|
+| Brücke unsichtbar | mDNS erreicht das iPhone nicht | `dns-sd -B _hap._tcp` auf dem Mac; Bridge-Pod braucht `hostNetwork`, ufw muss `5353/udp` und den HAP-Port aus dem LAN erlauben |
+| Alle Geräte «keine Antwort» | Plugin erreicht die App nicht | `baseUrl` in der `config.json`, dann `GET /api/switches` vom Server aus |
+| Einzelnes Gerät «keine Antwort» | Das Gerät meldet `online: false` | Dashboard zeigt denselben Zustand – das ist Absicht, kein Brückenfehler |
+| Kritischer Schalter lässt sich nicht ausschalten | Absicht: HomeKit kann nicht rückfragen | Im Dashboard schalten, oder `allowCriticalOff` setzen |
 
 ## Unterstützte Plattformen & Protokolle
 
