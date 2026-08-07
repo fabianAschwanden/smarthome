@@ -6,7 +6,11 @@ import fabianaschwanden.smarthome.domain.model.forecast.ChargeRecommendation;
 import fabianaschwanden.smarthome.domain.model.forecast.Confidence;
 import fabianaschwanden.smarthome.domain.model.forecast.ConsumptionBaseline;
 import fabianaschwanden.smarthome.domain.model.forecast.SurplusWindow;
+import fabianaschwanden.smarthome.domain.model.battery.RelayState;
+import fabianaschwanden.smarthome.domain.model.batteryschedule.BatterySchedule;
+import fabianaschwanden.smarthome.domain.model.batteryschedule.BatteryScheduleType;
 import fabianaschwanden.smarthome.domain.port.in.applianceschedule.ManageApplianceSchedules;
+import fabianaschwanden.smarthome.domain.port.in.batteryschedule.ManageBatterySchedules;
 import fabianaschwanden.smarthome.domain.port.in.forecast.NoRecommendationAvailable;
 import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,13 +36,15 @@ class WellnessSurplusServiceTest {
 
     private FakeSurplus surplus;
     private FakeSchedules schedules;
+    private FakeBatterySchedules batterySchedules;
     private WellnessSurplusService service;
 
     @BeforeEach
     void setUp() {
         surplus = new FakeSurplus();
         schedules = new FakeSchedules();
-        service = new WellnessSurplusService(surplus, schedules, new FakeConfig());
+        batterySchedules = new FakeBatterySchedules();
+        service = new WellnessSurplusService(surplus, schedules, batterySchedules, new FakeConfig());
     }
 
     @Test
@@ -70,6 +77,28 @@ class WellnessSurplusServiceTest {
     }
 
     @Test
+    void schaltet_einen_ladeauftrag_im_heizfenster_ab() {
+        // Ein Batterie-Countdown setzt den Manuell-Modus und laedt unabhaengig vom
+        // tatsaechlichen Ueberschuss - zusammen mit der Heizung kaeme der Rest aus dem Netz.
+        surplus.recommendation = new ChargeRecommendation(FENSTER, Confidence.LEARNED);
+        BatterySchedule imFenster = countdown(VON.plusSeconds(600));
+
+        service.applyWellnessSurplus();
+
+        assertFalse(batterySchedules.byId(imFenster.id()).enabled());
+    }
+
+    @Test
+    void laesst_einen_ladeauftrag_ausserhalb_des_fensters_in_ruhe() {
+        surplus.recommendation = new ChargeRecommendation(FENSTER, Confidence.LEARNED);
+        BatterySchedule danach = countdown(BIS.plusSeconds(3600));
+
+        service.applyWellnessSurplus();
+
+        assertTrue(batterySchedules.byId(danach.id()).enabled());
+    }
+
+    @Test
     void wirft_ohne_jedes_fenster() {
         assertThrows(NoRecommendationAvailable.class, () -> service.applyWellnessSurplus());
         assertTrue(schedules.saved.isEmpty());
@@ -92,6 +121,44 @@ class WellnessSurplusServiceTest {
         @Override
         public Optional<ChargeRecommendation> recommendation() {
             return Optional.ofNullable(recommendation);
+        }
+    }
+
+    private BatterySchedule countdown(java.time.Instant fireAt) {
+        BatterySchedule schedule = new BatterySchedule(
+                UUID.randomUUID(), BatteryScheduleType.COUNTDOWN, RelayState.ON, true, null, null, fireAt);
+        batterySchedules.save(schedule);
+        return schedule;
+    }
+
+    private static final class FakeBatterySchedules implements ManageBatterySchedules {
+        private final java.util.Map<UUID, BatterySchedule> entries = new java.util.LinkedHashMap<>();
+
+        BatterySchedule byId(UUID id) {
+            return entries.get(id);
+        }
+
+        @Override
+        public List<BatterySchedule> all() {
+            return List.copyOf(entries.values());
+        }
+
+        @Override
+        public BatterySchedule save(BatterySchedule schedule) {
+            entries.put(schedule.id(), schedule);
+            return schedule;
+        }
+
+        @Override
+        public BatterySchedule setEnabled(UUID id, boolean enabled) {
+            BatterySchedule updated = entries.get(id).withEnabled(enabled);
+            entries.put(id, updated);
+            return updated;
+        }
+
+        @Override
+        public void delete(UUID id) {
+            entries.remove(id);
         }
     }
 

@@ -13,5 +13,11 @@ public enum AutoApplyOutcome {
     FORECAST_UNRELIABLE,
 
     /** Noch zu wenige ausgewertete Tage, um über die Verlässlichkeit zu urteilen. */
-    NOT_ENOUGH_DATA
+    NOT_ENOUGH_DATA,
+
+    /**
+     * Der Whirlpool heizt im selben Fenster. Erzwungenes Laden käme zum Teil aus dem
+     * Netz; die Batterie lädt derweil über den Automatik-Modus aus dem, was übrig bleibt.
+     */
+    BLOCKED_BY_WELLNESS
 }

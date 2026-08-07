@@ -29,13 +29,17 @@ class ApplianceScheduleResourceTest {
         // Alles ausser 200 und 409 ist ein Fehler - ein 500 hier hat schon einmal einen
         // echten Defekt im Persistence-Adapter aufgedeckt.
         org.junit.jupiter.api.Assertions.assertEquals(200, status);
-        String id = given().when().get("/api/appliance-schedules")
+        java.util.List<String> ids = given().when().get("/api/appliance-schedules")
                 .then().statusCode(200)
                 .body("[0].targetTemp", notNullValue())
                 .body("[0].fireAt", notNullValue())
-                .extract().path("[0].id");
+                .extract().path("id");
 
-        given().when().delete("/api/appliance-schedules/" + id).then().statusCode(204);
+        // ALLE wieder abraeumen: Ein liegengebliebener Heizauftrag haelt die Ladeempfehlung
+        // in anderen Tests zurueck - die beiden schliessen sich absichtlich aus.
+        for (String id : ids) {
+            given().when().delete("/api/appliance-schedules/" + id).then().statusCode(204);
+        }
     }
 
     @Test

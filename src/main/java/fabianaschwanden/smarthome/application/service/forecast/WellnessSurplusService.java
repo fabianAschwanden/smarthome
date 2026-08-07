@@ -3,7 +3,9 @@ package fabianaschwanden.smarthome.application.service.forecast;
 import fabianaschwanden.smarthome.application.config.WellnessSurplusConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.SurplusWindow;
+import fabianaschwanden.smarthome.domain.model.batteryschedule.BatterySchedule;
 import fabianaschwanden.smarthome.domain.port.in.applianceschedule.ManageApplianceSchedules;
+import fabianaschwanden.smarthome.domain.port.in.batteryschedule.ManageBatterySchedules;
 import fabianaschwanden.smarthome.domain.port.in.forecast.NoRecommendationAvailable;
 import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.WellnessSurplusPlan;
@@ -11,6 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +38,16 @@ import java.util.Optional;
  * jemand zwischendurch von Hand etwas anderes eingestellt hat.</b> Das ist die
  * unangenehme Seite der Sache und der Grund, warum es beim Knopfdruck bleibt und nicht
  * automatisch läuft.
+ *
+ * <p><b>Heizen und erzwungenes Laden schliessen sich aus.</b> Ein Batterie-Countdown
+ * setzt den Manuell-Modus und lädt unabhängig davon, ob gerade wirklich Überschuss da
+ * ist. Zusammen mit der Whirlpool-Heizung zöge das mehr, als die Anlage liefert – der
+ * Rest käme aus dem Netz, und damit wäre der Zweck der Übung verfehlt. Wird die Heizung
+ * eingeplant, werden anstehende Ladeaufträge deshalb abgeschaltet.
+ *
+ * <p>Die Batterie lädt dadurch nicht weniger, sondern anders: Im Automatik-Modus regelt
+ * der SMARTFOX nach dem tatsächlichen Überschuss und nimmt sich, was die Heizung übrig
+ * lässt.
  */
 @ApplicationScoped
 public class WellnessSurplusService implements WellnessSurplusPlan {
@@ -43,13 +56,18 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
 
     private final SurplusQuery surplus;
     private final ManageApplianceSchedules schedules;
+    private final ManageBatterySchedules batterySchedules;
     private final WellnessSurplusConfig config;
 
     @Inject
     public WellnessSurplusService(
-            SurplusQuery surplus, ManageApplianceSchedules schedules, WellnessSurplusConfig config) {
+            SurplusQuery surplus,
+            ManageApplianceSchedules schedules,
+            ManageBatterySchedules batterySchedules,
+            WellnessSurplusConfig config) {
         this.surplus = surplus;
         this.schedules = schedules;
+        this.batterySchedules = batterySchedules;
         this.config = config;
     }
 
@@ -67,9 +85,36 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
             created.add(schedules.save(
                     ApplianceSchedule.countdown(entry.id(), entry.baseTemp(), window.to())));
         }
-        LOG.infof("Wellness-Heizung ins Überschussfenster gelegt: %s bis %s, erwartet %.1f kWh",
-                window.from(), window.to(), window.expectedKwh());
+        int stopped = stopForcedCharging(window.from(), window.to());
+        LOG.infof("Wellness-Heizung ins Überschussfenster gelegt: %s bis %s, erwartet %.1f kWh"
+                        + (stopped > 0 ? " (%d Ladeauftrag/-aufträge abgeschaltet)" : ""),
+                window.from(), window.to(), window.expectedKwh(), stopped);
         return created;
+    }
+
+    /**
+     * Schaltet Ladeaufträge ab, die im Heizfenster feuern würden.
+     *
+     * <p>Nur Countdowns: Eine wiederkehrende Regel gehört dem Betreiber, sie hier still
+     * zu deaktivieren wäre ein Übergriff. Sie setzt allerdings ebenfalls den
+     * Manuell-Modus – wer beides hat, muss selbst entscheiden.
+     *
+     * @return wie viele Aufträge abgeschaltet wurden
+     */
+    private int stopForcedCharging(Instant from, Instant to) {
+        int stopped = 0;
+        for (BatterySchedule schedule : batterySchedules.all()) {
+            if (!schedule.enabled() || schedule.fireAt() == null) {
+                continue;
+            }
+            if (!schedule.fireAt().isBefore(from) && schedule.fireAt().isBefore(to)) {
+                batterySchedules.setEnabled(schedule.id(), false);
+                LOG.infof("Ladeauftrag %s abgeschaltet - der Whirlpool heizt in diesem Fenster",
+                        schedule.id());
+                stopped++;
+            }
+        }
+        return stopped;
     }
 
     /**

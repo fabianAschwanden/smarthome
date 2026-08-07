@@ -35,7 +35,9 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
             {{ fenster.expectedKwh }} kWh. Die Heizung geht zu Beginn an und am Ende aus.
           </p>
           <p class="text-xs text-amber-300/90">
-            Am Fensterende wird auch dann ausgeschaltet, wenn die Heizung vorher schon lief.
+            Am Fensterende wird auf die Grundtemperatur zurückgestellt – auch wenn du zwischendurch
+            von Hand etwas anderes eingestellt hast. Solange der Whirlpool heizt, lädt die Batterie
+            nicht zusätzlich auf Befehl.
           </p>
           <div class="flex items-center gap-3">
             <button
