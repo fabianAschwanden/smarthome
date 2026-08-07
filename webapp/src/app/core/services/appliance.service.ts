@@ -58,9 +58,16 @@ export class ApplianceService {
     });
   }
 
-  /** Soll-Temperatur einer beheizten Anlage setzen (°C). */
+  /**
+   * Soll-Temperatur einer beheizten Anlage setzen (°C).
+   *
+   * <p>Der Wunsch wird nur bis zur Antwort lokal gehalten. Danach führt das Backend Buch
+   * (`temperature.pending`) und wiederholt den Befehl, bis die Anlage ihn meldet – ein
+   * lokaler Merker würde beim nächsten Poll überschrieben, und genau daran scheiterten
+   * Sprünge über mehrere Grad.
+   */
   setTargetTemp(id: string, target: number): void {
-    // Optimistisch (Gecko-Befehl ist langsam, sonst springt der Wert zurück).
+    // Optimistisch, damit die Anzeige nicht bis zur Antwort hängt.
     this.pendingTemp.set(id, target);
     this.patchTarget(id, target);
 
@@ -85,13 +92,20 @@ export class ApplianceService {
     }
   }
 
-  /** Setzt die Soll-Temperatur im lokalen Signal sofort (optimistisch). */
+  /**
+   * Zeigt den Wunsch sofort als «wird gestellt» an (optimistisch).
+   *
+   * <p>Geschrieben wird `pending`, nicht `target`: Die Anlage hat den Wert noch nicht
+   * übernommen, und die Oberfläche soll den Unterschied zeigen können.
+   */
   private patchTarget(id: string, target: number): void {
     const current = this.appliancesState();
     if (current) {
       this.appliancesState.set(
         current.map((a) =>
-          a.id === id && a.temperature ? { ...a, temperature: { ...a.temperature, target } } : a,
+          a.id === id && a.temperature
+            ? { ...a, temperature: { ...a.temperature, pending: target } }
+            : a,
         ),
       );
     }
@@ -109,7 +123,7 @@ export class ApplianceService {
     let result = functions === a.functions ? a : { ...a, functions };
     const t = this.pendingTemp.get(a.id);
     if (t !== undefined && result.temperature) {
-      result = { ...result, temperature: { ...result.temperature, target: t } };
+      result = { ...result, temperature: { ...result.temperature, pending: t } };
     }
     return result;
   }

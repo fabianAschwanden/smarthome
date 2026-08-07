@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ApplianceService } from '../../core/services/appliance.service';
-import { Appliance, ApplianceFunction } from '../../core/models/appliance';
+import { Appliance, ApplianceFunction, ApplianceTemperature } from '../../core/models/appliance';
 import { TempDial } from '../../shared/temp-dial';
 import { ItemImage } from '../../shared/item-image';
 
@@ -55,20 +55,27 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                 @if (a.temperature; as t) {
                   <div>
                     <app-temp-dial
-                      [target]="t.target"
+                      [target]="soll(t)"
                       [current]="t.current"
                       [min]="t.min"
                       [max]="t.max"
                       label="Wassertemperatur"
                       emphasis="current"
                     />
+                    @if (wirdGestellt(t)) {
+                      <!-- Die Anlage uebernimmt den Wert verzoegert; bis dahin ist der
+                           Unterschied zwischen "gewuenscht" und "eingestellt" sichtbar. -->
+                      <p class="mt-2 text-center text-xs text-[color:var(--ink-soft)]">
+                        {{ t.pending }}° wird gestellt … (Anlage meldet {{ t.target }}°)
+                      </p>
+                    }
                     <div class="mt-3 flex items-center justify-center gap-5">
                       <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
                         >{{ t.max }}°</span
                       >
                       <button
                         type="button"
-                        [disabled]="!a.online || t.target >= t.max"
+                        [disabled]="!a.online || soll(t) >= t.max"
                         class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
                         (click)="changeTemp(a, 1)"
                         aria-label="Wärmer"
@@ -77,7 +84,7 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                       </button>
                       <button
                         type="button"
-                        [disabled]="!a.online || t.target <= t.min"
+                        [disabled]="!a.online || soll(t) <= t.min"
                         class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
                         (click)="changeTemp(a, -1)"
                         aria-label="Kälter"
@@ -88,6 +95,27 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                         >{{ t.min }}°</span
                       >
                     </div>
+
+                    <!-- Direkteingabe: Ein Sprung von 30 auf 38 Grad soll ein Schritt
+                         sein und nicht acht. -->
+                    <form
+                      class="mt-3 flex items-center justify-center gap-2"
+                      (submit)="setTemp(a, $event)"
+                    >
+                      <input
+                        type="number"
+                        class="glass w-24 rounded-full px-4 py-2 text-center tabular-nums"
+                        [attr.min]="t.min"
+                        [attr.max]="t.max"
+                        step="1"
+                        [value]="soll(t)"
+                        [disabled]="!a.online"
+                        aria-label="Soll-Temperatur eingeben"
+                      />
+                      <button type="submit" class="seg px-4 py-2 text-sm" [disabled]="!a.online">
+                        Setzen
+                      </button>
+                    </form>
                   </div>
                 }
 
@@ -176,13 +204,49 @@ export class AppliancePage {
     this.api.switchFunction(id, fn, on ? 'ON' : 'OFF');
   }
 
+  /**
+   * Was gerade gewollt ist: der noch offene Wunsch, sonst die gemeldete Soll-Temperatur.
+   *
+   * <p>Darauf rechnen auch die Schritte auf und ab. Rechnete man auf dem gemeldeten Wert
+   * weiter, käme man nie mehr als ein Grad weit – die Anlage übernimmt verzögert, und
+   * der zweite Klick startete wieder beim alten Stand.
+   */
+  protected soll(t: ApplianceTemperature): number {
+    return t.pending ?? t.target;
+  }
+
+  /** Läuft gerade ein Wunsch, den die Anlage noch nicht übernommen hat? */
+  protected wirdGestellt(t: ApplianceTemperature): boolean {
+    return t.pending !== null && t.pending !== undefined && t.pending !== t.target;
+  }
+
   protected changeTemp(a: Appliance, delta: number): void {
     const t = a.temperature;
     if (!t) {
       return;
     }
-    const next = t.target + delta;
-    if (next >= t.min && next <= t.max) {
+    this.applyTemp(a, this.soll(t) + delta);
+  }
+
+  /** Direkteingabe: ein Sprung über mehrere Grad statt vieler Einzelschritte. */
+  protected setTemp(a: Appliance, event: Event): void {
+    event.preventDefault();
+    const input = (event.target as HTMLFormElement).querySelector('input');
+    const wanted = Number(input?.value);
+    if (Number.isFinite(wanted)) {
+      this.applyTemp(a, Math.round(wanted));
+    }
+  }
+
+  private applyTemp(a: Appliance, wanted: number): void {
+    const t = a.temperature;
+    if (!t) {
+      return;
+    }
+    // Auf den Bereich der Anlage begrenzen statt die Eingabe zu verwerfen: Wer 45 tippt,
+    // will das Maximum - eine wortlos ignorierte Eingabe wäre die schlechtere Antwort.
+    const next = Math.min(t.max, Math.max(t.min, wanted));
+    if (next !== this.soll(t)) {
       this.api.setTargetTemp(a.id, next);
     }
   }

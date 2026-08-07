@@ -30,7 +30,9 @@ public class ApplianceResource {
 
     @GET
     public List<ApplianceDto> list() {
-        return appliances.list().stream().map(ApplianceDto::from).toList();
+        return appliances.list().stream()
+                .map(a -> ApplianceDto.from(a, appliances.pendingTarget(a.id())))
+                .toList();
     }
 
     @POST
@@ -39,12 +41,14 @@ public class ApplianceResource {
             @PathParam("id") String id,
             @PathParam("function") ApplianceFunction function,
             @Valid FunctionCommandRequest request) {
-        return ApplianceDto.from(appliances.switchFunction(id, function, request.state()));
+        return ApplianceDto.from(
+                appliances.switchFunction(id, function, request.state()), appliances.pendingTarget(id));
     }
 
     @POST
     @Path("{id}/temperature")
     public ApplianceDto setTemperature(@PathParam("id") String id, TemperatureRequest request) {
-        return ApplianceDto.from(appliances.setTargetTemperature(id, request.target()));
+        return ApplianceDto.from(
+                appliances.setTargetTemperature(id, request.target()), appliances.pendingTarget(id));
     }
 }
