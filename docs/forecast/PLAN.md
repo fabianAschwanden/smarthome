@@ -151,4 +151,10 @@ Nach Etappe 5 ist der Use Case per API/Swagger nutzbar – Frontend kann getrenn
   («98 % zu»)**, nicht auf 0: Ein Spalt bleibt offen, der Behang sitzt nicht auf dem
   Anschlag auf und der Raum wird nicht völlig dunkel. Übernommen wird auf Knopfdruck;
   automatisch wird es erst mit F2.
-- **F4 Wellness-Fenster:** Whirlpool-/Becken-Heizung (UC 6) in Überschussfenster legen.
+- ✅ **F4 Wellness-Fenster** *(2026-08-07)*: Whirlpool-/Becken-Heizung (UC 6) in
+  Überschussfenster. Dafür entstand zuerst eine **Wellness-Zeitsteuerung** – für Storen,
+  Schalter und Batterie gab es je eine, für Wellness nicht. Ohne sie hätte die Prognose
+  einen zweiten Schaltpfad aufgemacht.
+  **Bleibt bewusst beim Knopfdruck:** Am Fensterende wird ausgeschaltet, auch wenn die
+  Heizung vorher schon lief. Wer sie von Hand angestellt hat, fände sie sonst am Abend
+  abgestellt – das darf nicht ohne Zutun passieren.

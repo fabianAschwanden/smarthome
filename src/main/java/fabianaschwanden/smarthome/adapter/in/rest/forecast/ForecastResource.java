@@ -1,6 +1,7 @@
 package fabianaschwanden.smarthome.adapter.in.rest.forecast;
 
 import fabianaschwanden.smarthome.adapter.in.rest.dto.batteryschedule.BatteryScheduleDto;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.applianceschedule.ApplianceScheduleDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.coverschedule.CoverScheduleDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AccuracyDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AutoApplyDto;
@@ -13,6 +14,7 @@ import fabianaschwanden.smarthome.domain.port.in.forecast.ApplyHeatProtection;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ForecastAccuracyQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.HeatProtectionQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ManageAutoApply;
+import fabianaschwanden.smarthome.domain.port.in.forecast.WellnessSurplusPlan;
 import fabianaschwanden.smarthome.domain.port.in.forecast.PvForecastQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import jakarta.ws.rs.GET;
@@ -44,6 +46,7 @@ public class ForecastResource {
     private final ForecastAccuracyQuery accuracy;
     private final HeatProtectionQuery heatProtection;
     private final ManageAutoApply autoApply;
+    private final WellnessSurplusPlan wellnessSurplus;
     private final ApplyHeatProtection applyHeatProtection;
     private final int shadedPosition;
 
@@ -54,6 +57,7 @@ public class ForecastResource {
             ForecastAccuracyQuery accuracy,
             HeatProtectionQuery heatProtection,
             ManageAutoApply autoApply,
+            WellnessSurplusPlan wellnessSurplus,
             ApplyHeatProtection applyHeatProtection,
             @ConfigProperty(name = "forecast.heat-protection.position") int shadedPosition) {
         this.forecast = forecast;
@@ -62,8 +66,20 @@ public class ForecastResource {
         this.accuracy = accuracy;
         this.heatProtection = heatProtection;
         this.autoApply = autoApply;
+        this.wellnessSurplus = wellnessSurplus;
         this.applyHeatProtection = applyHeatProtection;
         this.shadedPosition = shadedPosition;
+    }
+
+    @POST
+    @Path("wellness-surplus/apply")
+    @Operation(
+            summary = "Wellness-Heizung ins Ueberschussfenster legen",
+            description = "Legt je Anlage einen Auftrag zum Ein- und einen zum Ausschalten der "
+                    + "Heizung an. 409, wenn kein Ueberschussfenster vorliegt. Achtung: Am "
+                    + "Fensterende wird auch dann ausgeschaltet, wenn die Heizung vorher schon lief.")
+    public java.util.List<ApplianceScheduleDto> applyWellnessSurplus() {
+        return wellnessSurplus.applyWellnessSurplus().stream().map(ApplianceScheduleDto::from).toList();
     }
 
     @GET

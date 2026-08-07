@@ -24,14 +24,15 @@ public class PanacheForecastAccuracyRepository
     @Override
     @Transactional
     public void save(ForecastAccuracy accuracy) {
-        ForecastAccuracyEntity entity = findById(accuracy.date());
-        if (entity == null) {
-            entity = new ForecastAccuracyEntity();
-            entity.day = accuracy.date();
-            persist(entity);
-        }
+        // Erst füllen, dann persistieren - und zwar immer: Ein persist() vor dem Füllen
+        // legt die Zeile mit NULL-Werten an und scheitert an den NOT-NULL-Spalten;
+        // ein fehlendes persist() beim Aktualisieren lässt die Änderung verschwinden.
+        ForecastAccuracyEntity entity =
+                findByIdOptional(accuracy.date()).orElseGet(ForecastAccuracyEntity::new);
+        entity.day = accuracy.date();
         entity.forecastKwh = accuracy.forecastKwh();
         entity.actualKwh = accuracy.actualKwh().isPresent() ? accuracy.actualKwh().getAsDouble() : null;
+        persist(entity);
     }
 
     @Override

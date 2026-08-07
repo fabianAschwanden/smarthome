@@ -89,3 +89,14 @@ export interface AutoApply {
   /** Klartext dazu – sagt auch, warum NICHT geschaltet wurde. */
   lastDetail: string;
 }
+
+/** Ein Schaltauftrag der Wellness-Zeitsteuerung (UC 15 / F4). */
+export interface ApplianceSchedule {
+  id: string;
+  applianceId: string;
+  function: string;
+  state: 'ON' | 'OFF';
+  fireAt: string;
+  /** false, sobald ausgeführt – der Auftrag bleibt sichtbar. */
+  enabled: boolean;
+}

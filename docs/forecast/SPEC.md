@@ -24,6 +24,15 @@ Out of Scope (Folgestufen, siehe PLAN.md §Folgestufen): automatisches Schalten 
 Nutzeraktion, Storen-Hitzeschutz nach Sonnenstand, Wellness-Heizung in Überschussfenster,
 SoC-basierte Steuerung.
 
+**Nachgeliefert (F4, 2026-08-07):** Wellness im Überschussfenster.
+`POST /api/forecast/wellness-surplus/apply` legt je Anlage aus
+`forecast.wellness.appliance-ids` einen Auftrag zum Ein- und einen zum Ausschalten der
+Heizung an; ausgeführt werden sie von der neuen **Wellness-Zeitsteuerung**
+(`/api/appliance-schedules`, Tabelle `appliance_schedule`, Ticker
+`appliance-schedule.tick-interval`). Nur Countdowns – der Anlass ist ein Fenster von
+heute. Liegt keine Ladeempfehlung vor, taugt das erste Überschussfenster trotzdem: Die
+Empfehlung gilt der Batterie und verlangt deren Schwellen, zum Aufheizen reicht weniger.
+
 **Nachgeliefert (F2, 2026-08-07):** Lade-Automatik. `GET/PUT /api/forecast/auto-apply`.
 Standard ist **aus** – automatisches Schalten ist eine bewusste Entscheidung. Der Lauf
 (`forecast.auto-apply.cron`, nach dem Festschreiben der Tagesprognose) übernimmt die

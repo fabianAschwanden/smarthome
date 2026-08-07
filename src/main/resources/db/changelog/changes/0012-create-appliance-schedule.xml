@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 15 / F4: einmalige Schaltauftraege fuer Wellness-Anlagen.
+
+         Warum eine eigene Tabelle statt einer Liste im Speicher: Die Auftraege liegen
+         Stunden in der Zukunft. Ein Neustart der App wuerde sie sonst verschlucken -
+         die Heizung ginge an und nie wieder aus.
+
+         Nur Countdowns, keine wiederkehrenden Regeln: Der Anlass sind die
+         Ueberschussfenster aus der Prognose, und die gelten fuer einen Tag. -->
+    <changeSet id="0012-create-appliance-schedule" author="smarthome">
+        <createTable tableName="appliance_schedule">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appliance_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="function" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="varchar(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fire_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
