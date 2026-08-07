@@ -3,6 +3,8 @@ package fabianaschwanden.smarthome.adapter.in.rest.forecast;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.batteryschedule.BatteryScheduleDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.coverschedule.CoverScheduleDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AccuracyDto;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AutoApplyDto;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AutoApplyRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.HeatProtectionDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.PvForecastDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.SurplusDto;
@@ -10,12 +12,14 @@ import fabianaschwanden.smarthome.domain.port.in.forecast.ApplyRecommendation;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ApplyHeatProtection;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ForecastAccuracyQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.HeatProtectionQuery;
+import fabianaschwanden.smarthome.domain.port.in.forecast.ManageAutoApply;
 import fabianaschwanden.smarthome.domain.port.in.forecast.PvForecastQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -39,6 +43,7 @@ public class ForecastResource {
     private final ApplyRecommendation applyRecommendation;
     private final ForecastAccuracyQuery accuracy;
     private final HeatProtectionQuery heatProtection;
+    private final ManageAutoApply autoApply;
     private final ApplyHeatProtection applyHeatProtection;
     private final int shadedPosition;
 
@@ -48,6 +53,7 @@ public class ForecastResource {
             ApplyRecommendation applyRecommendation,
             ForecastAccuracyQuery accuracy,
             HeatProtectionQuery heatProtection,
+            ManageAutoApply autoApply,
             ApplyHeatProtection applyHeatProtection,
             @ConfigProperty(name = "forecast.heat-protection.position") int shadedPosition) {
         this.forecast = forecast;
@@ -55,8 +61,27 @@ public class ForecastResource {
         this.applyRecommendation = applyRecommendation;
         this.accuracy = accuracy;
         this.heatProtection = heatProtection;
+        this.autoApply = autoApply;
         this.applyHeatProtection = applyHeatProtection;
         this.shadedPosition = shadedPosition;
+    }
+
+    @GET
+    @Path("auto-apply")
+    @Operation(
+            summary = "Zustand der Lade-Automatik",
+            description = "Enthaelt auch das Ergebnis des letzten Laufs - gerade dann, wenn "
+                    + "NICHT geschaltet wurde. Ein stilles Nichts waere von 'aus' nicht zu "
+                    + "unterscheiden.")
+    public AutoApplyDto autoApply() {
+        return AutoApplyDto.from(autoApply.state());
+    }
+
+    @PUT
+    @Path("auto-apply")
+    @Operation(summary = "Lade-Automatik ein- oder ausschalten")
+    public AutoApplyDto setAutoApply(AutoApplyRequest request) {
+        return AutoApplyDto.from(autoApply.setEnabled(request.enabled()));
     }
 
     @GET

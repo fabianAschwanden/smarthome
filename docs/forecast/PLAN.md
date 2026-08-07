@@ -139,8 +139,12 @@ Nach Etappe 5 ist der Use Case per API/Swagger nutzbar – Frontend kann getrenn
   um 07:00 festgeschrieben und danach nicht mehr angefasst – sonst schmiegte sie sich im
   Lauf des Tages an die Wirklichkeit an. Der Ist-Wert kommt nachts aus derselben
   Aggregation wie das Energie-Diagramm, damit beide Anzeigen nicht auseinanderlaufen.
-- **F2 Auto-Apply:** Empfehlung automatisch als Zeitplan anlegen (Opt-in-Toggle),
-  Nachrichtenzentrale meldet das Fenster.
+- ✅ **F2 Auto-Apply** *(2026-08-07)*: Empfehlung automatisch als Zeitplan (Opt-in,
+  Standard **aus**). **Die Genauigkeitsmessung aus F1 ist der Schutzschalter:**
+  Geschaltet wird erst, wenn genug Tage ausgewertet sind *und* der mittlere Fehler unter
+  der Schwelle liegt – sonst schaltete die Automatik ausgerechnet direkt nach der
+  Inbetriebnahme los, wenn sie am wenigsten weiss. Die Nachrichtenzentrale meldet es,
+  wenn die Automatik an ist und trotzdem nicht schaltet.
 - ✅ **F3 Storen-Hitzeschutz** *(2026-08-07)*: GTI + Innentemperatur (UC 8) →
   Storen-Countdowns (UC 5). Beschattet wird nur, wenn **beides** zusammenkommt – ein
   strahlender Wintertag heizt das Haus nicht auf. Zugefahren wird auf **Geräte-Position 2

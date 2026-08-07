@@ -24,6 +24,15 @@ Out of Scope (Folgestufen, siehe PLAN.md §Folgestufen): automatisches Schalten 
 Nutzeraktion, Storen-Hitzeschutz nach Sonnenstand, Wellness-Heizung in Überschussfenster,
 SoC-basierte Steuerung.
 
+**Nachgeliefert (F2, 2026-08-07):** Lade-Automatik. `GET/PUT /api/forecast/auto-apply`.
+Standard ist **aus** – automatisches Schalten ist eine bewusste Entscheidung. Der Lauf
+(`forecast.auto-apply.cron`, nach dem Festschreiben der Tagesprognose) übernimmt die
+Empfehlung nur, wenn `forecast.auto-apply.min-rated-days` erreicht sind **und** der MAPE
+unter `forecast.auto-apply.max-mape` liegt. Der Tag des Laufs wird auch dann festgehalten,
+wenn nichts übernommen wurde – sonst liefe die Automatik nach einem Neustart am selben Tag
+erneut. Der Grund steht im Zustand, damit «hat nicht geschaltet» nicht wie «ist aus»
+aussieht.
+
 **Nachgeliefert (F3, 2026-08-07):** Storen-Hitzeschutz. `GET /api/forecast/heat-protection`
 liefert das Fenster, `POST .../apply` legt je Store zwei Countdowns an (zufahren, öffnen).
 Bedingung ist **beides**: Einstrahlung ≥ `forecast.heat-protection.gti-threshold` und

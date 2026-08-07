@@ -102,6 +102,43 @@ import { ItemImage } from '../../shared/item-image';
           </article>
         }
 
+        <!-- Lade-Automatik (Use Case 15 / F2). Sichtbar auch ohne Empfehlung: Dass sie
+             an ist und heute NICHT geschaltet hat, ist die wichtigere Information. -->
+        @if (autoApply(); as auto) {
+          <article class="glass-card space-y-3 p-5">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="font-medium">Automatisch übernehmen</h3>
+                <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                  Legt das Ladefenster morgens selbst als Zeitplan an – erst, wenn die Prognose sich
+                  bewährt hat.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="seg shrink-0 px-4 py-1.5 text-sm"
+                [attr.data-active]="auto.enabled"
+                (click)="autoApplyUmschalten(!auto.enabled)"
+              >
+                {{ auto.enabled ? 'An' : 'Aus' }}
+              </button>
+            </div>
+            @if (auto.lastRunDay) {
+              <p
+                class="text-xs"
+                [class.text-amber-300]="auto.lastOutcome === 'FORECAST_UNRELIABLE'"
+                [class.text-[color:var(--ink-soft)]]="auto.lastOutcome !== 'FORECAST_UNRELIABLE'"
+              >
+                Letzter Lauf {{ auto.lastRunDay }}: {{ auto.lastDetail }}
+              </p>
+            } @else if (auto.enabled) {
+              <p class="text-xs text-[color:var(--ink-soft)]">
+                Noch nicht gelaufen – der erste Lauf ist morgen früh.
+              </p>
+            }
+          </article>
+        }
+
         <!-- Steuerung -->
         <article class="glass-card space-y-5 p-5">
           <div>
@@ -142,6 +179,12 @@ import { ItemImage } from '../../shared/item-image';
 export class BatteryPage {
   private readonly battery = inject(BatteryService);
   private readonly forecast = inject(ForecastService);
+
+  protected readonly autoApply = this.forecast.autoApply;
+
+  protected autoApplyUmschalten(enabled: boolean): void {
+    this.forecast.setAutoApply(enabled);
+  }
 
   protected readonly control = this.battery.control;
   protected readonly manual = computed(() => this.control()?.mode === 'MANUAL');

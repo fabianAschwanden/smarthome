@@ -4,6 +4,7 @@ import { SensorService } from './sensor.service';
 import { CoverService } from './cover.service';
 import { TuyaService } from './tuya.service';
 import { ClimateService } from './climate.service';
+import { ForecastService } from './forecast.service';
 import { AppNotification } from '../models/notification';
 
 const LOW_BATTERY_PERCENT = 20;
@@ -20,6 +21,7 @@ export class NotificationCenterService {
   private readonly covers = inject(CoverService);
   private readonly tuya = inject(TuyaService);
   private readonly climate = inject(ClimateService);
+  private readonly forecast = inject(ForecastService);
 
   /** Alle aktuellen Meldungen, nach Schweregrad sortiert (Alarm zuerst). */
   readonly notifications = computed<AppNotification[]>(() => {
@@ -53,6 +55,19 @@ export class NotificationCenterService {
           source: 'battery',
         });
       }
+    }
+
+    // Lade-Automatik: Dass sie an ist und NICHT schaltet, muss sichtbar sein - sonst
+    // wartet man auf ein Ladefenster, das nie kommt.
+    const auto = this.forecast.autoApply();
+    if (auto?.enabled && auto.lastOutcome === 'FORECAST_UNRELIABLE') {
+      out.push({
+        id: 'forecast:auto-apply:unreliable',
+        severity: 'warning',
+        title: 'Lade-Automatik schaltet nicht',
+        detail: `${auto.lastDetail}. Die Empfehlung lässt sich weiterhin von Hand übernehmen.`,
+        source: 'battery',
+      });
     }
 
     // Erreichbarkeit der übrigen Geräte (Warnung).

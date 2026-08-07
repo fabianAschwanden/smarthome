@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { pollingTimer } from '../polling';
 import { BatterySchedule } from '../models/battery-schedule';
 import { CoverSchedule } from '../models/cover-schedule';
-import { Accuracy, HeatProtection, PvForecast, Surplus } from '../models/forecast';
+import { Accuracy, AutoApply, HeatProtection, PvForecast, Surplus } from '../models/forecast';
 
 /**
  * Holt PV-Prognose und Überschussfenster vom eigenen Backend (BFF) und exponiert sie als
@@ -52,6 +52,10 @@ export class ForecastService {
           this.surplusState.set(surplus);
         }
       });
+
+    // Einmal beim Start: Die Nachrichtenzentrale soll den Zustand kennen, ohne dass
+    // vorher jemand die Batterie-Seite geöffnet haben muss.
+    this.loadAutoApply();
   }
 
   /**
@@ -75,6 +79,22 @@ export class ForecastService {
   /** Übernimmt das Fenster als Storen-Zeitsteuerung (Use Case 5). 409 = kein Fenster. */
   applyHeatProtection(): Observable<CoverSchedule[]> {
     return this.http.post<CoverSchedule[]>('/api/forecast/heat-protection/apply', {});
+  }
+
+  private readonly autoApplyState = signal<AutoApply | null>(null);
+  /** Zustand der Lade-Automatik; treibt auch die Meldung in der Nachrichtenzentrale. */
+  readonly autoApply = this.autoApplyState.asReadonly();
+
+  loadAutoApply(): void {
+    this.http
+      .get<AutoApply>('/api/forecast/auto-apply')
+      .subscribe((state) => this.autoApplyState.set(state));
+  }
+
+  setAutoApply(enabled: boolean): void {
+    this.http
+      .put<AutoApply>('/api/forecast/auto-apply', { enabled })
+      .subscribe((state) => this.autoApplyState.set(state));
   }
 
   loadAccuracy(): void {

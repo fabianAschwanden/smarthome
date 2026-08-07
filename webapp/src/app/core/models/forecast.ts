@@ -76,3 +76,16 @@ export interface HeatProtection {
   /** Dieselbe Angabe in der Sprache der Oberfläche – das Backend rechnet um. */
   closedPercent: number;
 }
+
+/** Wie der letzte Lauf der Lade-Automatik ausging. */
+export type AutoApplyOutcome =
+  'APPLIED' | 'NO_RECOMMENDATION' | 'FORECAST_UNRELIABLE' | 'NOT_ENOUGH_DATA';
+
+export interface AutoApply {
+  enabled: boolean;
+  /** Null, solange die Automatik noch nie gelaufen ist. */
+  lastRunDay: string | null;
+  lastOutcome: AutoApplyOutcome | null;
+  /** Klartext dazu – sagt auch, warum NICHT geschaltet wurde. */
+  lastDetail: string;
+}

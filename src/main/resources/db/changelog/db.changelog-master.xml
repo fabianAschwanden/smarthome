@@ -16,5 +16,6 @@
     <include file="db/changelog/changes/0008-create-energy-sample.xml"/>
     <include file="db/changelog/changes/0009-create-plant-profile.xml"/>
     <include file="db/changelog/changes/0010-create-forecast-accuracy.xml"/>
+    <include file="db/changelog/changes/0011-create-auto-apply.xml"/>
 
 </databaseChangeLog>

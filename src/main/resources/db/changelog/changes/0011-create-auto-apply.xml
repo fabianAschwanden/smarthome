@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 15 / F2: Lade-Automatik. Genau EINE Zeile (fester Schluessel), weil
+         der Zustand die Anlage als Ganzes beschreibt.
+
+         last_run_day wird auch dann gesetzt, wenn nichts uebernommen wurde: Sonst liefe
+         die Automatik nach einem Neustart am selben Tag erneut und legte einen zweiten
+         Zeitplan an. Der Grund des letzten Laufs steht daneben, damit im UI sichtbar
+         ist, WARUM nicht geschaltet wurde - ein stilles Nichts waere von "aus" nicht zu
+         unterscheiden. -->
+    <changeSet id="0011-create-auto-apply" author="smarthome">
+        <createTable tableName="forecast_auto_apply">
+            <column name="id" type="varchar(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_run_day" type="date"/>
+            <column name="last_outcome" type="varchar(32)"/>
+            <column name="last_detail" type="varchar(256)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
