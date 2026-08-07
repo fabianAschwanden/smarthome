@@ -1,4 +1,13 @@
-import { ClimateDto, CoverDto, EMPTY_SNAPSHOT, SensorDto, SmokeDto, Snapshot, SwitchDto } from './types';
+import {
+  ApplianceDto,
+  ClimateDto,
+  CoverDto,
+  EMPTY_SNAPSHOT,
+  SensorDto,
+  SmokeDto,
+  Snapshot,
+  SwitchDto,
+} from './types';
 
 /** Minimaler Logger – entkoppelt den Client von Homebridge, damit er testbar bleibt. */
 export interface ClientLog {
@@ -23,14 +32,15 @@ export class ApiClient {
 
   /** Alle Geräte in einem Zug. Fehlerhafte Endpunkte liefern eine leere Liste. */
   async snapshot(): Promise<Snapshot> {
-    const [switches, covers, climate, sensors, smoke] = await Promise.all([
+    const [switches, appliances, covers, climate, sensors, smoke] = await Promise.all([
       this.getList<SwitchDto>('/api/switches'),
+      this.getList<ApplianceDto>('/api/appliances'),
       this.getList<CoverDto>('/api/covers'),
       this.getList<ClimateDto>('/api/climate'),
       this.getList<SensorDto>('/api/sensors'),
       this.getList<SmokeDto>('/api/safety/smoke'),
     ]);
-    return { ...EMPTY_SNAPSHOT, switches, covers, climate, sensors, smoke };
+    return { ...EMPTY_SNAPSHOT, switches, appliances, covers, climate, sensors, smoke };
   }
 
   /**
@@ -54,7 +64,19 @@ export class ApiClient {
     });
   }
 
-  /** Zielposition in DOMÄNEN-Semantik (100 = zu). Die Umrechnung macht der Aufrufer. */
+  /** Schaltet eine Funktion einer Wellness-Anlage (PUMP, HEATER, LIGHT, ...). */
+  async setApplianceFunction(id: string, fn: string, on: boolean): Promise<void> {
+    await this.post(
+      `/api/appliances/${encodeURIComponent(id)}/functions/${encodeURIComponent(fn)}`,
+      { state: on ? 'ON' : 'OFF' },
+    );
+  }
+
+  async setApplianceTemperature(id: string, target: number): Promise<void> {
+    await this.post(`/api/appliances/${encodeURIComponent(id)}/temperature`, { target });
+  }
+
+  /** Zielposition in der Geräteskala: 0 = zu, 100 = offen – wie HomeKit (siehe cover.ts). */
   async setCoverPosition(id: string, domainPosition: number): Promise<void> {
     await this.post(`/api/covers/${encodeURIComponent(id)}/position`, { position: domainPosition });
   }

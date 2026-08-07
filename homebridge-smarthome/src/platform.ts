@@ -8,6 +8,7 @@ import type {
   Service,
 } from 'homebridge';
 import { ApiClient } from './api-client';
+import { ApplianceHandler } from './accessories/appliance';
 import { ClimateHandler } from './accessories/climate';
 import { CoverHandler } from './accessories/cover';
 import { SensorHandler } from './accessories/sensor';
@@ -128,6 +129,13 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
         kind: 'switch',
         create: (accessory) =>
           new SwitchHandler(this, accessory, this.client, device, this.allowCriticalOff),
+      });
+    }
+    for (const device of snapshot.appliances) {
+      result.push({
+        device,
+        kind: 'appliance',
+        create: (accessory) => new ApplianceHandler(this, accessory, this.client, device),
       });
     }
     for (const device of snapshot.sensors) {

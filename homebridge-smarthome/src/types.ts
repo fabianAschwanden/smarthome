@@ -91,9 +91,36 @@ export function hasBattery(smoke: SmokeDto): boolean {
   return smoke.battery >= 0;
 }
 
+/**
+ * Whirlpool und Schwimmbecken (Use Case 6). Anders als die uebrigen Klassen bringt eine
+ * Anlage mehrere Funktionen mit, die je nach Geraet verschieden sind - deshalb eine Map
+ * und keine festen Felder.
+ */
+export interface ApplianceDto extends DeviceBase {
+  /** Funktionsname (PUMP, HEATER, LIGHT, MASSAGE, FILTER, ...) -> "ON" | "OFF". */
+  functions: Record<string, string>;
+  /** null bei Anlagen ohne Heizung. */
+  temperature: ApplianceTemperature | null;
+}
+
+export interface ApplianceTemperature {
+  target: number;
+  /** {@link CLIMATE_TEMP_UNKNOWN}, wenn die Anlage nichts meldet. */
+  current: number;
+  min: number;
+  max: number;
+}
+
+/** Die Funktion, die als Thermostat abgebildet wird; alle uebrigen werden Schalter. */
+export const HEATER_FUNCTION = 'HEATER';
+
+/** Diese Funktion wird zur Lampe statt zum Schalter - in HomeKit ist das ein Unterschied. */
+export const LIGHT_FUNCTION = 'LIGHT';
+
 /** Ein Abzug aller Geraete eines Poll-Zyklus. */
 export interface Snapshot {
   switches: SwitchDto[];
+  appliances: ApplianceDto[];
   covers: CoverDto[];
   climate: ClimateDto[];
   sensors: SensorDto[];
@@ -102,6 +129,7 @@ export interface Snapshot {
 
 export const EMPTY_SNAPSHOT: Snapshot = {
   switches: [],
+  appliances: [],
   covers: [],
   climate: [],
   sensors: [],

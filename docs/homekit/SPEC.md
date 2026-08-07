@@ -31,9 +31,13 @@ In Scope (v1) – als **eine** HomeKit-Bridge mit Accessories:
 | Rauchmelder (UC 9) | SmokeSensor (+ StatusLowBattery) | `ReadSafety` |
 
 Out of Scope (bewusst, siehe PLAN.md §Folgestufen): **Kameras** (HomeKit Secure
-Video ist ein eigenes Grossprojekt), **Wellness** (kein passendes HomeKit-Profil;
-später ggf. als HeaterCooler + Switches gemappt), **Energie/Batterie/PV** (kennt
-HomeKit nicht – bleibt Dashboard-exklusiv), Matter.
+Video ist ein eigenes Grossprojekt), **Energie/Batterie/PV** (kennt HomeKit nicht –
+bleibt Dashboard-exklusiv), Matter.
+
+**Nachgeliefert (F2, 2026-08-07): Wellness.** Statt HeaterCooler wurde der **Thermostat**
+gewählt – er bildet «auf eine Temperatur heizen» direkt ab, und seine Modi lassen sich auf
+AUS/HEIZEN beschränken. Je Anlage ein Accessory: Heizung als Thermostat, Licht als Lampe
+(in HomeKit ein Unterschied zum Schalter), alles Übrige als Schalter.
 
 ## 2. Technik: Homebridge + eigenes Plugin
 
