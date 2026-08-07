@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EnergyService } from '../../core/services/energy.service';
+import { ForecastService } from '../../core/services/forecast.service';
 import { EnergyHistory, HistoryRange, PowerReading } from '../../core/models/energy';
 import { ItemImage } from '../../shared/item-image';
 import { ENERGY_COLORS, EnergyHistoryChart } from './energy-history-chart';
@@ -194,6 +195,61 @@ const RANGES: { key: HistoryRange; label: string }[] = [
           <p class="text-sm text-[color:var(--ink-soft)]">Lade Verlauf …</p>
         }
       </article>
+
+      <!-- Prognosegüte (Use Case 15 / F1): Wie gut lag die Vorhersage? Steht hier und
+           nicht auf dem Dashboard – die Zahl ist zum Nachschauen, nicht zum Danebenstehen. -->
+      @if (accuracy(); as acc) {
+        <article class="glass-card space-y-4 p-5">
+          <header class="flex flex-wrap items-baseline justify-between gap-3">
+            <h3 class="text-lg font-semibold">Prognosegüte</h3>
+            @if (acc.mapePercent !== null) {
+              <p class="text-sm text-[color:var(--ink-soft)]">
+                <span class="text-2xl font-semibold tabular-nums text-[color:var(--ink)]"
+                  >{{ acc.mapePercent.toFixed(0) }} %</span
+                >
+                mittlere Abweichung über {{ acc.ratedDays }}
+                {{ acc.ratedDays === 1 ? 'Tag' : 'Tage' }}
+              </p>
+            } @else {
+              <!-- Leer statt 0: "noch nicht messbar" ist etwas anderes als "kein Fehler". -->
+              <p class="text-sm text-[color:var(--ink-soft)]">Noch kein Tag auswertbar</p>
+            }
+          </header>
+
+          @if (acc.days.length > 0) {
+            <ul class="space-y-1.5">
+              @for (day of acc.days; track day.date) {
+                <li class="flex items-center justify-between gap-3 text-sm">
+                  <span class="text-[color:var(--ink-soft)]">{{ dayLabel(day.date) }}</span>
+                  <span class="flex items-center gap-3 tabular-nums">
+                    <span class="text-[color:var(--ink-faint)]"
+                      >{{ day.forecastKwh.toFixed(1) }} kWh erwartet</span
+                    >
+                    @if (day.actualKwh !== null) {
+                      <span class="font-semibold">{{ day.actualKwh.toFixed(1) }} kWh</span>
+                    } @else {
+                      <span class="text-[color:var(--ink-faint)]">läuft noch</span>
+                    }
+                    @if (day.deviationPercent !== null) {
+                      <span
+                        class="w-14 text-right"
+                        [class.text-[color:var(--accent)]]="day.deviationPercent > 25"
+                        >{{ day.deviationPercent.toFixed(0) }} %</span
+                      >
+                    } @else {
+                      <span class="w-14 text-right text-[color:var(--ink-faint)]">–</span>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-sm text-[color:var(--ink-soft)]">
+              Noch keine Prognose festgehalten – der erste Eintrag entsteht morgen früh.
+            </p>
+          }
+        </article>
+      }
     </section>
   `,
 })
@@ -202,6 +258,8 @@ export class EnergyPage {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly snapshot = this.energy.snapshot;
+  private readonly forecast = inject(ForecastService);
+  protected readonly accuracy = this.forecast.accuracy;
   protected readonly ranges = RANGES;
   protected readonly colors = ENERGY_COLORS;
   protected readonly range = signal<HistoryRange>('day');
@@ -223,6 +281,8 @@ export class EnergyPage {
 
   constructor() {
     this.loadHistory('day');
+    // Einmal beim Öffnen: Die Güte ändert sich einmal je Tag, Pollen wäre Beschäftigung.
+    this.forecast.loadAccuracy();
   }
 
   protected setRange(range: HistoryRange): void {
@@ -231,6 +291,24 @@ export class EnergyPage {
       this.history.set(null);
       this.loadHistory(range);
     }
+  }
+
+  /** «Heute», «Gestern» oder das kurze Datum – ein ISO-String liest sich in einer Liste schlecht. */
+  protected dayLabel(isoDate: string): string {
+    const today = new Date();
+    const date = new Date(`${isoDate}T00:00:00`);
+    const diffDays = Math.round(
+      (new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() -
+        date.getTime()) /
+        86_400_000,
+    );
+    if (diffDays === 0) {
+      return 'Heute';
+    }
+    if (diffDays === 1) {
+      return 'Gestern';
+    }
+    return date.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
 
   private loadHistory(range: HistoryRange): void {

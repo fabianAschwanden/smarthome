@@ -1,15 +1,18 @@
 package fabianaschwanden.smarthome.adapter.in.rest.forecast;
 
 import fabianaschwanden.smarthome.adapter.in.rest.dto.batteryschedule.BatteryScheduleDto;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.AccuracyDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.PvForecastDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.forecast.SurplusDto;
 import fabianaschwanden.smarthome.domain.port.in.forecast.ApplyRecommendation;
+import fabianaschwanden.smarthome.domain.port.in.forecast.ForecastAccuracyQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.PvForecastQuery;
 import fabianaschwanden.smarthome.domain.port.in.forecast.SurplusQuery;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -23,15 +26,34 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 @Produces(MediaType.APPLICATION_JSON)
 public class ForecastResource {
 
+    /** Zeigt zwei Wochen - genug, um einen Trend zu sehen, wenig genug fuer eine Kachel. */
+    private static final int DEFAULT_DAYS = 14;
+
     private final PvForecastQuery forecast;
     private final SurplusQuery surplus;
     private final ApplyRecommendation applyRecommendation;
+    private final ForecastAccuracyQuery accuracy;
 
     public ForecastResource(
-            PvForecastQuery forecast, SurplusQuery surplus, ApplyRecommendation applyRecommendation) {
+            PvForecastQuery forecast,
+            SurplusQuery surplus,
+            ApplyRecommendation applyRecommendation,
+            ForecastAccuracyQuery accuracy) {
         this.forecast = forecast;
         this.surplus = surplus;
         this.applyRecommendation = applyRecommendation;
+        this.accuracy = accuracy;
+    }
+
+    @GET
+    @Path("accuracy")
+    @Operation(
+            summary = "Wie gut lag die Prognose?",
+            description = "Prognose gegen Ist je Tag samt mittlerem relativem Fehler (MAPE). "
+                    + "mapePercent ist null, solange kein Tag bewertbar ist - offene Tage und "
+                    + "solche ganz ohne Ertrag zaehlen nicht mit.")
+    public AccuracyDto accuracy(@QueryParam("days") Integer days) {
+        return AccuracyDto.from(accuracy.accuracy(days == null ? DEFAULT_DAYS : days));
     }
 
     @GET

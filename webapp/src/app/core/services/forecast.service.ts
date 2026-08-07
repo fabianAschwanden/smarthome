@@ -4,7 +4,7 @@ import { Observable, startWith, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { pollingTimer } from '../polling';
 import { BatterySchedule } from '../models/battery-schedule';
-import { PvForecast, Surplus } from '../models/forecast';
+import { Accuracy, PvForecast, Surplus } from '../models/forecast';
 
 /**
  * Holt PV-Prognose und Überschussfenster vom eigenen Backend (BFF) und exponiert sie als
@@ -24,6 +24,10 @@ export class ForecastService {
 
   private readonly surplusState = signal<Surplus | null>(null);
   readonly surplus = this.surplusState.asReadonly();
+
+  private readonly accuracyState = signal<Accuracy | null>(null);
+  /** Prognosegüte der letzten Tage; null, solange noch nichts geladen wurde. */
+  readonly accuracy = this.accuracyState.asReadonly();
 
   private readonly intervalMs = 5 * 60 * 1000;
 
@@ -47,6 +51,16 @@ export class ForecastService {
           this.surplusState.set(surplus);
         }
       });
+  }
+
+  /**
+   * Lädt die Prognosegüte nach. Bewusst nicht gepollt: Der Wert ändert sich einmal je
+   * Tag, ein Timer wäre reine Beschäftigung.
+   */
+  loadAccuracy(): void {
+    this.http
+      .get<Accuracy>('/api/forecast/accuracy')
+      .subscribe((accuracy) => this.accuracyState.set(accuracy));
   }
 
   /**

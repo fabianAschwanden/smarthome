@@ -22,7 +22,13 @@ In Scope (v1):
 
 Out of Scope (Folgestufen, siehe PLAN.md §Folgestufen): automatisches Schalten ohne
 Nutzeraktion, Storen-Hitzeschutz nach Sonnenstand, Wellness-Heizung in Überschussfenster,
-Prognose-Genauigkeits-Tracking, SoC-basierte Steuerung.
+SoC-basierte Steuerung.
+
+**Nachgeliefert (F1, 2026-08-07):** Genauigkeits-Tracking. `GET /api/forecast/accuracy`
+liefert Prognose gegen Ist je Tag samt MAPE. Ein Tag zählt nur mit, wenn der Fehler
+definiert ist: offene Tage und solche ganz ohne Ertrag bleiben draussen – bei 0 kWh Ist
+ist der relative Fehler nicht definiert, und ein einziger trüber Tag würde den
+Durchschnitt sonst bestimmen.
 
 **Grundsatz aus Use Case 2 bleibt:** Die Überschuss-*Regelung* gehört dem SMARTFOX
 (AUTO-Modus). Dieser Use Case regelt nicht in Echtzeit, sondern **plant voraus** – er

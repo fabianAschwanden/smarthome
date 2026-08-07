@@ -45,3 +45,21 @@ export interface Surplus {
   /** Null, wenn kein Fenster die Schwellen erreicht – an einem trüben Tag normal. */
   recommendation: Recommendation | null;
 }
+
+/** Ein Tag im Vergleich Prognose gegen Ist. */
+export interface AccuracyDay {
+  date: string;
+  forecastKwh: number;
+  /** Null, solange der Tag nicht abgeschlossen ist – nicht 0. */
+  actualKwh: number | null;
+  /** Null bei offenem Tag und bei einem Tag ganz ohne Ertrag (Fehler nicht definiert). */
+  deviationPercent: number | null;
+}
+
+export interface Accuracy {
+  /** Mittlerer relativer Fehler; null, solange kein Tag bewertbar ist. */
+  mapePercent: number | null;
+  /** Auf wie vielen Tagen der MAPE beruht – ohne das ist er nicht einzuordnen. */
+  ratedDays: number;
+  days: AccuracyDay[];
+}
