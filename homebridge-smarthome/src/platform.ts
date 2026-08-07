@@ -8,6 +8,7 @@ import type {
   Service,
 } from 'homebridge';
 import { ApiClient } from './api-client';
+import { ClimateHandler } from './accessories/climate';
 import { CoverHandler } from './accessories/cover';
 import { SensorHandler } from './accessories/sensor';
 import { SmokeHandler } from './accessories/smoke';
@@ -150,7 +151,13 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
         create: (accessory) => new CoverHandler(this, accessory, this.client, device),
       });
     }
-    // Klima folgt in Etappe 5.
+    for (const device of snapshot.climate) {
+      result.push({
+        device,
+        kind: 'climate',
+        create: (accessory) => new ClimateHandler(this, accessory, this.client, device),
+      });
+    }
     return result;
   }
 

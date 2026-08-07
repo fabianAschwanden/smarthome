@@ -44,7 +44,7 @@ npm run build   # nach dist/
 Die Tests decken die Abbildungslogik ab und arbeiten gegen eine HAP-Attrappe
 (`test/harness.ts`) – Homebridge wird dafür nicht gestartet.
 
-## Geräteklassen (Stand Etappe 4)
+## Geräteklassen (Stand Etappe 5)
 
 | Klasse | HomeKit | Besonderheit |
 |---|---|---|
@@ -52,6 +52,7 @@ Die Tests decken die Abbildungslogik ab und arbeiten gegen eine HAP-Attrappe
 | Sensor | `TemperatureSensor` (+ `HumiditySensor`) | Feuchte nur, wenn der Sensor eine meldet |
 | Rauchmelder | `SmokeSensor` (+ `StatusLowBattery`) | Batteriestatus nur bei bekanntem Wert |
 | Store | `WindowCovering` | **Keine Invertierung** – REST und HomeKit zählen beide 0 = zu |
+| Klima | `HeaterCooler` | `FAN` wird als `AUTO` gezeigt und nie gesetzt; Boost bleibt im Dashboard |
 
 Der Rauchmelder ist die dokumentierte **Ausnahme** von der Regel «offline → nicht
 erreichbar»: Batteriemelder funken sporadisch, ein dauerhaftes «keine Antwort» würde die
@@ -59,7 +60,11 @@ Kachel entwerten. Er meldet deshalb den zuletzt bekannten Alarmzustand weiter.
 
 ## Grenzen
 
-- **Klima** liest der Poll-Zyklus bereits mit, es bekommt seinen Handler in Etappe 5.
+- **Boost** (Turbo der Klimaanlage) und der Modus **FAN** haben in HomeKit kein
+  Gegenstück und bleiben dem Dashboard vorbehalten. FAN wird als `AUTO` angezeigt –
+  «aus» wäre falscher –, aber aus HomeKit nie gesetzt.
+- Die **Aussentemperatur** der Klimaanlage wird nicht exponiert; dafür gibt es den
+  eigenen Aussensensor.
 - Ausgeliefert wird das Plugin noch nicht: Das Container-Image mit dem Plugin entsteht in
   Etappe 6. Bis dahin läuft in der Bridge das generische HTTP-Plugin aus Etappe 1.
 - Zustände kommen per Poll, nicht per Push – eine Änderung am Gerät erscheint mit bis zu

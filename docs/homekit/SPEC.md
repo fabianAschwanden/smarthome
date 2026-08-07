@@ -159,6 +159,11 @@ Frontend: keine Änderung.
       zeigt «% zu» und spiegelt dafür selbst. **An der Anlage gegengeprüft:** beide
       Storen komplett zu, API meldet `position: 0`.
 - [ ] Klima: exaktes Modus-Mapping an der realen Midea verifizieren (Auto/Fan).
+      Umgesetzt (Etappe 5): COOL/HEAT/AUTO eins zu eins, **FAN wird als AUTO angezeigt
+      und aus HomeKit nie gesetzt** – HomeKit kennt keinen Modus ohne Temperaturziel.
+      Zu prüfen bleibt, wie sich die Anlage verhält, wenn HomeKit aus FAN heraus AUTO
+      setzt. Getrennte Heiz-/Kühl-Schwellwerte gibt es in HomeKit, in der Anlage nur
+      eine Soll-Temperatur; beide Merkmale zeigen und schreiben denselben Wert.
 - [x] Aussensensor: liefert Feuchte, aber ohne verlässliche Kalibrierung – entscheiden,
       ob nur TemperatureSensor exponiert wird.
       - **Entschieden (2026-08-06): Feuchte wird exponiert** (Etappe 3). Home-App und
