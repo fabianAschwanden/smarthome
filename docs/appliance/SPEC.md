@@ -118,6 +118,26 @@ Backend sind umgesetzt:
   schreibt später den passenden Geräte-Datenpunkt.
 
 
+## Abendabsenkung
+
+Ein Gecko-Spa hält seinen Sollwert **rund um die Uhr**. Wer ihn tagsüber auf
+Badetemperatur stellt, heizt ohne Zutun die ganze Nacht weiter – und zwar aus dem Netz,
+weil dann keine Sonne mehr scheint.
+
+Ab `wellness.setback-time` (Ortszeit, Standard 16:00) wird deshalb je Anlage auf
+`night-temp` abgesenkt. Höchstens einmal je Tag, damit der Minutentakt keine Änderung von
+Hand überschreibt; nach einem späten Neustart wird sie nachgeholt. Ein
+Überschussfenster, das über die Absenkzeit hinausreicht, wird dort gekappt – sonst höbe
+sein Ende-Auftrag die Temperatur nach der Absenkung wieder an.
+
+```properties
+wellness.setback-time=16:00
+wellness.appliances[0].id=whirlpool
+wellness.appliances[0].base-temp=25      # tagsüber
+wellness.appliances[0].surplus-temp=33   # im PV-Überschussfenster
+wellness.appliances[0].night-temp=20     # ab setback-time
+```
+
 ## Die Heizung ist kein Schalter
 
 `HEATER` erscheint in der Funktionsliste, lässt sich aber **nicht schalten**: Beim

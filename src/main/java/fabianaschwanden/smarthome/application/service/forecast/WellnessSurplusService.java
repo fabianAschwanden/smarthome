@@ -1,6 +1,6 @@
 package fabianaschwanden.smarthome.application.service.forecast;
 
-import fabianaschwanden.smarthome.application.config.WellnessSurplusConfig;
+import fabianaschwanden.smarthome.application.config.WellnessConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.SurplusWindow;
 import fabianaschwanden.smarthome.domain.model.batteryschedule.BatterySchedule;
@@ -13,7 +13,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -57,18 +59,30 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
     private final SurplusQuery surplus;
     private final ManageApplianceSchedules schedules;
     private final ManageBatterySchedules batterySchedules;
-    private final WellnessSurplusConfig config;
+    private final WellnessConfig config;
+    private final Clock clock;
 
     @Inject
     public WellnessSurplusService(
             SurplusQuery surplus,
             ManageApplianceSchedules schedules,
             ManageBatterySchedules batterySchedules,
-            WellnessSurplusConfig config) {
+            WellnessConfig config) {
+        this(surplus, schedules, batterySchedules, config, Clock.systemDefaultZone());
+    }
+
+    // Sichtbar fürs Testen: feste Uhr und Zone.
+    WellnessSurplusService(
+            SurplusQuery surplus,
+            ManageApplianceSchedules schedules,
+            ManageBatterySchedules batterySchedules,
+            WellnessConfig config,
+            Clock clock) {
         this.surplus = surplus;
         this.schedules = schedules;
         this.batterySchedules = batterySchedules;
         this.config = config;
+        this.clock = clock;
     }
 
     @Override
@@ -78,18 +92,31 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
                 .or(this::firstWindow)
                 .orElseThrow(NoRecommendationAvailable::new);
 
+        // Das Fenster endet spaetestens mit der Abendabsenkung. Ohne diese Kappung wuerde
+        // ein spaeter endendes Fenster die Temperatur nach der Absenkung wieder anheben -
+        // und der Whirlpool heizte doch in den Abend hinein.
+        Instant setback = setbackInstant(window.from());
+        boolean cappedByEvening = window.to().isAfter(setback);
+        Instant end = cappedByEvening ? setback : window.to();
+
         List<ApplianceSchedule> created = new ArrayList<>();
-        for (WellnessSurplusConfig.Entry entry : config.appliances()) {
+        for (WellnessConfig.Entry entry : config.appliances()) {
+            int endTemp = cappedByEvening ? entry.nightTemp() : entry.baseTemp();
             created.add(schedules.save(
                     ApplianceSchedule.countdown(entry.id(), entry.surplusTemp(), window.from())));
-            created.add(schedules.save(
-                    ApplianceSchedule.countdown(entry.id(), entry.baseTemp(), window.to())));
+            created.add(schedules.save(ApplianceSchedule.countdown(entry.id(), endTemp, end)));
         }
-        int stopped = stopForcedCharging(window.from(), window.to());
+        int stopped = stopForcedCharging(window.from(), end);
         LOG.infof("Wellness-Heizung ins Überschussfenster gelegt: %s bis %s, erwartet %.1f kWh"
                         + (stopped > 0 ? " (%d Ladeauftrag/-aufträge abgeschaltet)" : ""),
                 window.from(), window.to(), window.expectedKwh(), stopped);
         return created;
+    }
+
+    /** Die Absenkzeit des Tages, an dem das Fenster beginnt. */
+    private Instant setbackInstant(Instant windowStart) {
+        ZoneId zone = clock.getZone();
+        return windowStart.atZone(zone).toLocalDate().atTime(config.setbackTime()).atZone(zone).toInstant();
     }
 
     /**
