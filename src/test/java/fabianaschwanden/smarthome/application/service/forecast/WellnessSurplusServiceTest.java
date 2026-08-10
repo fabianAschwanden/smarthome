@@ -1,6 +1,6 @@
 package fabianaschwanden.smarthome.application.service.forecast;
 
-import fabianaschwanden.smarthome.application.config.WellnessSurplusConfig;
+import fabianaschwanden.smarthome.application.config.WellnessConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.ChargeRecommendation;
 import fabianaschwanden.smarthome.domain.model.forecast.Confidence;
@@ -44,7 +44,9 @@ class WellnessSurplusServiceTest {
         surplus = new FakeSurplus();
         schedules = new FakeSchedules();
         batterySchedules = new FakeBatterySchedules();
-        service = new WellnessSurplusService(surplus, schedules, batterySchedules, new FakeConfig());
+        // Uhr in der Zone der Anlage: Die Kappung am Abend rechnet in Ortszeit.
+        service = new WellnessSurplusService(surplus, schedules, batterySchedules, new FakeConfig(),
+                java.time.Clock.fixed(VON, java.time.ZoneId.of("Europe/Zurich")));
     }
 
     @Test
@@ -96,6 +98,27 @@ class WellnessSurplusServiceTest {
         service.applyWellnessSurplus();
 
         assertTrue(batterySchedules.byId(danach.id()).enabled());
+    }
+
+    @Test
+    void kappt_das_fenster_an_der_abendabsenkung() {
+        // Ohne Kappung hoebe der Auftrag am Fensterende die Temperatur nach der
+        // Absenkung wieder an - und der Whirlpool heizte doch in den Abend hinein.
+        WellnessSurplusService frueheAbsenkung = new WellnessSurplusService(
+                surplus, schedules, batterySchedules, new FakeConfig() {
+                    @Override
+                    public java.time.LocalTime setbackTime() {
+                        return java.time.LocalTime.of(15, 0);  // Ortszeit = 13:00 UTC, mitten im Fenster
+                    }
+                },
+                java.time.Clock.fixed(VON, java.time.ZoneId.of("Europe/Zurich")));
+        surplus.recommendation = new ChargeRecommendation(FENSTER, Confidence.LEARNED);  // 10:00-14:00 UTC
+
+        List<ApplianceSchedule> angelegt = frueheAbsenkung.applyWellnessSurplus();
+
+        ApplianceSchedule ende = angelegt.get(1);
+        assertEquals(java.time.Instant.parse("2026-08-07T13:00:00Z"), ende.fireAt());
+        assertEquals(20, ende.targetTemp());  // Nachttemperatur, nicht die Tagestemperatur
     }
 
     @Test
@@ -162,15 +185,27 @@ class WellnessSurplusServiceTest {
         }
     }
 
-    /** Whirlpool 33 -> 38 °C, Becken 24 -> 28 °C. */
-    private static final class FakeConfig implements WellnessSurplusConfig {
+    /** Whirlpool 33 -> 38 -> nachts 20 °C, Becken 24 -> 28 -> nachts 18 °C. */
+    private static class FakeConfig implements WellnessConfig {
+
+        @Override
+        public java.time.LocalTime setbackTime() {
+            // Spaet genug, damit das Testfenster (bis 16:00 UTC = 18:00 Ortszeit) nicht
+            // gekappt wird; die Kappung hat ihren eigenen Test.
+            return java.time.LocalTime.of(23, 0);
+        }
+
+        @Override
+        public String setbackCheckInterval() {
+            return "1m";
+        }
 
         @Override
         public List<Entry> appliances() {
-            return List.of(entry("whirlpool", 33, 38), entry("pool", 24, 28));
+            return List.of(entry("whirlpool", 33, 38, 20), entry("pool", 24, 28, 18));
         }
 
-        private static Entry entry(String id, int base, int surplus) {
+        private static Entry entry(String id, int base, int surplus, int night) {
             return new Entry() {
                 @Override
                 public String id() {
@@ -185,6 +220,11 @@ class WellnessSurplusServiceTest {
                 @Override
                 public int surplusTemp() {
                     return surplus;
+                }
+
+                @Override
+                public int nightTemp() {
+                    return night;
                 }
             };
         }
