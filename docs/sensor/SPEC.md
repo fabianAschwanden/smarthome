@@ -46,7 +46,31 @@ Slice `sensor`: Port `ReadSensors` (in), `SensorDevice` + Factory (out),
 `SensorService` (application), Adapter `adapter/in/rest/sensor` und
 `adapter/out/sensor/{mock,local}`. Nutzt die geteilten `support.tuya`-Klassen.
 
-## Historie: Prometheus, nicht die eigene Datenbank
+## Historie: zwei Speicher mit verschiedenen Aufgaben
+
+| Speicher | Auflösung | Aufbewahrung | Wofür |
+|---|---|---|---|
+| Prometheus | alle 30 s (Scrape) | 30 Tage | Dashboard, kurzfristige Verläufe |
+| `sensor_sample` (Postgres) | alle 10 min, nach einem Jahr stündlich | unbegrenzt | Jahresvergleiche |
+
+**Warum zwei:** Prometheus kennt nur *eine* Aufbewahrungsdauer je Instanz – keine Retention
+je Metrik und kein Downsampling. «Nach einem Jahr nur noch stündlich» lässt sich dort nicht
+ausdrücken; dafür bräuchte es Thanos/Mimir (Objektspeicher) oder VictoriaMetrics Enterprise.
+Also behält Prometheus die feine Auflösung der letzten Wochen, und die eigene Tabelle die
+Jahre.
+
+**Verdichtung** (`sensor-history.compact-cron`, nachts): Alles vor
+`sensor-history.raw-days` wird auf den *ersten* Messpunkt je Stunde und Sensor reduziert –
+als eine SQL-Anweisung, nicht als Schleife in Java. Deterministisch und damit wiederholbar:
+Ein zweiter Lauf findet nichts mehr.
+
+**Grössenordnung:** 10-Minuten-Takt sind rund 105 000 Zeilen im Jahr (zwei Sensoren);
+nach der Verdichtung bleiben davon etwa 17 500. Das trägt Postgres jahrzehntelang.
+
+Aufgezeichnet werden nur belastbare Werte: Ein offline gemeldeter Sensor oder ein
+Platzhalter erzeugt **keinen** Punkt. Eine Lücke ist ehrlicher als eine erfundene Zahl.
+
+## Prometheus im Detail
 
 Innen- und Aussenwerte gehen als Gauges nach `/q/metrics` und landen damit in Prometheus;
 angesehen werden sie im Grafana-Board «Smarthome – Haus + Server», Zeile *Klima*.
