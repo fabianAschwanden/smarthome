@@ -46,6 +46,25 @@ Slice `sensor`: Port `ReadSensors` (in), `SensorDevice` + Factory (out),
 `SensorService` (application), Adapter `adapter/in/rest/sensor` und
 `adapter/out/sensor/{mock,local}`. Nutzt die geteilten `support.tuya`-Klassen.
 
+## Historie: Prometheus, nicht die eigene Datenbank
+
+Innen- und Aussenwerte gehen als Gauges nach `/q/metrics` und landen damit in Prometheus;
+angesehen werden sie im Grafana-Board «Smarthome – Haus + Server», Zeile *Klima*.
+
+| Metrik | Label |
+|---|---|
+| `smarthome_sensor_temperature_celsius` | `sensor="innen"` / `"aussen"` |
+| `smarthome_sensor_humidity_percent` | dito |
+
+Bewusst **keine** eigene Zeitreihen-Tabelle wie bei der Energie: Ein zweiter
+Zeitreihen-Speicher neben dem, der ohnehin läuft, wäre Doppelarbeit. Der Preis ist die
+Aufbewahrung – sie richtet sich nach der Prometheus-Retention (derzeit 30 Tage), nicht
+nach einer eigenen Regel.
+
+Ein Wert, der nicht vorliegt (Sensor offline oder Platzhalter `-1000`/`-1`), meldet
+**NaN** – in Grafana eine Lücke statt einer falschen Null. Ein durchgezogener Strich auf
+0 °C sähe aus wie Frost, nicht wie ein Ausfall.
+
 ## 6. Offene Punkte / TODO
 
 - [ ] dps/scale bei einem neuen Sensor verifizieren (`tinytuya status`).
