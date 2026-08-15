@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Langzeit-Historie der Umweltsensoren (Use Case 8).
+
+         Warum eine eigene Tabelle, obwohl die Werte auch in Prometheus stehen: Prometheus
+         kennt nur EINE Aufbewahrungsdauer je Instanz - keine Retention je Metrik und kein
+         Downsampling. "Nach einem Jahr nur noch stuendlich" laesst sich dort nicht
+         ausdruecken. Prometheus behaelt die feine Aufloesung der letzten 30 Tage fuers
+         Dashboard, diese Tabelle die Jahre.
+
+         Der Index deckt die einzige Abfrageform ab: ein Sensor ueber einen Zeitraum. -->
+    <changeSet id="0014-create-sensor-sample" author="smarthome">
+        <createTable tableName="sensor_sample">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sensor_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ts" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="temperature" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+            <column name="humidity" type="int">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="sensor_sample" indexName="idx_sensor_sample_sensor_ts">
+            <column name="sensor_id"/>
+            <column name="ts"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
