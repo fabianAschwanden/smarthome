@@ -5,7 +5,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
+import fabianaschwanden.smarthome.support.http.RecoveringHttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -20,9 +20,11 @@ import java.util.Optional;
 @ApplicationScoped
 public class TuyaSidecarClient {
 
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(2))
-            .build();
+    // Selbstheilend statt statisch: Ein lange gehaltener HttpClient kann seinen
+    // Selector-Manager verlieren und danach dauerhaft scheitern (siehe
+    // RecoveringHttpClient).
+    private static final RecoveringHttpClient HTTP =
+            new RecoveringHttpClient(Duration.ofSeconds(2));
 
     private final String baseUrl;
 

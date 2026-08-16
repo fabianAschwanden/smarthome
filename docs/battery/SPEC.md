@@ -106,6 +106,33 @@ Domain-Service `SurplusChargePolicy` (pur), Application-Service
 Adapter (`adapter/in/rest`, `adapter/out/{smartfox,mock}`). Der Auto-Modus liest
 den Energiestand über den bestehenden `CurrentEnergyQuery`-Port des Energy-Slice.
 
+## Betriebsfalle: der tote HTTP-Client (16.08.2026)
+
+Das Relais liess sich aus der App nicht mehr schalten, und die Anzeige stand auf «Aus»,
+obwohl es eingeschaltet war. Im Log:
+
+```
+RelaySwitchFailed: Relais konnte nicht auf Modus MANUAL / ON gestellt werden:
+selector manager closed
+```
+
+Der Adapter hielt einen `HttpClient` in einem statischen Feld. Verliert ein solcher
+Client seinen Selector-Manager, scheitert **jeder** weitere Aufruf dauerhaft – und weil
+derselbe Client auch `values.xml` liest, fielen Schalten *und* Ist-Abgleich zusammen aus.
+Die Anzeige blieb deshalb auf dem letzten selbst gesetzten Wert stehen; sie war nie
+falsch berechnet, sondern nur nie aktualisiert.
+
+Bemerkenswert: Der Energie-Adapter las weiter, denn er hält einen **eigenen** Client. Nur
+der eine war tot.
+
+**Sofortmassnahme** war ein Pod-Neustart (`initFromDevice` liest den Ist-Zustand).
+**Behoben** durch `support/http/RecoveringHttpClient`: Er prüft vor jedem Aufruf, ob der
+Client beendet ist, und wiederholt einmal mit einem frischen. Alle vier Adapter mit
+diesem Muster nutzen ihn.
+
+**Fürs nächste Mal:** «Anzeige stimmt nicht» und «Schalten geht nicht» können *eine*
+Ursache haben. Der Log-Eintrag `RelaySwitchFailed` steht in `kubectl logs deploy/smarthome`.
+
 ## 9. Offene Punkte / TODO
 
 - [ ] Schalt-URL/Parameter gegen die reale SMARTFOX-Firmware verifizieren

@@ -11,7 +11,7 @@ import org.jboss.logging.Logger;
 
 import java.io.InputStream;
 import java.net.URI;
-import java.net.http.HttpClient;
+import fabianaschwanden.smarthome.support.http.RecoveringHttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -42,9 +42,11 @@ public class SmartfoxRelaySwitch implements RelaySwitch {
 
     private static final Logger LOG = Logger.getLogger(SmartfoxRelaySwitch.class);
 
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    // Selbstheilend statt statisch: Ein lange gehaltener HttpClient kann seinen
+    // Selector-Manager verlieren und danach dauerhaft scheitern (siehe
+    // RecoveringHttpClient).
+    private static final RecoveringHttpClient HTTP =
+            new RecoveringHttpClient(Duration.ofSeconds(5));
 
     private final String relayUrlTemplate;
     private final String stateManualOn;
