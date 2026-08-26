@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BatteryService } from '../../core/services/battery.service';
+import { ChargingSession } from '../../core/models/battery';
 import { ForecastService } from '../../core/services/forecast.service';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ItemImage } from '../../shared/item-image';
@@ -115,7 +116,12 @@ import { ItemImage } from '../../shared/item-image';
                   <span class="text-[color:var(--ink-soft)]">{{ tag(s.startedAt) }}</span>
                   <span class="flex items-center gap-3 tabular-nums">
                     <span class="text-[color:var(--ink-faint)]">{{ dauer(s.minutes) }}</span>
-                    <span class="text-[color:var(--ink-faint)]">{{ s.watt.toFixed(0) }} W</span>
+                    <span class="text-[color:var(--ink-faint)]" [title]="leistungHinweis(s)">
+                      {{ (s.verifiedWatt ?? s.watt).toFixed(0) }} W
+                      @if (abweichung(s)) {
+                        <span class="text-amber-300">*</span>
+                      }
+                    </span>
                     <span class="w-16 text-right font-semibold"
                       >{{ s.energyKwh.toFixed(1) }} kWh</span
                     >
@@ -124,8 +130,10 @@ import { ItemImage } from '../../shared/item-image';
               }
             </ul>
             <p class="text-xs text-[color:var(--ink-soft)]">
-              Die Anlage misst das Lade-Relais nicht separat. Die Werte stammen aus dem
-              Verbrauchssprung beim Einschalten – gut für die Grössenordnung, kein Zählerwert.
+              Die Anlage misst das Lade-Relais nicht separat. Die Leistung stammt aus dem
+              Verbrauchssprung beim Schalten – gut für die Grössenordnung, kein Zählerwert. Ein
+              <span class="text-amber-300">*</span> heisst: Die beiden Messungen weichen deutlich
+              voneinander ab, vermutlich lief etwas anderes mit.
             </p>
           </article>
         }
@@ -233,6 +241,21 @@ export class BatteryPage {
       return `Gestern ${zeit}`;
     }
     return `${date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })} ${zeit}`;
+  }
+
+  /** Weichen Einschalt- und Gegenmessung um mehr als ein Fünftel ab? */
+  protected abweichung(s: ChargingSession): boolean {
+    if (s.verifiedWatt === null || s.verifiedWatt === 0) {
+      return false;
+    }
+    return Math.abs(s.watt - s.verifiedWatt) / s.verifiedWatt > 0.2;
+  }
+
+  protected leistungHinweis(s: ChargingSession): string {
+    if (s.verifiedWatt === null) {
+      return `Beim Einschalten gemessen: ${s.watt.toFixed(0)} W`;
+    }
+    return `Gegenmessung: ${s.verifiedWatt.toFixed(0)} W · beim Einschalten: ${s.watt.toFixed(0)} W`;
   }
 
   protected dauer(minuten: number): string {

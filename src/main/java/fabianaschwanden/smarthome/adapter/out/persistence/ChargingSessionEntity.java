@@ -33,4 +33,14 @@ public class ChargingSessionEntity {
 
     @Column(name = "energy_kwh")
     public Double energyKwh;
+
+    /** Beginn der Gegenmessung (Relais AUS); gesetzt heisst: Pause laeuft oder war. */
+    @Column(name = "verify_started_at")
+    public Instant verifyStartedAt;
+
+    @Column(name = "verify_ended_at")
+    public Instant verifyEndedAt;
+
+    @Column(name = "verify_watt")
+    public Double verifyWatt;
 }

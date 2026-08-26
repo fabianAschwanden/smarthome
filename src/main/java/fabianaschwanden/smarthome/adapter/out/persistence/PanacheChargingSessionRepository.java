@@ -1,6 +1,7 @@
 package fabianaschwanden.smarthome.adapter.out.persistence;
 
 import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
+import fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession;
 import fabianaschwanden.smarthome.domain.port.out.charging.ChargingSessionRepository;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.panache.common.Sort;
@@ -33,8 +34,21 @@ public class PanacheChargingSessionRepository
     }
 
     @Override
-    public Optional<Instant> openStart() {
-        return openEntity().map(entity -> entity.startedAt);
+    public Optional<OpenChargingSession> open() {
+        return openEntity().map(entity -> new OpenChargingSession(
+                entity.startedAt,
+                Optional.ofNullable(entity.verifyStartedAt),
+                Optional.ofNullable(entity.verifyEndedAt)));
+    }
+
+    @Override
+    @Transactional
+    public void updateOpen(OpenChargingSession session) {
+        openEntity().ifPresent(entity -> {
+            entity.verifyStartedAt = session.verifyStartedAt().orElse(null);
+            entity.verifyEndedAt = session.verifyEndedAt().orElse(null);
+            persist(entity);
+        });
     }
 
     @Override
@@ -44,6 +58,9 @@ public class PanacheChargingSessionRepository
             entity.endedAt = session.endedAt();
             entity.watt = session.watt();
             entity.energyKwh = session.energyKwh();
+            entity.verifyWatt = session.verifiedWatt().isPresent()
+                    ? session.verifiedWatt().getAsDouble()
+                    : null;
             persist(entity);
         });
     }
@@ -68,6 +85,13 @@ public class PanacheChargingSessionRepository
     }
 
     private static ChargingSession toDomain(ChargingSessionEntity entity) {
-        return new ChargingSession(entity.startedAt, entity.endedAt, entity.watt, entity.energyKwh);
+        return new ChargingSession(
+                entity.startedAt,
+                entity.endedAt,
+                entity.watt,
+                entity.energyKwh,
+                entity.verifyWatt == null
+                        ? java.util.OptionalDouble.empty()
+                        : java.util.OptionalDouble.of(entity.verifyWatt));
     }
 }

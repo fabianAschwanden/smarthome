@@ -131,6 +131,28 @@ ein Ladegerät, das gegen Ende abregelt, wird überschätzt. Für die Grössenor
 als Abrechnungsgrundlage nicht. Wer eine belastbare Zahl braucht, braucht einen eigenen
 Zähler – der SMARTFOX bringt dafür einen Ladestations-Kanal mit (`ccEnergyValue`).
 
+### Gegenmessung mitten im Ladevorgang
+
+Nach `verify-after` (Standard 7 min) wird **einmal je Ladevorgang** kurz abgeschaltet und
+wieder eingeschaltet. Der Verbrauch fällt dabei um die Ladeleistung – eine zweite,
+unabhängige Messung, und die belastbarere: Sie entsteht im eingeschwungenen Zustand,
+während die erste unmittelbar nach dem Einschalten fällt, wo das Ladegerät noch anläuft.
+Für die Energie zählt deshalb die Gegenmessung, sobald es eine gibt; die Pause zählt nicht
+als Ladezeit.
+
+Weichen beide Messungen um mehr als ein Fünftel ab, markiert die Oberfläche das mit `*` –
+dann hat beim Einschalten vermutlich eine andere Last mitgeschaltet.
+
+**Das ist ein Eingriff an der Anlage**, kein reines Mitlesen: Das Relais schaltet zweimal
+zusätzlich je Ladevorgang, und für `verify-pause` wird nicht geladen. Deshalb:
+
+- abschaltbar über `battery.charging.verify-enabled`,
+- **nur im Manuell-Modus** – im Automatik-Modus gehört das Relais dem SMARTFOX, und ein
+  Eingriff von aussen arbeitete gegen dessen Regelung,
+- der Stand steht in der Datenbank, nicht im Speicher: Ein Neustart mitten in der Pause
+  muss erkennen können, dass er wieder einschalten muss, sonst bliebe die Anlage
+  ausgeschaltet zurück.
+
 Ein Vorgang wird **beim Einschalten sofort** in `charging_session` festgehalten und erst
 beim Ausschalten vervollständigt; läge der Beginn nur im Speicher, verschluckte jeder
 Neustart den laufenden Vorgang. Lässt sich nichts schätzen, wird der Eintrag **verworfen**

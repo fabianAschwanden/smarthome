@@ -1,6 +1,7 @@
 package fabianaschwanden.smarthome.domain.port.out.charging;
 
 import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
+import fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,8 +19,11 @@ public interface ChargingSessionRepository {
     /** Hält den Beginn fest; ein bereits offener Vorgang bleibt unangetastet. */
     void open(Instant startedAt);
 
-    /** Beginn des laufenden Vorgangs, falls einer offen ist. */
-    Optional<Instant> openStart();
+    /** Der laufende Vorgang samt Stand der Gegenmessung, falls einer offen ist. */
+    Optional<OpenChargingSession> open();
+
+    /** Schreibt den Stand der Gegenmessung fort. */
+    void updateOpen(OpenChargingSession session);
 
     /** Vervollständigt den offenen Vorgang. Ohne offenen Vorgang passiert nichts. */
     void close(ChargingSession session);

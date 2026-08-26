@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Schätzt die Ladeenergie aus dem Verbrauchssprung beim Einschalten.
@@ -68,9 +69,61 @@ public class ChargingEnergyEstimator {
         // Negatives kann es nicht geben - faellt der Verbrauch beim Einschalten, hat eine
         // andere Last aufgehoert, und ueber das Ladegeraet sagt das nichts.
         double watt = Math.max(0, median(during) - median(before));
-        double hours = Duration.between(startedAt, endedAt).toSeconds() / SECONDS_PER_HOUR;
+        return Optional.of(session(startedAt, endedAt, watt, OptionalDouble.empty(), Duration.ZERO));
+    }
+
+    /**
+     * Die Gegenmessung: Was fällt der Verbrauch, wenn mitten im Laden kurz abgeschaltet
+     * wird?
+     *
+     * <p>Dieselbe Rechnung wie beim Einschalten, nur andersherum – und im eingeschwungenen
+     * Zustand, weshalb sie die belastbarere der beiden ist.
+     *
+     * @param pausedAt  Zeitpunkt des Abschaltens
+     * @param resumedAt Zeitpunkt des Wiedereinschaltens
+     */
+    public OptionalDouble verify(
+            List<EnergySample> samples,
+            Instant pausedAt,
+            Instant resumedAt,
+            Duration settleTime,
+            Duration baselineWindow) {
+
+        if (samples == null || pausedAt == null || resumedAt == null || resumedAt.isBefore(pausedAt)) {
+            return OptionalDouble.empty();
+        }
+        List<Double> whileCharging = consumptionIn(samples, pausedAt.minus(baselineWindow), pausedAt);
+        List<Double> whilePaused = consumptionIn(samples, pausedAt.plus(settleTime), resumedAt);
+        if (whileCharging.isEmpty() || whilePaused.isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(round(Math.max(0, median(whileCharging) - median(whilePaused))));
+    }
+
+    /**
+     * Baut den Vorgang und rechnet die Energie.
+     *
+     * <p>Gerechnet wird mit der Gegenmessung, sobald es eine gibt – sie entsteht im
+     * eingeschwungenen Zustand. Die Pause zählt nicht als Ladezeit; in ihr floss kein
+     * Strom.
+     */
+    public ChargingSession session(
+            Instant startedAt,
+            Instant endedAt,
+            double stepWatt,
+            OptionalDouble verifiedWatt,
+            Duration pausedFor) {
+
+        double watt = verifiedWatt.orElse(stepWatt);
+        double hours = Math.max(0, Duration.between(startedAt, endedAt).minus(pausedFor).toSeconds())
+                / SECONDS_PER_HOUR;
         double kwh = watt * hours / WATT_TO_KW;
-        return Optional.of(new ChargingSession(startedAt, endedAt, round(watt), round(kwh)));
+        return new ChargingSession(
+                startedAt, endedAt, round(stepWatt), round(kwh), round(verifiedWatt));
+    }
+
+    private static OptionalDouble round(OptionalDouble value) {
+        return value.isPresent() ? OptionalDouble.of(round(value.getAsDouble())) : value;
     }
 
     private static List<Double> consumptionIn(List<EnergySample> samples, Instant from, Instant to) {

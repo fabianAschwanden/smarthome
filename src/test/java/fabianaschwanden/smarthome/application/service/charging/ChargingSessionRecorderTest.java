@@ -37,8 +37,9 @@ class ChargingSessionRecorderTest {
         battery = new FakeBattery();
         sessions = new FakeSessions();
         samples = new FakeSamples();
-        recorder = new ChargingSessionRecorder(
-                battery, sessions, samples, Duration.ofSeconds(60), Duration.ofMinutes(2));
+        // Gegenmessung in den Grundtests aus: Sie hat ihre eigene Testklasse.
+        recorder = new ChargingSessionRecorder(battery, sessions, samples,
+                Duration.ofSeconds(60), Duration.ofMinutes(2), false, Duration.ofMinutes(7), Duration.ofSeconds(90));
     }
 
     @Test
@@ -47,7 +48,7 @@ class ChargingSessionRecorderTest {
 
         recorder.tick();
 
-        assertEquals(EIN, sessions.openStart().orElseThrow());
+        assertEquals(EIN, sessions.open().orElseThrow().startedAt());
     }
 
     @Test
@@ -59,7 +60,7 @@ class ChargingSessionRecorderTest {
         recorder.tick();
         recorder.tick();
 
-        assertEquals(EIN, sessions.openStart().orElseThrow());
+        assertEquals(EIN, sessions.open().orElseThrow().startedAt());
         assertEquals(1, sessions.opened);
     }
 
@@ -76,7 +77,7 @@ class ChargingSessionRecorderTest {
         ChargingSession session = sessions.closed.orElseThrow();
         assertEquals(2000.0, session.watt());
         assertEquals(4.0, session.energyKwh());
-        assertTrue(sessions.openStart().isEmpty());
+        assertTrue(sessions.open().isEmpty());
     }
 
     @Test
@@ -90,7 +91,7 @@ class ChargingSessionRecorderTest {
 
         assertTrue(sessions.closed.isEmpty());
         assertTrue(sessions.discarded);
-        assertTrue(sessions.openStart().isEmpty());
+        assertTrue(sessions.open().isEmpty());
     }
 
     @Test
@@ -99,7 +100,7 @@ class ChargingSessionRecorderTest {
 
         recorder.tick();
 
-        assertTrue(sessions.openStart().isEmpty());
+        assertTrue(sessions.open().isEmpty());
         assertFalse(sessions.discarded);
     }
 
@@ -130,23 +131,34 @@ class ChargingSessionRecorderTest {
         }
     }
 
-    private static final class FakeSessions implements ChargingSessionRepository {
-        private Instant open;
-        private Optional<ChargingSession> closed = Optional.empty();
+    static final class FakeSessions implements ChargingSessionRepository {
+        private fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession open;
+        Optional<ChargingSession> closed = Optional.empty();
         private boolean discarded;
         private int opened;
+
+        void setOpen(fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession session) {
+            open = session;
+        }
 
         @Override
         public void open(Instant startedAt) {
             if (open == null) {
-                open = startedAt;
+                open = fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession
+                        .startedAt(startedAt);
                 opened++;
             }
         }
 
         @Override
-        public Optional<Instant> openStart() {
+        public Optional<fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession> open() {
             return Optional.ofNullable(open);
+        }
+
+        @Override
+        public void updateOpen(
+                fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession session) {
+            open = session;
         }
 
         @Override

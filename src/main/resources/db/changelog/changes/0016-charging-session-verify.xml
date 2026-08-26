@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Gegenmessung mitten im Ladevorgang: kurz abschalten, Verbrauchsabfall messen,
+         wieder einschalten.
+
+         Die drei Zeitpunkte/Werte stehen in der Tabelle und nicht im Speicher, weil die
+         Anlage waehrend der Pause AUSGESCHALTET ist. Ein Neustart genau dann wuerde sie
+         sonst ausgeschaltet lassen - der Dienst muss beim Hochfahren erkennen koennen,
+         dass er mitten in einer Pause steht, und wieder einschalten. -->
+    <changeSet id="0016-charging-session-verify" author="smarthome">
+        <addColumn tableName="charging_session">
+            <column name="verify_started_at" type="timestamp with time zone"/>
+            <column name="verify_ended_at" type="timestamp with time zone"/>
+            <column name="verify_watt" type="double precision"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
