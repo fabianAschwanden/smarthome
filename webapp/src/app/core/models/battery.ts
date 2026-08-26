@@ -7,3 +7,15 @@ export interface BatteryControl {
   desiredState: RelayState;
   changedAt: string;
 }
+
+/** Ein Ladevorgang der Batterie; die Energie ist geschätzt, nicht gemessen. */
+export interface ChargingSession {
+  startedAt: string;
+  endedAt: string;
+  minutes: number;
+  /** Ladeleistung aus dem Verbrauchssprung beim Einschalten. */
+  watt: number;
+  energyKwh: number;
+  /** Immer true – die Anlage misst das Lade-Relais nicht separat. */
+  estimated: boolean;
+}

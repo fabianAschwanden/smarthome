@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { startWith, switchMap } from 'rxjs';
 import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BatteryControl, ControlMode, RelayState } from '../models/battery';
+import { BatteryControl, ChargingSession, ControlMode, RelayState } from '../models/battery';
 
 /**
  * Pollt den Steuerstand der Batterie vom eigenen Backend (BFF) und exponiert ihn
@@ -16,6 +16,20 @@ export class BatteryService {
 
   private readonly controlState = signal<BatteryControl | null>(null);
   readonly control = this.controlState.asReadonly();
+
+  private readonly sessionsState = signal<ChargingSession[]>([]);
+  /** Letzte Ladevorgänge; die Energie darin ist geschätzt. */
+  readonly chargingSessions = this.sessionsState.asReadonly();
+
+  /**
+   * Lädt die Ladevorgänge nach. Bewusst nicht gepollt: Ein Eintrag entsteht erst, wenn
+   * ein Ladevorgang endet – ein Timer wäre reine Beschäftigung.
+   */
+  loadChargingSessions(): void {
+    this.http
+      .get<ChargingSession[]>('/api/battery/charging-sessions')
+      .subscribe((sessions) => this.sessionsState.set(sessions));
+  }
 
   private readonly intervalMs = 3000;
 

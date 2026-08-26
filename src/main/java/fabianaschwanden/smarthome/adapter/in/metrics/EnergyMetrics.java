@@ -37,11 +37,14 @@ public class EnergyMetrics {
 
     private final CurrentEnergyQuery currentEnergy;
     private final ControlBattery battery;
+    private final fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery chargingSessions;
     private volatile Cached cached;
 
-    EnergyMetrics(MeterRegistry registry, CurrentEnergyQuery currentEnergy, ControlBattery battery) {
+    EnergyMetrics(MeterRegistry registry, CurrentEnergyQuery currentEnergy, ControlBattery battery,
+                  fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery chargingSessions) {
         this.currentEnergy = currentEnergy;
         this.battery = battery;
+        this.chargingSessions = chargingSessions;
         for (PowerSource source : PowerSource.values()) {
             registerPerSource(registry, source, "smarthome.pv.watt",
                     "PV-Produktion in Watt", PowerReading::pvWatt);
@@ -50,6 +53,12 @@ public class EnergyMetrics {
             registerPerSource(registry, source, "smarthome.grid.watt",
                     "Netzbezug (+) bzw. Einspeisung (-) in Watt", PowerReading::gridWatt);
         }
+        // Energie des letzten Ladevorgangs: Damit laesst sich in Grafana ueber die Zeit
+        // aufsummieren, wie viel in die Batterie ging. Bewusst der LETZTE Wert und keine
+        // Summe - die Schaetzung soll je Vorgang nachvollziehbar bleiben.
+        Gauge.builder("smarthome.battery.charging.last.kwh", this, EnergyMetrics::lastChargingKwh)
+                .description("Geschaetzte Energie des letzten abgeschlossenen Ladevorgangs in kWh")
+                .register(registry);
         Gauge.builder("smarthome.battery.relay.state", this, EnergyMetrics::relayState)
                 .description("Von der Steuerung gewuenschter Relais-Zustand (1 = ON, 0 = OFF)")
                 .register(registry);
@@ -73,6 +82,18 @@ public class EnergyMetrics {
                 .findFirst()
                 .map(value::applyAsDouble)
                 .orElse(Double.NaN);
+    }
+
+    /** Leer, solange kein Ladevorgang abgeschlossen wurde – dann NaN statt einer 0. */
+    private double lastChargingKwh() {
+        try {
+            return chargingSessions.recentSessions(1).stream()
+                    .findFirst()
+                    .map(fabianaschwanden.smarthome.domain.model.charging.ChargingSession::energyKwh)
+                    .orElse(Double.NaN);
+        } catch (RuntimeException e) {
+            return Double.NaN;
+        }
     }
 
     private double relayState() {

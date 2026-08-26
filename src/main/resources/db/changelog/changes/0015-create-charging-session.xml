@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Ladevorgaenge der Batterie (Use Case 2).
+
+         ended_at, watt und energy_kwh sind NULLABLE: Beim Einschalten steht nur der
+         Beginn fest. Wuerde der Beginn nur im Speicher liegen, verschluckte jeder
+         Neustart den laufenden Ladevorgang - und Deploys sind haeufig.
+
+         Hoechstens EINE Zeile darf offen sein; darum kuemmert sich der Adapter. -->
+    <changeSet id="0015-create-charging-session" author="smarthome">
+        <createTable tableName="charging_session">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="started_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ended_at" type="timestamp with time zone"/>
+            <column name="watt" type="double precision"/>
+            <column name="energy_kwh" type="double precision"/>
+        </createTable>
+        <createIndex tableName="charging_session" indexName="idx_charging_session_started">
+            <column name="started_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
