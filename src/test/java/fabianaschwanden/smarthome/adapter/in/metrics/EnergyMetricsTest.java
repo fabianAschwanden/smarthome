@@ -59,7 +59,7 @@ class EnergyMetricsTest {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(
                 PowerReading.of(PowerSource.FRONIUS, NOW, -300.0, 5000.0, null, 1200.0),
                 PowerReading.error(PowerSource.SMARTFOX, NOW)), Optional.empty());
-        metrics = new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery, sessions);
 
         assertEquals(5000.0, gauge("smarthome.pv.watt", PowerSource.FRONIUS));
         assertEquals(1200.0, gauge("smarthome.consumption.watt", PowerSource.FRONIUS));
@@ -71,7 +71,7 @@ class EnergyMetricsTest {
     @Test
     void relais_zustand_als_null_oder_eins() {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(), Optional.empty());
-        metrics = new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery, sessions);
 
         battery.control = new BatteryControl(ControlMode.MANUAL, RelayState.ON, NOW);
         assertEquals(1.0, registry.get("smarthome.battery.relay.state").gauge().value());
@@ -84,7 +84,7 @@ class EnergyMetricsTest {
     void ein_scrape_befragt_die_geraete_nur_einmal() {
         energyQuery.snapshot = new EnergySnapshot(NOW, List.of(
                 PowerReading.of(PowerSource.FRONIUS, NOW, 0.0, 4200.0, null, 800.0)), Optional.empty());
-        metrics = new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery, sessions);
 
         gauge("smarthome.pv.watt", PowerSource.FRONIUS);
         gauge("smarthome.consumption.watt", PowerSource.FRONIUS);
@@ -96,12 +96,25 @@ class EnergyMetricsTest {
     @Test
     void geraetestoerung_ergibt_nan_statt_scrape_fehler() {
         energyQuery.snapshot = null; // Query wirft
-        metrics = new EnergyMetrics(registry, energyQuery, battery);
+        metrics = new EnergyMetrics(registry, energyQuery, battery, sessions);
 
         assertTrue(Double.isNaN(gauge("smarthome.pv.watt", PowerSource.FRONIUS)));
         assertTrue(Double.isNaN(gauge("smarthome.consumption.watt", PowerSource.SMARTFOX)));
         // Nur ein Fehlversuch trotz mehrerer Gauge-Reads (Fehlschlag wird gecacht):
         assertEquals(1, energyQuery.calls);
+    }
+
+    /** Ohne abgeschlossenen Ladevorgang - der Metrik-Test dreht sich um die Energiewerte. */
+    private final FakeChargingSessions sessions = new FakeChargingSessions();
+
+    private static final class FakeChargingSessions
+            implements fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery {
+
+        @Override
+        public java.util.List<fabianaschwanden.smarthome.domain.model.charging.ChargingSession>
+                recentSessions(int limit) {
+            return java.util.List.of();
+        }
     }
 
     /** Liefert den gesetzten Snapshot; ohne Snapshot wirft er wie eine gestörte Quelle. */

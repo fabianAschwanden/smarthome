@@ -20,5 +20,7 @@
     <include file="db/changelog/changes/0012-create-appliance-schedule.xml"/>
     <include file="db/changelog/changes/0013-appliance-schedule-temperature.xml"/>
     <include file="db/changelog/changes/0014-create-sensor-sample.xml"/>
+    <include file="db/changelog/changes/0015-create-charging-session.xml"/>
+    <include file="db/changelog/changes/0016-charging-session-verify.xml"/>
 
 </databaseChangeLog>

@@ -106,6 +106,61 @@ Domain-Service `SurplusChargePolicy` (pur), Application-Service
 Adapter (`adapter/in/rest`, `adapter/out/{smartfox,mock}`). Der Auto-Modus liest
 den Energiestand über den bestehenden `CurrentEnergyQuery`-Port des Energy-Slice.
 
+## Ladeenergie: geschätzt, nicht gemessen
+
+**Weder SMARTFOX noch Wechselrichter messen das Lade-Relais separat.** Der SMARTFOX führt
+für Relais 1 nur Status, Rest- und Laufzeit – keinen kWh-Zähler; der Fronius meldet
+`P_Akku: None`, er sieht die Batterie gar nicht (beides am 26.08.2026 abgefragt).
+
+Was bleibt, ist der Hausverbrauch – und darin steckt das Ladegerät. Weil die App den
+Schaltzeitpunkt kennt, ist der **Verbrauchssprung beim Einschalten** die Ladeleistung:
+
+| Schritt | Wie |
+|---|---|
+| Vergleich davor | Median des Verbrauchs im `baseline-window` vor dem Einschalten |
+| Ladeleistung | Median während des Ladens minus Vergleich, nie negativ |
+| Anlauf | `settle-time` nach dem Einschalten wird übersprungen |
+| Energie | Leistung × Dauer |
+
+Median statt Mittelwert: Ein einzelner Ausreisser – der Backofen, der zufällig anspringt –
+verschöbe einen Mittelwert, den Median kaum.
+
+**Grenzen, die man kennen muss.** Schaltet gleichzeitig eine andere grosse Last, wandert
+deren Leistung in die Rechnung. Und die Leistung gilt als konstant über den ganzen Vorgang;
+ein Ladegerät, das gegen Ende abregelt, wird überschätzt. Für die Grössenordnung taugt das,
+als Abrechnungsgrundlage nicht. Wer eine belastbare Zahl braucht, braucht einen eigenen
+Zähler – der SMARTFOX bringt dafür einen Ladestations-Kanal mit (`ccEnergyValue`).
+
+### Gegenmessung mitten im Ladevorgang
+
+Nach `verify-after` (Standard 7 min) wird **einmal je Ladevorgang** kurz abgeschaltet und
+wieder eingeschaltet. Der Verbrauch fällt dabei um die Ladeleistung – eine zweite,
+unabhängige Messung, und die belastbarere: Sie entsteht im eingeschwungenen Zustand,
+während die erste unmittelbar nach dem Einschalten fällt, wo das Ladegerät noch anläuft.
+Für die Energie zählt deshalb die Gegenmessung, sobald es eine gibt; die Pause zählt nicht
+als Ladezeit.
+
+Weichen beide Messungen um mehr als ein Fünftel ab, markiert die Oberfläche das mit `*` –
+dann hat beim Einschalten vermutlich eine andere Last mitgeschaltet.
+
+**Das ist ein Eingriff an der Anlage**, kein reines Mitlesen: Das Relais schaltet zweimal
+zusätzlich je Ladevorgang, und für `verify-pause` wird nicht geladen. Deshalb:
+
+- abschaltbar über `battery.charging.verify-enabled`,
+- **nur im Manuell-Modus** – im Automatik-Modus gehört das Relais dem SMARTFOX, und ein
+  Eingriff von aussen arbeitete gegen dessen Regelung,
+- der Stand steht in der Datenbank, nicht im Speicher: Ein Neustart mitten in der Pause
+  muss erkennen können, dass er wieder einschalten muss, sonst bliebe die Anlage
+  ausgeschaltet zurück.
+
+Ein Vorgang wird **beim Einschalten sofort** in `charging_session` festgehalten und erst
+beim Ausschalten vervollständigt; läge der Beginn nur im Speicher, verschluckte jeder
+Neustart den laufenden Vorgang. Lässt sich nichts schätzen, wird der Eintrag **verworfen**
+statt mit 0 kWh geführt – eine 0 sähe aus wie «nicht geladen».
+
+Erfasst werden auch Ladevorgänge, die **direkt am SMARTFOX** gestartet wurden: Beobachtet
+wird der Relais-Zustand, nicht der eigene Schaltbefehl.
+
 ## Betriebsfalle: der tote HTTP-Client (16.08.2026)
 
 Das Relais liess sich aus der App nicht mehr schalten, und die Anzeige stand auf «Aus»,

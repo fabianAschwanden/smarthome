@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BatteryService } from '../../core/services/battery.service';
+import { ChargingSession } from '../../core/models/battery';
 import { ForecastService } from '../../core/services/forecast.service';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ItemImage } from '../../shared/item-image';
@@ -102,6 +103,41 @@ import { ItemImage } from '../../shared/item-image';
           </article>
         }
 
+        <!-- Ladevorgaenge: Was tatsaechlich in die Batterie ging (geschaetzt). -->
+        @if (sessions().length > 0) {
+          <article class="glass-card space-y-3 p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-medium">Letzte Ladevorgänge</h3>
+              <span class="text-xs text-[color:var(--ink-soft)]">geschätzt</span>
+            </div>
+            <ul class="space-y-1.5">
+              @for (s of sessions(); track s.startedAt) {
+                <li class="flex items-center justify-between gap-3 text-sm">
+                  <span class="text-[color:var(--ink-soft)]">{{ tag(s.startedAt) }}</span>
+                  <span class="flex items-center gap-3 tabular-nums">
+                    <span class="text-[color:var(--ink-faint)]">{{ dauer(s.minutes) }}</span>
+                    <span class="text-[color:var(--ink-faint)]" [title]="leistungHinweis(s)">
+                      {{ (s.verifiedWatt ?? s.watt).toFixed(0) }} W
+                      @if (abweichung(s)) {
+                        <span class="text-amber-300">*</span>
+                      }
+                    </span>
+                    <span class="w-16 text-right font-semibold"
+                      >{{ s.energyKwh.toFixed(1) }} kWh</span
+                    >
+                  </span>
+                </li>
+              }
+            </ul>
+            <p class="text-xs text-[color:var(--ink-soft)]">
+              Die Anlage misst das Lade-Relais nicht separat. Die Leistung stammt aus dem
+              Verbrauchssprung beim Schalten – gut für die Grössenordnung, kein Zählerwert. Ein
+              <span class="text-amber-300">*</span> heisst: Die beiden Messungen weichen deutlich
+              voneinander ab, vermutlich lief etwas anderes mit.
+            </p>
+          </article>
+        }
+
         <!-- Lade-Automatik (Use Case 15 / F2). Sichtbar auch ohne Empfehlung: Dass sie
              an ist und heute NICHT geschaltet hat, ist die wichtigere Information. -->
         @if (autoApply(); as auto) {
@@ -181,6 +217,52 @@ export class BatteryPage {
   private readonly forecast = inject(ForecastService);
 
   protected readonly autoApply = this.forecast.autoApply;
+  protected readonly sessions = this.battery.chargingSessions;
+
+  constructor() {
+    // Einmal beim Öffnen: Ein Eintrag entsteht erst, wenn ein Ladevorgang endet.
+    this.battery.loadChargingSessions();
+  }
+
+  /** «Heute 14:20», «Gestern 09:05» oder das kurze Datum. */
+  protected tag(iso: string): string {
+    const date = new Date(iso);
+    const zeit = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+    const heute = new Date();
+    const tage = Math.round(
+      (new Date(heute.getFullYear(), heute.getMonth(), heute.getDate()).getTime() -
+        new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()) /
+        86_400_000,
+    );
+    if (tage === 0) {
+      return `Heute ${zeit}`;
+    }
+    if (tage === 1) {
+      return `Gestern ${zeit}`;
+    }
+    return `${date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })} ${zeit}`;
+  }
+
+  /** Weichen Einschalt- und Gegenmessung um mehr als ein Fünftel ab? */
+  protected abweichung(s: ChargingSession): boolean {
+    if (s.verifiedWatt === null || s.verifiedWatt === 0) {
+      return false;
+    }
+    return Math.abs(s.watt - s.verifiedWatt) / s.verifiedWatt > 0.2;
+  }
+
+  protected leistungHinweis(s: ChargingSession): string {
+    if (s.verifiedWatt === null) {
+      return `Beim Einschalten gemessen: ${s.watt.toFixed(0)} W`;
+    }
+    return `Gegenmessung: ${s.verifiedWatt.toFixed(0)} W · beim Einschalten: ${s.watt.toFixed(0)} W`;
+  }
+
+  protected dauer(minuten: number): string {
+    const h = Math.floor(minuten / 60);
+    const m = minuten % 60;
+    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+  }
 
   protected autoApplyUmschalten(enabled: boolean): void {
     this.forecast.setAutoApply(enabled);
