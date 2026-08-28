@@ -5,6 +5,7 @@ import fabianaschwanden.smarthome.domain.model.battery.RelayState;
 import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
 import fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession;
+import fabianaschwanden.smarthome.domain.model.energy.EnergySample;
 import fabianaschwanden.smarthome.domain.port.in.battery.ControlBattery;
 import fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery;
 import fabianaschwanden.smarthome.domain.port.out.charging.ChargingSessionRepository;
@@ -16,6 +17,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -58,6 +60,7 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
     private final boolean verifyEnabled;
     private final Duration verifyAfter;
     private final Duration verifyPause;
+    private final Clock clock;
 
     @Inject
     public ChargingSessionRecorder(
@@ -69,6 +72,23 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
             @ConfigProperty(name = "battery.charging.verify-enabled") boolean verifyEnabled,
             @ConfigProperty(name = "battery.charging.verify-after") Duration verifyAfter,
             @ConfigProperty(name = "battery.charging.verify-pause") Duration verifyPause) {
+        this(battery, sessions, samples, settleTime, baselineWindow, verifyEnabled, verifyAfter,
+                verifyPause, Clock.systemUTC());
+    }
+
+    // Sichtbar fuers Testen: feste Uhr. Ohne sie liess sich die Faelligkeit nicht pruefen -
+    // und genau dort steckte ein Fehler, den die Tests deshalb nicht sahen.
+    ChargingSessionRecorder(
+            ControlBattery battery,
+            ChargingSessionRepository sessions,
+            EnergySampleRepository samples,
+            Duration settleTime,
+            Duration baselineWindow,
+            boolean verifyEnabled,
+            Duration verifyAfter,
+            Duration verifyPause,
+            Clock clock) {
+        this.clock = clock;
         this.battery = battery;
         this.sessions = sessions;
         this.samples = samples;
@@ -114,11 +134,14 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
         if (!verifyEnabled || open.verificationDone() || control.mode() != ControlMode.MANUAL) {
             return;
         }
-        Instant now = control.changedAt().isAfter(open.startedAt()) ? control.changedAt() : Instant.now();
-        if (now.isBefore(open.startedAt().plus(verifyAfter))) {
+        // clock.instant(), NICHT control.changedAt(): Letzteres ist der Zeitpunkt der
+        // letzten Relais-Aenderung und steht still, solange nichts geschaltet wird. Genau
+        // damit hat sich die Gegenmessung selbst blockiert - nach einem Neustart liegt
+        // changedAt hinter dem Sessionbeginn, und die Faelligkeit trat nie ein.
+        if (clock.instant().isBefore(open.startedAt().plus(verifyAfter))) {
             return;
         }
-        Instant pausedAt = Instant.now();
+        Instant pausedAt = clock.instant();
         battery.switchRelay(RelayState.OFF);
         sessions.updateOpen(open.verifyStarted(pausedAt));
         LOG.infof("Gegenmessung: Relais fuer %s abgeschaltet", verifyPause);
@@ -130,10 +153,10 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
      */
     private void resumeIfDue(OpenChargingSession open, BatteryControl control) {
         Instant pausedAt = open.verifyStartedAt().orElseThrow();
-        if (Instant.now().isBefore(pausedAt.plus(verifyPause))) {
+        if (clock.instant().isBefore(pausedAt.plus(verifyPause))) {
             return;
         }
-        Instant resumedAt = Instant.now();
+        Instant resumedAt = clock.instant();
         if (control.desiredState() != RelayState.ON) {
             battery.switchRelay(RelayState.ON);
         }
@@ -142,12 +165,19 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
                 Duration.between(pausedAt, resumedAt));
     }
 
+    private static Instant min(Instant a, Instant b) {
+        return a.isBefore(b) ? a : b;
+    }
+
     private void finish(OpenChargingSession open, Instant endedAt) {
         Instant startedAt = open.startedAt();
-        List<fabianaschwanden.smarthome.domain.model.energy.EnergySample> window =
-                samples.between(startedAt.minus(baselineWindow), endedAt);
-        Optional<ChargingSession> step =
-                estimator.estimate(window, startedAt, endedAt, settleTime, baselineWindow);
+        // Nur die Fenster laden, die die Rechnung braucht - nicht den ganzen Ladevorgang.
+        // Bei einer Batterie, die tagelang am Netz haengt, waeren das Zehntausende
+        // Messpunkte (alle 10 s), und alle davon nur, um zwei Mediane zu bilden.
+        Instant stepEnd = startedAt.plus(settleTime).plus(baselineWindow);
+        List<EnergySample> stepWindow = samples.between(startedAt.minus(baselineWindow), stepEnd);
+        Optional<ChargingSession> step = estimator.estimate(
+                stepWindow, startedAt, min(stepEnd, endedAt), settleTime, baselineWindow);
 
         if (step.isEmpty()) {
             // Ohne Vergleichswerte gibt es keine Zahl. Eine 0 einzutragen saehe aus wie
@@ -162,7 +192,9 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
         if (open.verifyStartedAt().isPresent() && open.verifyEndedAt().isPresent()) {
             Instant pausedAt = open.verifyStartedAt().get();
             Instant resumedAt = open.verifyEndedAt().get();
-            verified = estimator.verify(window, pausedAt, resumedAt, settleTime, baselineWindow);
+            List<EnergySample> pauseWindow =
+                    samples.between(pausedAt.minus(baselineWindow), resumedAt.plus(settleTime));
+            verified = estimator.verify(pauseWindow, pausedAt, resumedAt, settleTime, baselineWindow);
             pausedFor = Duration.between(pausedAt, resumedAt);
         }
 

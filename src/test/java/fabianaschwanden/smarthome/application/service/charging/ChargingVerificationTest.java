@@ -41,9 +41,14 @@ class ChargingVerificationTest {
         samples = new FakeSamples();
     }
 
+    /** Uhr auf JETZT - die Tests rechnen relativ dazu. */
     private ChargingSessionRecorder recorder(boolean enabled) {
+        return recorder(enabled, java.time.Clock.systemUTC());
+    }
+
+    private ChargingSessionRecorder recorder(boolean enabled, java.time.Clock clock) {
         return new ChargingSessionRecorder(battery, sessions, samples,
-                Duration.ofSeconds(60), Duration.ofMinutes(2), enabled, NACH, PAUSE);
+                Duration.ofSeconds(60), Duration.ofMinutes(2), enabled, NACH, PAUSE, clock);
     }
 
     @Test
@@ -65,6 +70,23 @@ class ChargingVerificationTest {
         recorder.tick();   // Vorgang anlegen
 
         recorder.tick();   // faellig
+
+        assertEquals(RelayState.OFF, battery.control.desiredState());
+        assertTrue(sessions.open().orElseThrow().isPaused());
+    }
+
+    @Test
+    void misst_auch_dann_gegen_wenn_das_relais_zwischendurch_gestellt_wurde() {
+        // Der Fehler, der in Produktion auffiel: Als "jetzt" diente der Zeitpunkt der
+        // letzten Relais-Aenderung. Nach einem Neustart liegt der HINTER dem Beginn des
+        // Ladevorgangs - und stand still, solange nichts geschaltet wurde. Die
+        // Gegenmessung wurde deshalb nie faellig.
+        Instant begonnen = Instant.now().minus(NACH).minusSeconds(600);
+        sessions.setOpen(OpenChargingSession.startedAt(begonnen));
+        // Relais zuletzt NACH dem Sessionbeginn gestellt (z. B. Abgleich nach Neustart):
+        battery.control = new BatteryControl(ControlMode.MANUAL, RelayState.ON, begonnen.plusSeconds(300));
+
+        recorder(true).tick();
 
         assertEquals(RelayState.OFF, battery.control.desiredState());
         assertTrue(sessions.open().orElseThrow().isPaused());
