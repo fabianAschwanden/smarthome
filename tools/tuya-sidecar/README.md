@@ -36,3 +36,30 @@ Der Sidecar muss laufen, damit 3.4/3.5-Geräte (z. B. der Innensensor) online si
 Ist er aus, erscheinen diese Geräte „offline" – 3.3-Geräte sind nicht betroffen.
 Mittelfristig kann der 3.4-Handshake in `support.tuya.Tuya34Session` fertig
 implementiert werden, dann entfällt der Sidecar.
+
+## Betriebsfalle: das Socket-Leck (August 2026)
+
+Der Sidecar wurde alle vier bis sechs Stunden von seinem Speicherlimit (256 MiB)
+erschlagen. Sichtbar war das nur im Kernel-Log des Hosts
+(`Memory cgroup out of memory: Killed process … (python)`), nach aussen als kurzzeitig
+ausfallende Tuya-, Gecko- und Klima-Geräte.
+
+**Ursache:** `async with GeckoAsyncSpaMan(...)` ruft nur `__aexit__`, und das beendet
+lediglich die Tasks. Die UDP-Verbindungen zum Spa blieben offen – rund zwei Sockets je
+Abfrage, bei einer Abfrage alle paar Sekunden. Erst `async_reset()` ruft
+`facade.disconnect()` und `spa.disconnect()`.
+
+**Diagnose fürs nächste Mal:**
+
+```bash
+kubectl -n smarthome exec deploy/sidecar -- sh -c 'ls /proc/1/fd | wc -l'   # Sockets
+kubectl -n smarthome exec deploy/sidecar -- grep VmRSS /proc/1/status       # Speicher
+```
+
+Bleiben beide Zahlen über Minuten stabil, ist alles in Ordnung. Wachsen sie stetig, hängt
+irgendwo eine Verbindung.
+
+**Behoben** durch `async_reset()` in einem `finally` – und zwar *ausserhalb* des
+`wait_for`: Läuft die Abfrage in den Timeout, wird die innere Coroutine abgebrochen, und
+ein Aufräumen dort käme nie zum Zug. Ausgerechnet beim nicht erreichbaren Spa bliebe der
+Socket dann liegen. Beide Fälle deckt `test_gecko_cleanup.py` ab.

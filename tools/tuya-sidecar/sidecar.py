@@ -196,6 +196,33 @@ import threading as _threading
 
 _gecko_loop = None
 _gecko_lock = _threading.Lock()
+_gecko_man_cls = None
+
+
+def _gecko_man_class():
+    """Die SpaMan-Ableitung EINMAL bauen, nicht je Aufruf.
+
+    Eine Klasse pro Anfrage zu definieren erzeugt bei jedem Abruf ein neues Typ-Objekt
+    samt Methodentabellen - unnoetig, wenn sich nichts daran unterscheidet.
+    """
+    global _gecko_man_cls
+    if _gecko_man_cls is None:
+        from geckolib import GeckoAsyncSpaMan, GeckoSpaEvent
+
+        class _Man(GeckoAsyncSpaMan):
+            async def handle_event(self, event: GeckoSpaEvent, **kwargs) -> None:
+                pass
+
+        _gecko_man_cls = _Man
+    return _gecko_man_cls
+
+
+async def _reset_quietly(man):
+    """Verbindungen schliessen; ein Fehler dabei darf die Antwort nicht kippen."""
+    try:
+        await man.async_reset()
+    except Exception as exc:  # noqa: BLE001 - Aufraeumen darf nie die Abfrage stoeren
+        print(f"[gecko] Verbindung schliessen fehlgeschlagen: {exc}", flush=True)
 
 
 def _ensure_gecko_loop():
@@ -210,33 +237,43 @@ def _ensure_gecko_loop():
 def _gecko_run(ip, ident, name, action):
     """Baut einen SpaMan, verbindet, führt action(facade) aus und liefert den Snapshot."""
     import uuid
-    from geckolib import GeckoAsyncSpaMan, GeckoSpaEvent
 
-    class _Man(GeckoAsyncSpaMan):
-        async def handle_event(self, event: GeckoSpaEvent, **kwargs) -> None:
-            pass
+    _Man = _gecko_man_class()
 
     async def run():
         # Timeout INNERHALB der Coroutine: bei Überschreitung bricht der Connect
         # selbst ab, der SpaMan wird über 'async with' sauber geschlossen und der
         # Lock zuverlässig freigegeben – ein hängendes Spa blockiert so nicht die
         # folgenden Abfragen (z. B. das zweite Spa).
-        async def _do():
-            async with _Man(str(uuid.uuid4())) as man:
-                facade = await _gecko_facade(man, ip, ident, name)
-                if not facade:
-                    raise RuntimeError("Spa nicht erreichbar (keine Facade)")
-                if action:
-                    await action(facade)
-                return _gecko_snapshot(facade)
+        async def _do(man):
+            facade = await _gecko_facade(man, ip, ident, name)
+            if not facade:
+                raise RuntimeError("Spa nicht erreichbar (keine Facade)")
+            if action:
+                await action(facade)
+            return _gecko_snapshot(facade)
 
-        try:
-            return await _aio.wait_for(_do(), timeout=GECKO_TIMEOUT)
-        except _aio.TimeoutError:
-            raise RuntimeError(
-                f"Spa '{name}' ({ip}) antwortet nicht innerhalb {GECKO_TIMEOUT:.0f}s "
-                f"(Gecko-Verbindung/RF prüfen)"
-            )
+        async with _Man(str(uuid.uuid4())) as man:
+            try:
+                return await _aio.wait_for(_do(man), timeout=GECKO_TIMEOUT)
+            except _aio.TimeoutError:
+                raise RuntimeError(
+                    f"Spa '{name}' ({ip}) antwortet nicht innerhalb {GECKO_TIMEOUT:.0f}s "
+                    f"(Gecko-Verbindung/RF prüfen)"
+                )
+            finally:
+                # MUSS sein, und MUSS hier stehen: 'async with' ruft nur __aexit__, und
+                # das beendet lediglich die Tasks - die UDP-Verbindungen zum Spa bleiben
+                # offen, rund zwei Sockets je Abfrage. Nach wenigen Stunden hatte der
+                # Sidecar so 180 offene Sockets und lief in sein Speicherlimit (OOM alle
+                # vier bis sechs Stunden, August 2026). Erst async_reset() ruft
+                # facade.disconnect() und spa.disconnect().
+                #
+                # Ausserhalb des wait_for, nicht darin: Laeuft die Abfrage in den
+                # Timeout, wird die innere Coroutine abgebrochen - ein Aufraeumen DORT
+                # kaeme nie zum Zug. Ausgerechnet beim nicht erreichbaren Spa bliebe der
+                # Socket dann liegen.
+                await _reset_quietly(man)
 
     # Gecko-Aufrufe serialisieren (ein Spa-Protokoll zur Zeit) und über den festen Loop fahren.
     # Äusseres Result-Timeout etwas grösser als der innere Connect-Timeout, als Sicherheitsnetz.
