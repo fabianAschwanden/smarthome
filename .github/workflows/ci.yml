@@ -44,6 +44,19 @@ jobs:
       - run: npm run lint
       - run: npm test -- --watch=false
 
+  # Der Sidecar hatte lange gar keine Tests - und genau dort steckte ein Socket-Leck,
+  # das den Dienst alle paar Stunden ins Speicherlimit trieb. Der Test braucht keine
+  # Fremdpakete (tinytuya und geckolib werden gestubbt), also genuegt ein nacktes Python.
+  sidecar:
+    name: Tuya-Sidecar (Regressionstests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python3 tools/tuya-sidecar/test_gecko_cleanup.py
+
   # Das HomeKit-Plugin ist ein eigenes Deployable (laeuft in Homebridge, nicht in der App),
   # deshalb ein eigener Job - aber im selben Gate: Die Mapping-Logik lebt hier in TypeScript
   # statt in getestetem Java und braucht denselben Schutz.
