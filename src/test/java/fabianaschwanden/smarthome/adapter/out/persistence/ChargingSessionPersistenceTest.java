@@ -40,7 +40,7 @@ class ChargingSessionPersistenceTest {
         assertTrue(repository.open().isEmpty());
         ChargingSession gespeichert = repository.latest(10).get(0);
         assertEquals(3.6, gespeichert.energyKwh());
-        assertEquals(2000.0, gespeichert.verifiedWatt().getAsDouble());
+        assertEquals(2000.0, gespeichert.measuredWatt().getAsDouble());
     }
 
     @Test
@@ -99,6 +99,6 @@ class ChargingSessionPersistenceTest {
         assertEquals(3.0, letzte.get(0).energyKwh());
         assertEquals(2.0, letzte.get(1).energyKwh());
         assertEquals(Optional.empty(), Optional.ofNullable(
-                letzte.get(0).verifiedWatt().isPresent() ? 1 : null));
+                letzte.get(0).measuredWatt().isPresent() ? 1 : null));
     }
 }

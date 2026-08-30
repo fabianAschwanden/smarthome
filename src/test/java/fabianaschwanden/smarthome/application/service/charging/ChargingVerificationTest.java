@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.application.service.charging;
 import fabianaschwanden.smarthome.domain.model.battery.BatteryControl;
 import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.battery.RelayState;
+import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
 import fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession;
 import fabianaschwanden.smarthome.domain.model.energy.EnergySample;
 import fabianaschwanden.smarthome.domain.port.in.battery.ControlBattery;
@@ -48,7 +49,7 @@ class ChargingVerificationTest {
 
     private ChargingSessionRecorder recorder(boolean enabled, java.time.Clock clock) {
         return new ChargingSessionRecorder(battery, sessions, samples,
-                Duration.ofSeconds(60), Duration.ofMinutes(2), enabled, NACH, PAUSE, clock);
+                Duration.ofSeconds(60), Duration.ofMinutes(30), enabled, NACH, PAUSE, clock, 1500);
     }
 
     @Test
@@ -149,8 +150,9 @@ class ChargingVerificationTest {
     }
 
     @Test
-    void nimmt_die_gegenmessung_fuer_die_energie() {
-        // Sprung beim Einschalten 1800 W, Gegenmessung 2000 W -> es zaehlt die zweite.
+    void rechnet_die_energie_aus_der_konstanten_und_fuehrt_den_messwert_mit() {
+        // Die Gegenmessung bestimmt die Energie NICHT mehr: Ihre zweiminuetige Pause ist
+        // demselben Rauschen ausgesetzt wie die frueheren kurzen Fenster.
         Instant ein = Instant.now().minus(Duration.ofHours(2));
         Instant pausiert = ein.plus(NACH);
         Instant weiter = pausiert.plus(PAUSE);
@@ -167,7 +169,9 @@ class ChargingVerificationTest {
 
         recorder(true).tick();
 
-        assertEquals(2000.0, sessions.closed.orElseThrow().verifiedWatt().getAsDouble());
+        ChargingSession session = sessions.closed.orElseThrow();
+        assertEquals(1500.0, session.watt());                  // konfiguriert
+        assertTrue(session.measuredWatt().isPresent());        // Vergleichswert liegt vor
     }
 
     private static List<EnergySample> reihe(Instant von, Instant bis, double watt) {

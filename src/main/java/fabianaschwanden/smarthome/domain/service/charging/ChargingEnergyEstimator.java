@@ -101,28 +101,28 @@ public class ChargingEnergyEstimator {
     }
 
     /**
-     * Baut den Vorgang und rechnet die Energie.
+     * Baut den Vorgang und rechnet die Energie aus der <b>konfigurierten</b>
+     * Ladeleistung.
      *
-     * <p>Gerechnet wird mit der Gegenmessung, sobald es eine gibt – sie entsteht im
-     * eingeschwungenen Zustand. Die Pause zählt nicht als Ladezeit; in ihr floss kein
-     * Strom.
+     * <p>Nicht aus einer Messung: Die Anlage misst das Lade-Relais nicht separat, und der
+     * Umweg über den Hausverbrauch erwies sich als zu ungenau - ein Haus schwankt um
+     * ±1000 W, in derselben Grössenordnung wie die gesuchte Leistung. Eine ehrliche
+     * Konstante ist mehr wert als eine Messung, die im Rauschen ertrinkt.
+     *
+     * <p>Die Pause der Gegenmessung zählt nicht als Ladezeit; in ihr floss kein Strom.
      */
     public ChargingSession session(
             Instant startedAt,
             Instant endedAt,
-            double stepWatt,
-            OptionalDouble verifiedWatt,
+            double configuredWatt,
+            OptionalDouble measuredWatt,
             Duration pausedFor) {
 
-        // Gerechnet wird mit der Fenstermessung, NICHT mit der Gegenmessung: Deren
-        // zweiminuetige Pause ist demselben Rauschen ausgesetzt, das die kurzen Fenster
-        // schon einmal auf 0 kWh gebracht hat (siehe ChargingSessionRecorder).
-        double watt = stepWatt;
         double hours = Math.max(0, Duration.between(startedAt, endedAt).minus(pausedFor).toSeconds())
                 / SECONDS_PER_HOUR;
-        double kwh = watt * hours / WATT_TO_KW;
+        double kwh = configuredWatt * hours / WATT_TO_KW;
         return new ChargingSession(
-                startedAt, endedAt, round(stepWatt), round(kwh), round(verifiedWatt));
+                startedAt, endedAt, round(configuredWatt), round(kwh), round(measuredWatt));
     }
 
     private static OptionalDouble round(OptionalDouble value) {

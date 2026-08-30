@@ -60,6 +60,7 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
     private final Duration verifyAfter;
     private final Duration verifyPause;
     private final Clock clock;
+    private final double configuredWatt;
 
     @Inject
     public ChargingSessionRecorder(
@@ -70,9 +71,10 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
             @ConfigProperty(name = "battery.charging.baseline-window") Duration baselineWindow,
             @ConfigProperty(name = "battery.charging.verify-enabled") boolean verifyEnabled,
             @ConfigProperty(name = "battery.charging.verify-after") Duration verifyAfter,
-            @ConfigProperty(name = "battery.charging.verify-pause") Duration verifyPause) {
+            @ConfigProperty(name = "battery.charging.verify-pause") Duration verifyPause,
+            @ConfigProperty(name = "battery.charging.power-watt") double configuredWatt) {
         this(battery, sessions, samples, settleTime, baselineWindow, verifyEnabled, verifyAfter,
-                verifyPause, Clock.systemUTC());
+                verifyPause, Clock.systemUTC(), configuredWatt);
     }
 
     // Sichtbar fuers Testen: feste Uhr. Ohne sie liess sich die Faelligkeit nicht pruefen -
@@ -87,6 +89,22 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
             Duration verifyAfter,
             Duration verifyPause,
             Clock clock) {
+        this(battery, sessions, samples, settleTime, baselineWindow, verifyEnabled, verifyAfter,
+                verifyPause, clock, 1500);
+    }
+
+    ChargingSessionRecorder(
+            ControlBattery battery,
+            ChargingSessionRepository sessions,
+            EnergySampleRepository samples,
+            Duration settleTime,
+            Duration baselineWindow,
+            boolean verifyEnabled,
+            Duration verifyAfter,
+            Duration verifyPause,
+            Clock clock,
+            double configuredWatt) {
+        this.configuredWatt = configuredWatt;
         this.clock = clock;
         this.battery = battery;
         this.sessions = sessions;
@@ -190,40 +208,18 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
             return;
         }
 
-        double watt = Math.max(0, during.getAsDouble() - before.getAsDouble());
-        OptionalDouble verified = verifiedWatt(open);
-        ChargingSession session = estimator.session(startedAt, endedAt, watt, verified, pausedFor(open));
-        sessions.close(session);
-        LOG.infof("Ladevorgang beendet: %.2f kWh (%.0f W ueber %d min; vorher %.0f W, "
-                        + "waehrend %.0f W; Gegenmessung %s)",
-                session.energyKwh(), session.watt(), session.duration().toMinutes(),
-                before.getAsDouble(), during.getAsDouble(),
-                verified.isPresent() ? String.format("%.0f W", verified.getAsDouble()) : "keine");
-    }
+        // Aus dem Verbrauch abgeleitet - nur zum Vergleich, damit sich die konfigurierte
+        // Leistung an der Wirklichkeit nachjustieren laesst.
+        OptionalDouble measured =
+                OptionalDouble.of(Math.max(0, during.getAsDouble() - before.getAsDouble()));
 
-    /**
-     * Die Gegenmessung aus der Pause - nur noch zum Vergleich, nicht als Grundlage der
-     * Energie.
-     *
-     * <p>Zwei Minuten Pause sind demselben Rauschen ausgesetzt wie die alten kurzen
-     * Fenster: Schaltet in dieser Zeit zufaellig ein Backofen, misst man ihn statt das
-     * Ladegeraet. Sie steht weiter in der Anzeige, damit ein Auseinanderlaufen der beiden
-     * Zahlen auffaellt.
-     */
-    private OptionalDouble verifiedWatt(OpenChargingSession open) {
-        if (open.verifyStartedAt().isEmpty() || open.verifyEndedAt().isEmpty()) {
-            return OptionalDouble.empty();
-        }
-        Instant pausedAt = open.verifyStartedAt().get();
-        Instant resumedAt = open.verifyEndedAt().get();
-        OptionalDouble charging =
-                samples.medianConsumptionBetween(pausedAt.minus(baselineWindow), pausedAt);
-        OptionalDouble paused =
-                samples.medianConsumptionBetween(pausedAt.plus(settleTime), resumedAt);
-        if (charging.isEmpty() || paused.isEmpty()) {
-            return OptionalDouble.empty();
-        }
-        return OptionalDouble.of(Math.max(0, charging.getAsDouble() - paused.getAsDouble()));
+        ChargingSession session =
+                estimator.session(startedAt, endedAt, configuredWatt, measured, pausedFor(open));
+        sessions.close(session);
+        LOG.infof("Ladevorgang beendet: %.2f kWh (konfiguriert %.0f W ueber %d min; "
+                        + "aus dem Verbrauch abgeleitet %.0f W)",
+                session.energyKwh(), session.watt(), session.duration().toMinutes(),
+                measured.getAsDouble());
     }
 
     private Duration pausedFor(OpenChargingSession open) {

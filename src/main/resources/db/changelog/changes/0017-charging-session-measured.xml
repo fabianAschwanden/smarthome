@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Die Energie wird nicht mehr gemessen, sondern aus einer konfigurierten
+         Ladeleistung gerechnet (battery.charging.power-watt). Der aus dem Hausverbrauch
+         abgeleitete Wert bleibt erhalten - aber nur noch zum Vergleich, damit sich die
+         Konstante an der Wirklichkeit nachjustieren laesst.
+
+         Deshalb heisst die Spalte nicht mehr verify_watt (Gegenmessung), sondern
+         measured_watt (aus dem Verbrauch abgeleitet). -->
+    <changeSet id="0017-charging-session-measured" author="smarthome">
+        <renameColumn tableName="charging_session" oldColumnName="verify_watt" newColumnName="measured_watt"/>
+    </changeSet>
+
+</databaseChangeLog>

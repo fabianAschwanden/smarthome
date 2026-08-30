@@ -41,6 +41,6 @@ public class ChargingSessionEntity {
     @Column(name = "verify_ended_at")
     public Instant verifyEndedAt;
 
-    @Column(name = "verify_watt")
-    public Double verifyWatt;
+    @Column(name = "measured_watt")
+    public Double measuredWatt;
 }

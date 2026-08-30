@@ -13,14 +13,13 @@ export interface ChargingSession {
   startedAt: string;
   endedAt: string;
   minutes: number;
-  /** Ladeleistung aus dem Verbrauchssprung beim Einschalten. */
+  /** Konfigurierte Ladeleistung, aus der die Energie gerechnet wird (nicht gemessen). */
   watt: number;
   /**
-   * Gegenmessung aus der Mitte des Ladevorgangs (kurz abgeschaltet); null, wenn keine
-   * stattgefunden hat. Weicht sie stark von {@link watt} ab, hat beim Einschalten
-   * vermutlich eine andere Last mitgeschaltet.
+   * Aus dem Hausverbrauch abgeleiteter Wert – nur zum Vergleich, damit sich die
+   * konfigurierte Leistung nachjustieren lässt. Weicht er stark ab, lohnt ein Blick.
    */
-  verifiedWatt: number | null;
+  measuredWatt: number | null;
   energyKwh: number;
   /** Immer true – die Anlage misst das Lade-Relais nicht separat. */
   estimated: boolean;

@@ -117,7 +117,7 @@ import { ItemImage } from '../../shared/item-image';
                   <span class="flex items-center gap-3 tabular-nums">
                     <span class="text-[color:var(--ink-faint)]">{{ dauer(s.minutes) }}</span>
                     <span class="text-[color:var(--ink-faint)]" [title]="leistungHinweis(s)">
-                      {{ (s.verifiedWatt ?? s.watt).toFixed(0) }} W
+                      {{ (s.measuredWatt ?? s.watt).toFixed(0) }} W
                       @if (abweichung(s)) {
                         <span class="text-amber-300">*</span>
                       }
@@ -245,17 +245,20 @@ export class BatteryPage {
 
   /** Weichen Einschalt- und Gegenmessung um mehr als ein Fünftel ab? */
   protected abweichung(s: ChargingSession): boolean {
-    if (s.verifiedWatt === null || s.verifiedWatt === 0) {
+    if (s.measuredWatt === null || s.measuredWatt === 0) {
       return false;
     }
-    return Math.abs(s.watt - s.verifiedWatt) / s.verifiedWatt > 0.2;
+    return Math.abs(s.watt - s.measuredWatt) / s.measuredWatt > 0.2;
   }
 
   protected leistungHinweis(s: ChargingSession): string {
-    if (s.verifiedWatt === null) {
-      return `Beim Einschalten gemessen: ${s.watt.toFixed(0)} W`;
+    if (s.measuredWatt === null) {
+      return `Konfigurierte Ladeleistung: ${s.watt.toFixed(0)} W`;
     }
-    return `Gegenmessung: ${s.verifiedWatt.toFixed(0)} W · beim Einschalten: ${s.watt.toFixed(0)} W`;
+    return (
+      `Konfiguriert: ${s.watt.toFixed(0)} W · ` +
+      `aus dem Verbrauch abgeleitet: ${s.measuredWatt.toFixed(0)} W`
+    );
   }
 
   protected dauer(minuten: number): string {
