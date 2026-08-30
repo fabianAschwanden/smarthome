@@ -5,7 +5,6 @@ import fabianaschwanden.smarthome.domain.model.battery.RelayState;
 import fabianaschwanden.smarthome.domain.model.battery.ControlMode;
 import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
 import fabianaschwanden.smarthome.domain.model.charging.OpenChargingSession;
-import fabianaschwanden.smarthome.domain.model.energy.EnergySample;
 import fabianaschwanden.smarthome.domain.port.in.battery.ControlBattery;
 import fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery;
 import fabianaschwanden.smarthome.domain.port.out.charging.ChargingSessionRepository;
@@ -165,21 +164,25 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
                 Duration.between(pausedAt, resumedAt));
     }
 
-    private static Instant min(Instant a, Instant b) {
-        return a.isBefore(b) ? a : b;
-    }
-
     private void finish(OpenChargingSession open, Instant endedAt) {
         Instant startedAt = open.startedAt();
-        // Nur die Fenster laden, die die Rechnung braucht - nicht den ganzen Ladevorgang.
-        // Bei einer Batterie, die tagelang am Netz haengt, waeren das Zehntausende
-        // Messpunkte (alle 10 s), und alle davon nur, um zwei Mediane zu bilden.
-        Instant stepEnd = startedAt.plus(settleTime).plus(baselineWindow);
-        List<EnergySample> stepWindow = samples.between(startedAt.minus(baselineWindow), stepEnd);
-        Optional<ChargingSession> step = estimator.estimate(
-                stepWindow, startedAt, min(stepEnd, endedAt), settleTime, baselineWindow);
 
-        if (step.isEmpty()) {
+        // Lange Fenster, und der Median aus der Datenbank statt geladener Zeilen.
+        //
+        // Die erste Fassung verglich zwei Minuten vor dem Einschalten mit zwei Minuten
+        // danach. Am 29.08.2026 lagen in diesen zwei Minuten zufaellig 2572 W statt der
+        // sonst typischen 1981 W - eine gewoehnliche Haushaltsspitze. Die Differenz wurde
+        // negativ, und negativ heisst 0: Ein Ladevorgang ueber viereinhalb Stunden stand
+        // mit 0 kWh in der Liste. Ein Haus schwankt um +-1000 W, also in derselben
+        // Groessenordnung wie die gesuchte Ladeleistung; zwei Minuten sind dagegen kein
+        // Mass. Ueber 30 Minuten Vergleich und den ganzen Ladevorgang gerechnet ergaben
+        // dieselben Daten rund 1600 W.
+        OptionalDouble before =
+                samples.medianConsumptionBetween(startedAt.minus(baselineWindow), startedAt);
+        OptionalDouble during =
+                samples.medianConsumptionBetween(startedAt.plus(settleTime), endedAt);
+
+        if (before.isEmpty() || during.isEmpty()) {
             // Ohne Vergleichswerte gibt es keine Zahl. Eine 0 einzutragen saehe aus wie
             // "nicht geladen" - der Vorgang wird lieber verworfen als erfunden.
             sessions.discardOpen();
@@ -187,23 +190,46 @@ public class ChargingSessionRecorder implements ChargingSessionQuery {
             return;
         }
 
-        OptionalDouble verified = OptionalDouble.empty();
-        Duration pausedFor = Duration.ZERO;
-        if (open.verifyStartedAt().isPresent() && open.verifyEndedAt().isPresent()) {
-            Instant pausedAt = open.verifyStartedAt().get();
-            Instant resumedAt = open.verifyEndedAt().get();
-            List<EnergySample> pauseWindow =
-                    samples.between(pausedAt.minus(baselineWindow), resumedAt.plus(settleTime));
-            verified = estimator.verify(pauseWindow, pausedAt, resumedAt, settleTime, baselineWindow);
-            pausedFor = Duration.between(pausedAt, resumedAt);
-        }
-
-        ChargingSession session = estimator.session(
-                startedAt, endedAt, step.get().watt(), verified, pausedFor);
+        double watt = Math.max(0, during.getAsDouble() - before.getAsDouble());
+        OptionalDouble verified = verifiedWatt(open);
+        ChargingSession session = estimator.session(startedAt, endedAt, watt, verified, pausedFor(open));
         sessions.close(session);
-        LOG.infof("Ladevorgang beendet: %.2f kWh (Sprung %.0f W, Gegenmessung %s) ueber %d min",
-                session.energyKwh(), session.watt(),
-                verified.isPresent() ? String.format("%.0f W", verified.getAsDouble()) : "keine",
-                session.duration().toMinutes());
+        LOG.infof("Ladevorgang beendet: %.2f kWh (%.0f W ueber %d min; vorher %.0f W, "
+                        + "waehrend %.0f W; Gegenmessung %s)",
+                session.energyKwh(), session.watt(), session.duration().toMinutes(),
+                before.getAsDouble(), during.getAsDouble(),
+                verified.isPresent() ? String.format("%.0f W", verified.getAsDouble()) : "keine");
+    }
+
+    /**
+     * Die Gegenmessung aus der Pause - nur noch zum Vergleich, nicht als Grundlage der
+     * Energie.
+     *
+     * <p>Zwei Minuten Pause sind demselben Rauschen ausgesetzt wie die alten kurzen
+     * Fenster: Schaltet in dieser Zeit zufaellig ein Backofen, misst man ihn statt das
+     * Ladegeraet. Sie steht weiter in der Anzeige, damit ein Auseinanderlaufen der beiden
+     * Zahlen auffaellt.
+     */
+    private OptionalDouble verifiedWatt(OpenChargingSession open) {
+        if (open.verifyStartedAt().isEmpty() || open.verifyEndedAt().isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        Instant pausedAt = open.verifyStartedAt().get();
+        Instant resumedAt = open.verifyEndedAt().get();
+        OptionalDouble charging =
+                samples.medianConsumptionBetween(pausedAt.minus(baselineWindow), pausedAt);
+        OptionalDouble paused =
+                samples.medianConsumptionBetween(pausedAt.plus(settleTime), resumedAt);
+        if (charging.isEmpty() || paused.isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(Math.max(0, charging.getAsDouble() - paused.getAsDouble()));
+    }
+
+    private Duration pausedFor(OpenChargingSession open) {
+        if (open.verifyStartedAt().isEmpty() || open.verifyEndedAt().isEmpty()) {
+            return Duration.ZERO;
+        }
+        return Duration.between(open.verifyStartedAt().get(), open.verifyEndedAt().get());
     }
 }

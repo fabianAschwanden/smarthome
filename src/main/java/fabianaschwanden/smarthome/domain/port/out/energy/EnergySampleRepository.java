@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.domain.model.energy.EnergySample;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.OptionalDouble;
 
 /**
  * Getriebener Port: speichert und liest die Energie-Messpunkte (Zeitreihe). Der
@@ -20,6 +21,16 @@ public interface EnergySampleRepository {
 
     /** Löscht Messpunkte älter als {@code cutoff}; gibt die Anzahl gelöschter Zeilen zurück. */
     long deleteOlderThan(Instant cutoff);
+
+    /**
+     * Median des Hausverbrauchs im Zeitfenster [from, to) - oder leer ohne Messpunkte.
+     *
+     * <p>Der Median kommt aus der Datenbank und nicht aus geladenen Zeilen: Ueber Stunden
+     * gerechnet waeren das Zehntausende Messpunkte, und gebraucht wird davon eine
+     * einzige Zahl. Median statt Mittelwert, weil einzelne Grossverbraucher den
+     * Mittelwert verschieben.
+     */
+    OptionalDouble medianConsumptionBetween(Instant fromInclusive, Instant toExclusive);
 
     /** Gesamtzahl gespeicherter Messpunkte (für den Demo-Seeder). */
     long total();

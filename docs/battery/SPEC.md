@@ -117,10 +117,23 @@ Schaltzeitpunkt kennt, ist der **Verbrauchssprung beim Einschalten** die Ladelei
 
 | Schritt | Wie |
 |---|---|
-| Vergleich davor | Median des Verbrauchs im `baseline-window` vor dem Einschalten |
-| Ladeleistung | Median während des Ladens minus Vergleich, nie negativ |
+| Vergleich davor | Median des Verbrauchs über `baseline-window` (**30 min**) vor dem Einschalten |
+| Ladeleistung | Median über den **ganzen Ladevorgang** minus Vergleich, nie negativ |
 | Anlauf | `settle-time` nach dem Einschalten wird übersprungen |
-| Energie | Leistung × Dauer |
+| Energie | Leistung × Dauer (ohne die Pause der Gegenmessung) |
+
+**Warum so lange Fenster (Korrektur vom 30.08.2026):** Die erste Fassung verglich zwei
+Minuten vor dem Einschalten mit zwei Minuten danach. Am 29.08. lag in diesen zwei Minuten
+zufällig eine Haushaltsspitze — 2572 W statt der sonst typischen 1981 W. Die Differenz
+wurde negativ, und negativ heisst 0: Ein Ladevorgang über viereinhalb Stunden stand mit
+**0 kWh** in der Liste. Dieselben Daten über 30 Minuten Vergleich und den ganzen
+Ladevorgang gerechnet ergeben rund 1600 W.
+
+Ein Haus schwankt um ±1000 W — in derselben Grössenordnung wie die gesuchte Ladeleistung.
+Zwei Minuten sind dagegen kein Mass.
+
+Die Mediane rechnet **die Datenbank** (`percentile_cont`), nicht die Anwendung: Über
+Stunden wären das Zehntausende Messpunkte, und gebraucht wird davon eine einzige Zahl.
 
 Median statt Mittelwert: Ein einzelner Ausreisser – der Backofen, der zufällig anspringt –
 verschöbe einen Mittelwert, den Median kaum.
@@ -140,8 +153,10 @@ während die erste unmittelbar nach dem Einschalten fällt, wo das Ladegerät no
 Für die Energie zählt deshalb die Gegenmessung, sobald es eine gibt; die Pause zählt nicht
 als Ladezeit.
 
-Weichen beide Messungen um mehr als ein Fünftel ab, markiert die Oberfläche das mit `*` –
-dann hat beim Einschalten vermutlich eine andere Last mitgeschaltet.
+Die Gegenmessung dient nur noch dem **Vergleich**, nicht mehr als Grundlage der Energie:
+Ihre zweiminütige Pause ist demselben Rauschen ausgesetzt, das die kurzen Fenster schon
+einmal auf 0 kWh gebracht hat. Weichen beide Zahlen um mehr als ein Fünftel ab, markiert
+die Oberfläche das mit `*` — dann lief in einer der beiden Messungen etwas anderes mit.
 
 **Das ist ein Eingriff an der Anlage**, kein reines Mitlesen: Das Relais schaltet zweimal
 zusätzlich je Ladevorgang, und für `verify-pause` wird nicht geladen. Deshalb:

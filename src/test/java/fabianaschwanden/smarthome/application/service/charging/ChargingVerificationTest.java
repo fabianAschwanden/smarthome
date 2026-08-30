@@ -215,6 +215,19 @@ class ChargingVerificationTest {
         public long deleteOlderThan(Instant cutoff) {
             return 0;
         }
+        @Override
+        public java.util.OptionalDouble medianConsumptionBetween(Instant from, Instant to) {
+            java.util.List<Double> werte = samples.stream()
+                    .filter(s -> !s.timestamp().isBefore(from) && s.timestamp().isBefore(to))
+                    .map(EnergySample::consumptionWatt)
+                    .sorted()
+                    .toList();
+            if (werte.isEmpty()) {
+                return java.util.OptionalDouble.empty();
+            }
+            return java.util.OptionalDouble.of(werte.get(werte.size() / 2));
+        }
+
 
         @Override
         public long total() {

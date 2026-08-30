@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
+import java.util.OptionalDouble;
 import java.util.List;
 
 /** Driven Adapter — übersetzt zwischen Domänen-Record und JPA-Entity (Zeitreihe). */
@@ -40,6 +41,18 @@ public class PanacheEnergySampleRepository
 
     // Bewusst nicht 'count' genannt: eine explizite count()-Deklaration würde Panaches
     // Build-Time-Enhancement dieser Methode verhindern (implementationInjectionMissing).
+    @Override
+    public OptionalDouble medianConsumptionBetween(Instant fromInclusive, Instant toExclusive) {
+        Object result = getEntityManager()
+                .createNativeQuery(
+                        "select percentile_cont(0.5) within group (order by consumption_watt) "
+                        + "from energy_sample where ts >= ?1 and ts < ?2")
+                .setParameter(1, fromInclusive)
+                .setParameter(2, toExclusive)
+                .getSingleResult();
+        return result == null ? OptionalDouble.empty() : OptionalDouble.of(((Number) result).doubleValue());
+    }
+
     @Override
     public long total() {
         return count();

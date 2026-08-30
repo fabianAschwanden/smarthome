@@ -39,7 +39,7 @@ class ChargingSessionRecorderTest {
         samples = new FakeSamples();
         // Gegenmessung in den Grundtests aus: Sie hat ihre eigene Testklasse.
         recorder = new ChargingSessionRecorder(battery, sessions, samples,
-                Duration.ofSeconds(60), Duration.ofMinutes(2), false, Duration.ofMinutes(7), Duration.ofSeconds(90));
+                Duration.ofSeconds(60), Duration.ofMinutes(30), false, Duration.ofMinutes(7), Duration.ofSeconds(90));
     }
 
     @Test
@@ -78,6 +78,26 @@ class ChargingSessionRecorderTest {
         assertEquals(2000.0, session.watt());
         assertEquals(4.0, session.energyKwh());
         assertTrue(sessions.open().isEmpty());
+    }
+
+    @Test
+    void laesst_sich_von_einer_spitze_kurz_vor_dem_einschalten_nicht_taeuschen() {
+        // Der Fall vom 29.08.2026: In den zwei Minuten vor dem Einschalten lief zufaellig
+        // eine Haushaltsspitze (2570 W statt der sonst typischen 1980 W). Mit kurzen
+        // Fenstern wurde die Differenz negativ, und negativ heisst 0 - ein Ladevorgang
+        // ueber viereinhalb Stunden stand mit 0 kWh in der Liste.
+        battery.control = new BatteryControl(ControlMode.MANUAL, RelayState.ON, EIN);
+        recorder.tick();
+        samples.samples.addAll(reihe(EIN.minus(Duration.ofMinutes(30)), EIN.minusSeconds(120), 1980));
+        samples.samples.addAll(reihe(EIN.minusSeconds(120), EIN, 2570));   // die Spitze
+        samples.samples.addAll(reihe(EIN.plusSeconds(60), AUS, 3620));     // waehrend des Ladens
+
+        battery.control = new BatteryControl(ControlMode.MANUAL, RelayState.OFF, AUS);
+        recorder.tick();
+
+        ChargingSession session = sessions.closed.orElseThrow();
+        assertEquals(1640.0, session.watt(), 60.0);   // 3620 minus rund 1980
+        assertTrue(session.energyKwh() > 3.0, "Ladevorgang darf nicht mit 0 kWh enden");
     }
 
     @Test
@@ -196,6 +216,19 @@ class ChargingSessionRecorderTest {
         public long deleteOlderThan(Instant cutoff) {
             return 0;
         }
+        @Override
+        public java.util.OptionalDouble medianConsumptionBetween(Instant from, Instant to) {
+            java.util.List<Double> werte = samples.stream()
+                    .filter(s -> !s.timestamp().isBefore(from) && s.timestamp().isBefore(to))
+                    .map(EnergySample::consumptionWatt)
+                    .sorted()
+                    .toList();
+            if (werte.isEmpty()) {
+                return java.util.OptionalDouble.empty();
+            }
+            return java.util.OptionalDouble.of(werte.get(werte.size() / 2));
+        }
+
 
         @Override
         public long total() {

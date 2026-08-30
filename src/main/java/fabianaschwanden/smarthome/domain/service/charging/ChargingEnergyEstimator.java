@@ -114,7 +114,10 @@ public class ChargingEnergyEstimator {
             OptionalDouble verifiedWatt,
             Duration pausedFor) {
 
-        double watt = verifiedWatt.orElse(stepWatt);
+        // Gerechnet wird mit der Fenstermessung, NICHT mit der Gegenmessung: Deren
+        // zweiminuetige Pause ist demselben Rauschen ausgesetzt, das die kurzen Fenster
+        // schon einmal auf 0 kWh gebracht hat (siehe ChargingSessionRecorder).
+        double watt = stepWatt;
         double hours = Math.max(0, Duration.between(startedAt, endedAt).minus(pausedFor).toSeconds())
                 / SECONDS_PER_HOUR;
         double kwh = watt * hours / WATT_TO_KW;
