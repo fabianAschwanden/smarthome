@@ -106,75 +106,46 @@ Domain-Service `SurplusChargePolicy` (pur), Application-Service
 Adapter (`adapter/in/rest`, `adapter/out/{smartfox,mock}`). Der Auto-Modus liest
 den Energiestand über den bestehenden `CurrentEnergyQuery`-Port des Energy-Slice.
 
-## Ladeenergie: geschätzt, nicht gemessen
+## Ladeenergie: gerechnet aus einer konfigurierten Leistung
 
 **Weder SMARTFOX noch Wechselrichter messen das Lade-Relais separat.** Der SMARTFOX führt
 für Relais 1 nur Status, Rest- und Laufzeit – keinen kWh-Zähler; der Fronius meldet
 `P_Akku: None`, er sieht die Batterie gar nicht (beides am 26.08.2026 abgefragt).
 
-Was bleibt, ist der Hausverbrauch – und darin steckt das Ladegerät. Weil die App den
-Schaltzeitpunkt kennt, ist der **Verbrauchssprung beim Einschalten** die Ladeleistung:
+Der Umweg über den Hausverbrauch wurde versucht und **verworfen**: Ein Haus schwankt um
+±1000 W – in derselben Grössenordnung wie die gesuchte Ladeleistung. Am 29.08.2026 lag in
+den zwei Minuten vor dem Einschalten zufällig eine Haushaltsspitze (2572 W statt der sonst
+typischen 1981 W); die Differenz wurde negativ, und ein Ladevorgang über viereinhalb
+Stunden stand mit **0 kWh** da. Auch mit 30-Minuten-Fenstern bleibt das Verfahren eine
+Schätzung mit grosser Streuung.
 
-| Schritt | Wie |
-|---|---|
-| Vergleich davor | Median des Verbrauchs über `baseline-window` (**30 min**) vor dem Einschalten |
-| Ladeleistung | Median über den **ganzen Ladevorgang** minus Vergleich, nie negativ |
-| Anlauf | `settle-time` nach dem Einschalten wird übersprungen |
-| Energie | Leistung × Dauer (ohne die Pause der Gegenmessung) |
+**Deshalb: Energie = konfigurierte Leistung × Laufzeit.**
 
-**Warum so lange Fenster (Korrektur vom 30.08.2026):** Die erste Fassung verglich zwei
-Minuten vor dem Einschalten mit zwei Minuten danach. Am 29.08. lag in diesen zwei Minuten
-zufällig eine Haushaltsspitze — 2572 W statt der sonst typischen 1981 W. Die Differenz
-wurde negativ, und negativ heisst 0: Ein Ladevorgang über viereinhalb Stunden stand mit
-**0 kWh** in der Liste. Dieselben Daten über 30 Minuten Vergleich und den ganzen
-Ladevorgang gerechnet ergeben rund 1600 W.
+```properties
+battery.charging.power-watt=${BATTERY_CHARGING_POWER_WATT:1500}
+```
 
-Ein Haus schwankt um ±1000 W — in derselben Grössenordnung wie die gesuchte Ladeleistung.
-Zwei Minuten sind dagegen kein Mass.
+Änderbar über die Umgebungsvariable im Deployment oder als
+`%lan.battery.charging.power-watt` in der Geräte-Config – beides ohne neues Image.
 
-Die Mediane rechnet **die Datenbank** (`percentile_cont`), nicht die Anwendung: Über
-Stunden wären das Zehntausende Messpunkte, und gebraucht wird davon eine einzige Zahl.
+Der aus dem Hausverbrauch abgeleitete Wert wird **weiter mitgeführt** (`measured_watt`),
+aber nur zum Vergleich: Weicht er dauerhaft von der Konstanten ab, gehört diese
+nachjustiert. Die Oberfläche markiert eine Abweichung über einem Fünftel mit `*`.
 
-Median statt Mittelwert: Ein einzelner Ausreisser – der Backofen, der zufällig anspringt –
-verschöbe einen Mittelwert, den Median kaum.
-
-**Grenzen, die man kennen muss.** Schaltet gleichzeitig eine andere grosse Last, wandert
-deren Leistung in die Rechnung. Und die Leistung gilt als konstant über den ganzen Vorgang;
-ein Ladegerät, das gegen Ende abregelt, wird überschätzt. Für die Grössenordnung taugt das,
-als Abrechnungsgrundlage nicht. Wer eine belastbare Zahl braucht, braucht einen eigenen
-Zähler – der SMARTFOX bringt dafür einen Ladestations-Kanal mit (`ccEnergyValue`).
-
-### Gegenmessung mitten im Ladevorgang
-
-Nach `verify-after` (Standard 7 min) wird **einmal je Ladevorgang** kurz abgeschaltet und
-wieder eingeschaltet. Der Verbrauch fällt dabei um die Ladeleistung – eine zweite,
-unabhängige Messung, und die belastbarere: Sie entsteht im eingeschwungenen Zustand,
-während die erste unmittelbar nach dem Einschalten fällt, wo das Ladegerät noch anläuft.
-Für die Energie zählt deshalb die Gegenmessung, sobald es eine gibt; die Pause zählt nicht
-als Ladezeit.
-
-Die Gegenmessung dient nur noch dem **Vergleich**, nicht mehr als Grundlage der Energie:
-Ihre zweiminütige Pause ist demselben Rauschen ausgesetzt, das die kurzen Fenster schon
-einmal auf 0 kWh gebracht hat. Weichen beide Zahlen um mehr als ein Fünftel ab, markiert
-die Oberfläche das mit `*` — dann lief in einer der beiden Messungen etwas anderes mit.
-
-**Das ist ein Eingriff an der Anlage**, kein reines Mitlesen: Das Relais schaltet zweimal
-zusätzlich je Ladevorgang, und für `verify-pause` wird nicht geladen. Deshalb:
-
-- abschaltbar über `battery.charging.verify-enabled`,
-- **nur im Manuell-Modus** – im Automatik-Modus gehört das Relais dem SMARTFOX, und ein
-  Eingriff von aussen arbeitete gegen dessen Regelung,
-- der Stand steht in der Datenbank, nicht im Speicher: Ein Neustart mitten in der Pause
-  muss erkennen können, dass er wieder einschalten muss, sonst bliebe die Anlage
-  ausgeschaltet zurück.
+Eine ehrliche Konstante ist mehr wert als eine Messung, die im Rauschen ertrinkt. Wer
+eine belastbare Zahl braucht, braucht einen eigenen Zähler – der SMARTFOX bringt dafür
+einen Ladestations-Kanal mit (`ccEnergyValue`).
 
 Ein Vorgang wird **beim Einschalten sofort** in `charging_session` festgehalten und erst
 beim Ausschalten vervollständigt; läge der Beginn nur im Speicher, verschluckte jeder
-Neustart den laufenden Vorgang. Lässt sich nichts schätzen, wird der Eintrag **verworfen**
-statt mit 0 kWh geführt – eine 0 sähe aus wie «nicht geladen».
+Neustart den laufenden Vorgang. Erfasst werden auch Ladevorgänge, die **direkt am
+SMARTFOX** gestartet wurden: Beobachtet wird der Relais-Zustand, nicht der eigene
+Schaltbefehl.
 
-Erfasst werden auch Ladevorgänge, die **direkt am SMARTFOX** gestartet wurden: Beobachtet
-wird der Relais-Zustand, nicht der eigene Schaltbefehl.
+Die **Gegenmessung** (kurz abschalten, Abfall messen) ist damit gegenstandslos und
+standardmässig **aus** – sie sollte die Leistung messen, und das tut jetzt die Konstante.
+Ohne diesen Zweck bliebe nur ihr Preis: zwei zusätzliche Relais-Schaltungen je
+Ladevorgang und eine Pause im Laden.
 
 ## Betriebsfalle: der tote HTTP-Client (16.08.2026)
 
