@@ -122,8 +122,12 @@ Schätzung mit grosser Streuung.
 **Deshalb: Energie = konfigurierte Leistung × Laufzeit.**
 
 ```properties
-battery.charging.power-watt=${BATTERY_CHARGING_POWER_WATT:1500}
+battery.charging.power-watt=${BATTERY_CHARGING_POWER_WATT:1640}
 ```
+
+Die 1640 W stammen aus dem Ladevorgang vom 29.08.2026: Median 3618 W während des Ladens
+gegen 1981 W in der halben Stunde davor. Sie sind damit an der Anlage abgeleitet und nicht
+geraten – aber eben eine Konstante, kein Messwert.
 
 Änderbar über die Umgebungsvariable im Deployment oder als
 `%lan.battery.charging.power-watt` in der Geräte-Config – beides ohne neues Image.
