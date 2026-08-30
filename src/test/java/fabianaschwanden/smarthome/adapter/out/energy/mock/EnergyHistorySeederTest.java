@@ -49,6 +49,7 @@ class EnergyHistorySeederTest {
 
         @Override public void save(EnergySample sample) { saved.add(sample); }
         @Override public List<EnergySample> between(Instant from, Instant to) { return List.of(); }
+        @Override public java.util.OptionalDouble medianConsumptionBetween(Instant a, Instant b) { return java.util.OptionalDouble.empty(); }
         @Override public long deleteOlderThan(Instant cutoff) { return 0; }
         @Override public long total() { return saved.size(); }
     }

@@ -58,8 +58,8 @@ public class PanacheChargingSessionRepository
             entity.endedAt = session.endedAt();
             entity.watt = session.watt();
             entity.energyKwh = session.energyKwh();
-            entity.verifyWatt = session.verifiedWatt().isPresent()
-                    ? session.verifiedWatt().getAsDouble()
+            entity.measuredWatt = session.measuredWatt().isPresent()
+                    ? session.measuredWatt().getAsDouble()
                     : null;
             persist(entity);
         });
@@ -90,8 +90,8 @@ public class PanacheChargingSessionRepository
                 entity.endedAt,
                 entity.watt,
                 entity.energyKwh,
-                entity.verifyWatt == null
+                entity.measuredWatt == null
                         ? java.util.OptionalDouble.empty()
-                        : java.util.OptionalDouble.of(entity.verifyWatt));
+                        : java.util.OptionalDouble.of(entity.measuredWatt));
     }
 }

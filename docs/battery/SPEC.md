@@ -106,60 +106,50 @@ Domain-Service `SurplusChargePolicy` (pur), Application-Service
 Adapter (`adapter/in/rest`, `adapter/out/{smartfox,mock}`). Der Auto-Modus liest
 den Energiestand über den bestehenden `CurrentEnergyQuery`-Port des Energy-Slice.
 
-## Ladeenergie: geschätzt, nicht gemessen
+## Ladeenergie: gerechnet aus einer konfigurierten Leistung
 
 **Weder SMARTFOX noch Wechselrichter messen das Lade-Relais separat.** Der SMARTFOX führt
 für Relais 1 nur Status, Rest- und Laufzeit – keinen kWh-Zähler; der Fronius meldet
 `P_Akku: None`, er sieht die Batterie gar nicht (beides am 26.08.2026 abgefragt).
 
-Was bleibt, ist der Hausverbrauch – und darin steckt das Ladegerät. Weil die App den
-Schaltzeitpunkt kennt, ist der **Verbrauchssprung beim Einschalten** die Ladeleistung:
+Der Umweg über den Hausverbrauch wurde versucht und **verworfen**: Ein Haus schwankt um
+±1000 W – in derselben Grössenordnung wie die gesuchte Ladeleistung. Am 29.08.2026 lag in
+den zwei Minuten vor dem Einschalten zufällig eine Haushaltsspitze (2572 W statt der sonst
+typischen 1981 W); die Differenz wurde negativ, und ein Ladevorgang über viereinhalb
+Stunden stand mit **0 kWh** da. Auch mit 30-Minuten-Fenstern bleibt das Verfahren eine
+Schätzung mit grosser Streuung.
 
-| Schritt | Wie |
-|---|---|
-| Vergleich davor | Median des Verbrauchs im `baseline-window` vor dem Einschalten |
-| Ladeleistung | Median während des Ladens minus Vergleich, nie negativ |
-| Anlauf | `settle-time` nach dem Einschalten wird übersprungen |
-| Energie | Leistung × Dauer |
+**Deshalb: Energie = konfigurierte Leistung × Laufzeit.**
 
-Median statt Mittelwert: Ein einzelner Ausreisser – der Backofen, der zufällig anspringt –
-verschöbe einen Mittelwert, den Median kaum.
+```properties
+battery.charging.power-watt=${BATTERY_CHARGING_POWER_WATT:1640}
+```
 
-**Grenzen, die man kennen muss.** Schaltet gleichzeitig eine andere grosse Last, wandert
-deren Leistung in die Rechnung. Und die Leistung gilt als konstant über den ganzen Vorgang;
-ein Ladegerät, das gegen Ende abregelt, wird überschätzt. Für die Grössenordnung taugt das,
-als Abrechnungsgrundlage nicht. Wer eine belastbare Zahl braucht, braucht einen eigenen
-Zähler – der SMARTFOX bringt dafür einen Ladestations-Kanal mit (`ccEnergyValue`).
+Die 1640 W stammen aus dem Ladevorgang vom 29.08.2026: Median 3618 W während des Ladens
+gegen 1981 W in der halben Stunde davor. Sie sind damit an der Anlage abgeleitet und nicht
+geraten – aber eben eine Konstante, kein Messwert.
 
-### Gegenmessung mitten im Ladevorgang
+Änderbar über die Umgebungsvariable im Deployment oder als
+`%lan.battery.charging.power-watt` in der Geräte-Config – beides ohne neues Image.
 
-Nach `verify-after` (Standard 7 min) wird **einmal je Ladevorgang** kurz abgeschaltet und
-wieder eingeschaltet. Der Verbrauch fällt dabei um die Ladeleistung – eine zweite,
-unabhängige Messung, und die belastbarere: Sie entsteht im eingeschwungenen Zustand,
-während die erste unmittelbar nach dem Einschalten fällt, wo das Ladegerät noch anläuft.
-Für die Energie zählt deshalb die Gegenmessung, sobald es eine gibt; die Pause zählt nicht
-als Ladezeit.
+Der aus dem Hausverbrauch abgeleitete Wert wird **weiter mitgeführt** (`measured_watt`),
+aber nur zum Vergleich: Weicht er dauerhaft von der Konstanten ab, gehört diese
+nachjustiert. Die Oberfläche markiert eine Abweichung über einem Fünftel mit `*`.
 
-Weichen beide Messungen um mehr als ein Fünftel ab, markiert die Oberfläche das mit `*` –
-dann hat beim Einschalten vermutlich eine andere Last mitgeschaltet.
-
-**Das ist ein Eingriff an der Anlage**, kein reines Mitlesen: Das Relais schaltet zweimal
-zusätzlich je Ladevorgang, und für `verify-pause` wird nicht geladen. Deshalb:
-
-- abschaltbar über `battery.charging.verify-enabled`,
-- **nur im Manuell-Modus** – im Automatik-Modus gehört das Relais dem SMARTFOX, und ein
-  Eingriff von aussen arbeitete gegen dessen Regelung,
-- der Stand steht in der Datenbank, nicht im Speicher: Ein Neustart mitten in der Pause
-  muss erkennen können, dass er wieder einschalten muss, sonst bliebe die Anlage
-  ausgeschaltet zurück.
+Eine ehrliche Konstante ist mehr wert als eine Messung, die im Rauschen ertrinkt. Wer
+eine belastbare Zahl braucht, braucht einen eigenen Zähler – der SMARTFOX bringt dafür
+einen Ladestations-Kanal mit (`ccEnergyValue`).
 
 Ein Vorgang wird **beim Einschalten sofort** in `charging_session` festgehalten und erst
 beim Ausschalten vervollständigt; läge der Beginn nur im Speicher, verschluckte jeder
-Neustart den laufenden Vorgang. Lässt sich nichts schätzen, wird der Eintrag **verworfen**
-statt mit 0 kWh geführt – eine 0 sähe aus wie «nicht geladen».
+Neustart den laufenden Vorgang. Erfasst werden auch Ladevorgänge, die **direkt am
+SMARTFOX** gestartet wurden: Beobachtet wird der Relais-Zustand, nicht der eigene
+Schaltbefehl.
 
-Erfasst werden auch Ladevorgänge, die **direkt am SMARTFOX** gestartet wurden: Beobachtet
-wird der Relais-Zustand, nicht der eigene Schaltbefehl.
+Die **Gegenmessung** (kurz abschalten, Abfall messen) ist damit gegenstandslos und
+standardmässig **aus** – sie sollte die Leistung messen, und das tut jetzt die Konstante.
+Ohne diesen Zweck bliebe nur ihr Preis: zwei zusätzliche Relais-Schaltungen je
+Ladevorgang und eine Pause im Laden.
 
 ## Betriebsfalle: der tote HTTP-Client (16.08.2026)
 

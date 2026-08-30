@@ -5,7 +5,7 @@ import fabianaschwanden.smarthome.domain.model.charging.ChargingSession;
 /**
  * Transport-Objekt eines Ladevorgangs.
  *
- * <p>{@code verifiedWatt} ist die Gegenmessung aus der Mitte des Ladevorgangs; sie ist
+ * <p>{@code measuredWatt} ist die Gegenmessung aus der Mitte des Ladevorgangs; sie ist
  * {@code null}, wenn keine stattgefunden hat. Weicht sie stark von {@code watt} ab, hat
  * beim Einschalten vermutlich eine andere Last mitgeschaltet – dann taugt die
  * Gegenmessung mehr.
@@ -19,7 +19,7 @@ public record ChargingSessionDto(
         String endedAt,
         long minutes,
         double watt,
-        Double verifiedWatt,
+        Double measuredWatt,
         double energyKwh,
         boolean estimated) {
 
@@ -29,7 +29,7 @@ public record ChargingSessionDto(
                 session.endedAt().toString(),
                 session.duration().toMinutes(),
                 session.watt(),
-                session.verifiedWatt().isPresent() ? session.verifiedWatt().getAsDouble() : null,
+                session.measuredWatt().isPresent() ? session.measuredWatt().getAsDouble() : null,
                 session.energyKwh(),
                 true);
     }

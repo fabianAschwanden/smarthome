@@ -8,25 +8,24 @@ import java.util.OptionalDouble;
  * Ein abgeschlossener Ladevorgang der Batterie: von wann bis wann, mit welcher Leistung
  * und wie viel Energie das ergibt.
  *
- * <p><b>{@code watt} ist gemessen, {@code energyKwh} gerechnet.</b> Die Leistung stammt
- * aus dem Verbrauchssprung beim Einschalten – die Anlage misst das Lade-Relais nicht
- * separat, deshalb ist dieser Sprung die einzige Spur, die das Ladegerät hinterlässt.
- * Die Energie ist daraus mal Dauer, also eine <em>Schätzung</em> unter der Annahme
- * konstanter Ladeleistung. Wer eine belastbare Zahl braucht, braucht einen eigenen Zähler.
  *
- * <p>{@code verifiedWatt} ist die Gegenmessung aus der Mitte des Ladevorgangs – dort
- * wird kurz abgeschaltet, und der Verbrauch fällt um die Ladeleistung. Sie ist die
- * belastbarere der beiden Zahlen, weil das Ladegerät dann eingeschwungen ist. Weichen
- * beide stark voneinander ab, hat vermutlich eine andere Last mitgeschaltet.
+ * <p><b>{@code watt} ist die konfigurierte Ladeleistung, nicht gemessen.</b> Die Anlage
+ * misst das Lade-Relais nicht separat, und der Umweg über den Hausverbrauch erwies sich
+ * als zu ungenau: Ein Haus schwankt um ±1000 W, in derselben Grössenordnung wie die
+ * gesuchte Leistung. Eine ehrliche Konstante ist mehr wert als eine Messung, die im
+ * Rauschen ertrinkt.
+ *
+ * <p>{@code measuredWatt} ist der aus dem Verbrauch abgeleitete Wert – nur zum Vergleich,
+ * damit sich die Konstante an der Wirklichkeit nachjustieren lässt.
  *
  * <p>Value Object: immutable {@code record}.
  */
 public record ChargingSession(
-        Instant startedAt, Instant endedAt, double watt, double energyKwh, OptionalDouble verifiedWatt) {
+        Instant startedAt, Instant endedAt, double watt, double energyKwh, OptionalDouble measuredWatt) {
 
     public ChargingSession {
-        if (verifiedWatt == null) {
-            throw new IllegalArgumentException("verifiedWatt darf nicht null sein (leer statt null)");
+        if (measuredWatt == null) {
+            throw new IllegalArgumentException("measuredWatt darf nicht null sein (leer statt null)");
         }
         if (startedAt == null || endedAt == null) {
             throw new IllegalArgumentException("startedAt und endedAt dürfen nicht null sein");
