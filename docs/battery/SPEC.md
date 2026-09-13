@@ -155,8 +155,8 @@ Ladevorgang und eine Pause im Laden.
 
 ## Ohne-Sonne-Ausschalter
 
-Im Manuell-Modus lädt die Batterie, was das Relais hergibt – ob die Sonne scheint oder
-nicht. Ein Ladeauftrag, der in den Abend läuft, holt den Strom also aus dem Netz und tut
+Im Manuell-Modus lädt die Batterie, was das Relais hergibt – ob die Sonne dafür reicht
+oder nicht. Ein Ladeauftrag, der in den Abend läuft, holt den Strom also aus dem Netz und tut
 damit genau das Gegenteil dessen, wofür er gedacht war. Bis hierher wurde das über eine
 feste Uhrzeit erschlagen (Zeitsteuerungs-Regel «täglich 20:00 AUS»). Der Wächter ersetzt
 die Uhrzeit durch den tatsächlichen Stand der Sonne.
@@ -181,19 +181,25 @@ Wächter, der daraufhin abschaltet, wäre schlimmer als keiner.
 ```properties
 battery.sun-guard.tick-interval=60s
 battery.sun-guard.window=20m
-battery.sun-guard.sun-watt=${BATTERY_SUN_GUARD_SUN_WATT:1000}
-battery.sun-guard.dark-watt=${BATTERY_SUN_GUARD_DARK_WATT:300}
+battery.sun-guard.sun-watt=${BATTERY_SUN_GUARD_SUN_WATT:2000}
+battery.sun-guard.dark-watt=${BATTERY_SUN_GUARD_DARK_WATT:1500}
 ```
 
 Entschieden wird über den **Median** der PV-Leistung im Fenster, nicht über den
 Momentanwert – sonst sähe eine Wolke aus wie die Nacht. **Zwei Schwellen**, damit der
 Wächter am trüben Nachmittag nicht im Minutentakt scharf und stumpf wird.
 
-`dark-watt=300` heisst wörtlich «keine Sonne mehr»: An einem klaren Septembertag (13.09.2026,
-gemessen) liegt die PV-Leistung um 17:00 bei 759 W, um 18:00 bei 260 W, um 19:00 bei 47 W –
-der Wächter löst also gegen 18:15 aus. Wer stattdessen will, dass **nur mit echtem
-Überschuss** geladen wird, setzt den Wert in die Nähe der Ladeleistung (1640 W) plus
-Hausverbrauch; dann schaltet er schon am späten Nachmittag ab.
+**`dark-watt=1500` ist an der Ladeleistung ausgerichtet, nicht an der Dämmerung.** Die
+Batterie zieht rund 1640 W (`battery.charging.power-watt`). Liefert die Anlage weniger als
+1500 W, trägt die Sonne das Laden nicht mehr – der Rest käme aus dem Netz, und genau das
+soll der Wächter verhindern. Am klaren 13.09.2026 (gemessen) fällt der 20-Minuten-Median
+um 16:30 unter die Schwelle; der Wächter schaltet also am späten Nachmittag ab und nicht
+erst in der Dämmerung, wo die Anlage ohnehin nur noch ein paar hundert Watt liefert.
+
+**`sun-watt=2000` liegt bewusst knapp darüber.** Der Abstand hält den Wächter ruhig, ohne
+ihn an trüben Tagen ganz stummzuschalten. Erreicht die Anlage an einem Tag nie 2000 W,
+wird der Wächter an diesem Tag nicht scharf und löst folglich auch nicht aus – wer das
+nicht will, senkt `sun-watt` näher an `dark-watt` heran.
 
 Zustand in `battery_sun_guard` (eine Zeile, Migration `0018`). Standard: **aus** – etwas,
 das von selbst schaltet, ist eine bewusste Entscheidung. Entscheidung in

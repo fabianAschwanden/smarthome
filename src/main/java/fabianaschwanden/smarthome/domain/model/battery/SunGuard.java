@@ -4,7 +4,7 @@ import java.time.Instant;
 
 /**
  * Der Ohne-Sonne-Ausschalter: schaltet die Batterieladung ab, sobald die PV-Anlage
- * nichts mehr liefert. Er schaltet nur AUS – wann geladen wird, entscheiden weiterhin
+ * weniger liefert, als das Laden braucht. Er schaltet nur AUS – wann geladen wird, entscheiden weiterhin
  * die Zeitsteuerung, die Lade-Automatik und der SMARTFOX.
  *
  * <p>{@code armed} ist der Merker «die Sonne war da». Nur ein scharfer Wächter schaltet

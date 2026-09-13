@@ -183,9 +183,9 @@ import { ItemImage } from '../../shared/item-image';
               <div>
                 <h3 class="font-medium">Ohne Sonne ausschalten</h3>
                 <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
-                  Beendet die Ladung, sobald die PV-Anlage nichts mehr liefert – statt zu einer
-                  festen Uhrzeit. Eingeschaltet wird weiterhin über Zeitsteuerung, Lade-Automatik
-                  oder von Hand.
+                  Beendet die Ladung am Nachmittag, sobald die PV-Anlage das Laden nicht mehr trägt
+                  – statt zu einer festen Uhrzeit. Eingeschaltet wird weiterhin über Zeitsteuerung,
+                  Lade-Automatik oder von Hand.
                 </p>
               </div>
               <button
@@ -200,7 +200,7 @@ import { ItemImage } from '../../shared/item-image';
             @if (guard.enabled) {
               <p class="text-xs text-[color:var(--ink-soft)]">
                 @if (guard.armed) {
-                  Scharf – schaltet ab, sobald die Sonne weg ist.
+                  Scharf – schaltet ab, sobald die Sonne das Laden nicht mehr trägt.
                 } @else {
                   Für heute erledigt – wieder scharf, sobald die Sonne zurück ist.
                 }

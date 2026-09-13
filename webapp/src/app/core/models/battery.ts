@@ -26,7 +26,8 @@ export interface ChargingSession {
 }
 
 /**
- * Ohne-Sonne-Ausschalter: beendet die Ladung, sobald die PV-Anlage nichts mehr liefert.
+ * Ohne-Sonne-Ausschalter: beendet die Ladung, sobald die PV-Anlage das Laden nicht mehr
+ * trägt.
  * Er schaltet nur AUS – eingeschaltet wird weiterhin über Zeitsteuerung, Lade-Automatik
  * oder von Hand.
  */

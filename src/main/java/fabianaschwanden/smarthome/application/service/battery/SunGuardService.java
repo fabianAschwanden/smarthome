@@ -22,7 +22,7 @@ import java.util.OptionalDouble;
 
 /**
  * Der Ohne-Sonne-Ausschalter: schaltet die Batterieladung ab, sobald die PV-Anlage
- * nichts mehr liefert.
+ * weniger liefert, als das Laden braucht.
  *
  * <p><b>Wozu.</b> Im Manuell-Modus lädt die Batterie, was das Relais hergibt – ob die
  * Sonne scheint oder nicht. Ein Ladeauftrag, der in den Abend läuft, holt den Strom

@@ -63,7 +63,7 @@ public class BatteryResource {
     @Path("/sun-guard")
     @Operation(
             summary = "Ohne-Sonne-Ausschalter",
-            description = "Schaltet die Ladung ab, sobald die PV-Anlage nichts mehr liefert. "
+            description = "Schaltet die Ladung ab, sobald die PV-Anlage das Laden nicht mehr traegt. "
                     + "Er schaltet nur AUS - eingeschaltet wird weiterhin ueber Zeitsteuerung, "
                     + "Lade-Automatik oder von Hand.")
     public SunGuardDto sunGuard() {
