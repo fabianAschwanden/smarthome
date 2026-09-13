@@ -2,9 +2,12 @@ package fabianaschwanden.smarthome.adapter.in.rest.battery;
 
 import fabianaschwanden.smarthome.adapter.in.rest.dto.battery.BatteryControlDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.battery.ChangeModeRequest;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.battery.SunGuardDto;
+import fabianaschwanden.smarthome.adapter.in.rest.dto.battery.SunGuardRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.battery.SwitchRelayRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.charging.ChargingSessionDto;
 import fabianaschwanden.smarthome.domain.port.in.battery.ControlBattery;
+import fabianaschwanden.smarthome.domain.port.in.battery.ManageSunGuard;
 import fabianaschwanden.smarthome.domain.port.in.charging.ChargingSessionQuery;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -30,9 +33,13 @@ public class BatteryResource {
 
     private final ChargingSessionQuery chargingSessions;
 
-    public BatteryResource(ControlBattery battery, ChargingSessionQuery chargingSessions) {
+    private final ManageSunGuard sunGuard;
+
+    public BatteryResource(
+            ControlBattery battery, ChargingSessionQuery chargingSessions, ManageSunGuard sunGuard) {
         this.chargingSessions = chargingSessions;
         this.battery = battery;
+        this.sunGuard = sunGuard;
     }
 
     @GET
@@ -50,6 +57,23 @@ public class BatteryResource {
     @Path("/relay")
     public BatteryControlDto switchRelay(@Valid SwitchRelayRequest request) {
         return BatteryControlDto.from(battery.switchRelay(request.state()));
+    }
+
+    @GET
+    @Path("/sun-guard")
+    @Operation(
+            summary = "Ohne-Sonne-Ausschalter",
+            description = "Schaltet die Ladung ab, sobald die PV-Anlage das Laden nicht mehr traegt. "
+                    + "Er schaltet nur AUS - eingeschaltet wird weiterhin ueber Zeitsteuerung, "
+                    + "Lade-Automatik oder von Hand.")
+    public SunGuardDto sunGuard() {
+        return SunGuardDto.from(sunGuard.status());
+    }
+
+    @PUT
+    @Path("/sun-guard")
+    public SunGuardDto setSunGuard(@Valid SunGuardRequest request) {
+        return SunGuardDto.from(sunGuard.setEnabled(request.enabled()));
     }
 
     @GET

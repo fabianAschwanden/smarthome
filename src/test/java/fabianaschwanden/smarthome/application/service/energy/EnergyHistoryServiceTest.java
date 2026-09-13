@@ -143,6 +143,7 @@ class EnergyHistoryServiceTest {
         }
 
         @Override public java.util.OptionalDouble medianConsumptionBetween(Instant a, Instant b) { return java.util.OptionalDouble.empty(); }
+        @Override public java.util.OptionalDouble medianPvBetween(Instant a, Instant b) { return java.util.OptionalDouble.empty(); }
         @Override public long deleteOlderThan(Instant cutoff) {
             return samples.removeIf(s -> s.timestamp().isBefore(cutoff)) ? 1 : 0;
         }

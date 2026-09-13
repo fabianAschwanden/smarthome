@@ -67,6 +67,8 @@ letzten Stand.
 | GET     | `/api/battery`        | Status: Modus, gewünschter Relais-Zustand, Zeit |
 | PUT     | `/api/battery/mode`   | `{ "mode": "MANUAL" \| "AUTO" }`                 |
 | POST    | `/api/battery/relay`  | `{ "state": "ON" \| "OFF" }` (nur in `MANUAL`)  |
+| GET     | `/api/battery/sun-guard` | Ohne-Sonne-Ausschalter: `enabled`, `armed`, `lastTrippedAt` |
+| PUT     | `/api/battery/sun-guard` | `{ "enabled": true \| false }`                  |
 
 `POST /relay` im `AUTO`-Modus wird mit `409 Conflict` abgelehnt – die Automatik
 besitzt dann den Relais-Zustand.
@@ -150,6 +152,59 @@ Die **Gegenmessung** (kurz abschalten, Abfall messen) ist damit gegenstandslos u
 standardmässig **aus** – sie sollte die Leistung messen, und das tut jetzt die Konstante.
 Ohne diesen Zweck bliebe nur ihr Preis: zwei zusätzliche Relais-Schaltungen je
 Ladevorgang und eine Pause im Laden.
+
+## Ohne-Sonne-Ausschalter
+
+Im Manuell-Modus lädt die Batterie, was das Relais hergibt – ob die Sonne dafür reicht
+oder nicht. Ein Ladeauftrag, der in den Abend läuft, holt den Strom also aus dem Netz und tut
+damit genau das Gegenteil dessen, wofür er gedacht war. Bis hierher wurde das über eine
+feste Uhrzeit erschlagen (Zeitsteuerungs-Regel «täglich 20:00 AUS»). Der Wächter ersetzt
+die Uhrzeit durch den tatsächlichen Stand der Sonne.
+
+**Er schaltet nur AUS.** Wann geladen wird, entscheiden weiterhin die Zeitsteuerung, die
+Lade-Automatik und im Automatik-Modus der SMARTFOX. Eine vierte Stelle, die einschaltet,
+stritte mit allen dreien.
+
+**Er schaltet einmal pro Sonnenuntergang.** `armed` ist der Merker «die Sonne war da».
+Nur ein scharfer Wächter löst aus, danach ist er stumpf, bis wieder Sonne da war. Ohne
+diesen Merker würgte er jeden nächtlichen Einschaltversuch binnen einer Minute wieder ab –
+wer nachts bewusst laden will, soll das dürfen. Der Merker liegt in der Datenbank, nicht
+im Speicher: Ein Neustart am Abend dürfte den Wächter nicht wieder scharf machen.
+
+**Abgeschaltet heisst `(MANUAL, OFF)`** – dasselbe, was eine Zeitsteuerungs-Regel mit
+Aktion AUS tut, und auch aus dem Automatik-Modus heraus. Wer den Wächter einschaltet,
+will die Ladung abends aus haben, nicht dem Gerät überlassen.
+
+**Ohne Messwerte passiert nichts.** Eine tote Energiequelle sieht aus wie eine Nacht; ein
+Wächter, der daraufhin abschaltet, wäre schlimmer als keiner.
+
+```properties
+battery.sun-guard.tick-interval=60s
+battery.sun-guard.window=20m
+battery.sun-guard.sun-watt=${BATTERY_SUN_GUARD_SUN_WATT:2000}
+battery.sun-guard.dark-watt=${BATTERY_SUN_GUARD_DARK_WATT:1500}
+```
+
+Entschieden wird über den **Median** der PV-Leistung im Fenster, nicht über den
+Momentanwert – sonst sähe eine Wolke aus wie die Nacht. **Zwei Schwellen**, damit der
+Wächter am trüben Nachmittag nicht im Minutentakt scharf und stumpf wird.
+
+**`dark-watt=1500` ist an der Ladeleistung ausgerichtet, nicht an der Dämmerung.** Die
+Batterie zieht rund 1640 W (`battery.charging.power-watt`). Liefert die Anlage weniger als
+1500 W, trägt die Sonne das Laden nicht mehr – der Rest käme aus dem Netz, und genau das
+soll der Wächter verhindern. Am klaren 13.09.2026 (gemessen) fällt der 20-Minuten-Median
+um 16:30 unter die Schwelle; der Wächter schaltet also am späten Nachmittag ab und nicht
+erst in der Dämmerung, wo die Anlage ohnehin nur noch ein paar hundert Watt liefert.
+
+**`sun-watt=2000` liegt bewusst knapp darüber.** Der Abstand hält den Wächter ruhig, ohne
+ihn an trüben Tagen ganz stummzuschalten. Erreicht die Anlage an einem Tag nie 2000 W,
+wird der Wächter an diesem Tag nicht scharf und löst folglich auch nicht aus – wer das
+nicht will, senkt `sun-watt` näher an `dark-watt` heran.
+
+Zustand in `battery_sun_guard` (eine Zeile, Migration `0018`). Standard: **aus** – etwas,
+das von selbst schaltet, ist eine bewusste Entscheidung. Entscheidung in
+`domain/service/battery/SunGuardRule` (pur, ohne Uhr und Relais), Ausführung in
+`application/service/battery/SunGuardService`.
 
 ## Betriebsfalle: der tote HTTP-Client (16.08.2026)
 

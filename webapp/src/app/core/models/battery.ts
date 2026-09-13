@@ -24,3 +24,17 @@ export interface ChargingSession {
   /** Immer true – die Anlage misst das Lade-Relais nicht separat. */
   estimated: boolean;
 }
+
+/**
+ * Ohne-Sonne-Ausschalter: beendet die Ladung, sobald die PV-Anlage das Laden nicht mehr
+ * trägt.
+ * Er schaltet nur AUS – eingeschaltet wird weiterhin über Zeitsteuerung, Lade-Automatik
+ * oder von Hand.
+ */
+export interface SunGuard {
+  enabled: boolean;
+  /** Die Sonne war da – der Wächter wartet auf den Sonnenuntergang. */
+  armed: boolean;
+  /** Wann er zuletzt tatsächlich abgeschaltet hat; null, solange noch nie. */
+  lastTrippedAt: string | null;
+}

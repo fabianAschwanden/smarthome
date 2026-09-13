@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 2: Ohne-Sonne-Ausschalter. Genau EINE Zeile (fester Schluessel), weil
+         der Zustand die Anlage als Ganzes beschreibt.
+
+         armed ist der Merker "die Sonne war da". Er gehoert in die Datenbank und nicht
+         in den Speicher: Sonst waere der Waechter nach jedem Neustart wieder stumpf -
+         oder, schlimmer, wieder scharf und schaltete mitten in der Nacht ab, was jemand
+         bewusst eingeschaltet hat. -->
+    <changeSet id="0018-create-sun-guard" author="smarthome">
+        <createTable tableName="battery_sun_guard">
+            <column name="id" type="varchar(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="armed" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_tripped_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
