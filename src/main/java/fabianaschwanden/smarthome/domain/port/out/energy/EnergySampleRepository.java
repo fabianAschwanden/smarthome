@@ -32,6 +32,15 @@ public interface EnergySampleRepository {
      */
     OptionalDouble medianConsumptionBetween(Instant fromInclusive, Instant toExclusive);
 
+    /**
+     * Median der PV-Leistung im Zeitfenster [from, to) - oder leer ohne Messpunkte.
+     *
+     * <p>Median statt Momentanwert, weil eine einzelne Wolke sonst wie die Nacht
+     * aussieht: Der Ohne-Sonne-Ausschalter entscheidet ueber ein Fenster, nicht ueber
+     * einen Augenblick.
+     */
+    OptionalDouble medianPvBetween(Instant fromInclusive, Instant toExclusive);
+
     /** Gesamtzahl gespeicherter Messpunkte (für den Demo-Seeder). */
     long total();
 }

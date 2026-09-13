@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { BatteryPage } from './battery-page';
-import { BatteryControl } from '../../core/models/battery';
+import { BatteryControl, SunGuard } from '../../core/models/battery';
 import { Surplus } from '../../core/models/forecast';
 
 describe('BatteryPage', () => {
@@ -119,5 +119,47 @@ describe('BatteryPage', () => {
 
     // Kein Fenster an einem trueben Tag ist ein normaler Zustand, keine Fehlermeldung.
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Ladeempfehlung');
+  });
+
+  it('zeigt den Ohne-Sonne-Ausschalter und schaltet ihn ein', async () => {
+    const fixture = TestBed.createComponent(BatteryPage);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    httpMock.expectOne('/api/battery').flush({
+      mode: 'MANUAL',
+      desiredState: 'ON',
+      changedAt: '2026-09-13T12:00:00Z',
+    } satisfies BatteryControl);
+    httpMock.expectOne('/api/battery/sun-guard').flush({
+      enabled: false,
+      armed: false,
+      lastTrippedAt: null,
+    } satisfies SunGuard);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Ohne Sonne ausschalten');
+
+    const knopf = Array.from(element.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Aus',
+    );
+    expect(knopf).toBeTruthy();
+    knopf?.click();
+
+    const request = httpMock.expectOne('/api/battery/sun-guard');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ enabled: true });
+    request.flush({
+      enabled: true,
+      armed: true,
+      lastTrippedAt: '2026-09-12T16:18:00Z',
+    } satisfies SunGuard);
+    fixture.detectChanges();
+
+    // Scharf heisst: wartet auf den Sonnenuntergang. Ohne diesen Hinweis saehe ein
+    // eingeschalteter Waechter, der nichts tut, kaputt aus.
+    expect(element.textContent).toContain('Scharf');
   });
 });

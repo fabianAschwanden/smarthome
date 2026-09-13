@@ -3,7 +3,13 @@ import { Injectable, inject, signal } from '@angular/core';
 import { startWith, switchMap } from 'rxjs';
 import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BatteryControl, ChargingSession, ControlMode, RelayState } from '../models/battery';
+import {
+  BatteryControl,
+  ChargingSession,
+  ControlMode,
+  RelayState,
+  SunGuard,
+} from '../models/battery';
 
 /**
  * Pollt den Steuerstand der Batterie vom eigenen Backend (BFF) und exponiert ihn
@@ -29,6 +35,26 @@ export class BatteryService {
     this.http
       .get<ChargingSession[]>('/api/battery/charging-sessions')
       .subscribe((sessions) => this.sessionsState.set(sessions));
+  }
+
+  private readonly sunGuardState = signal<SunGuard | null>(null);
+  /** Stand des Ohne-Sonne-Ausschalters. */
+  readonly sunGuard = this.sunGuardState.asReadonly();
+
+  /**
+   * Lädt den Stand des Wächters. Nicht gepollt: Er ändert sich zweimal am Tag –
+   * morgens scharf, abends ausgelöst. Ein Drei-Sekunden-Takt wäre reine Beschäftigung.
+   */
+  loadSunGuard(): void {
+    this.http
+      .get<SunGuard>('/api/battery/sun-guard')
+      .subscribe((guard) => this.sunGuardState.set(guard));
+  }
+
+  setSunGuard(enabled: boolean): void {
+    this.http
+      .put<SunGuard>('/api/battery/sun-guard', { enabled })
+      .subscribe((guard) => this.sunGuardState.set(guard));
   }
 
   private readonly intervalMs = 3000;

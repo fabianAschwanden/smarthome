@@ -175,6 +175,43 @@ import { ItemImage } from '../../shared/item-image';
           </article>
         }
 
+        <!-- Ohne-Sonne-Ausschalter (Use Case 2). Ersetzt die feste Abend-Uhrzeit,
+             zu der man das Laden sonst von Hand beendet. -->
+        @if (sunGuard(); as guard) {
+          <article class="glass-card space-y-3 p-5">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="font-medium">Ohne Sonne ausschalten</h3>
+                <p class="mt-0.5 text-xs text-[color:var(--ink-soft)]">
+                  Beendet die Ladung, sobald die PV-Anlage nichts mehr liefert – statt zu einer
+                  festen Uhrzeit. Eingeschaltet wird weiterhin über Zeitsteuerung, Lade-Automatik
+                  oder von Hand.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="seg shrink-0 px-4 py-1.5 text-sm"
+                [attr.data-active]="guard.enabled"
+                (click)="sunGuardUmschalten(!guard.enabled)"
+              >
+                {{ guard.enabled ? 'An' : 'Aus' }}
+              </button>
+            </div>
+            @if (guard.enabled) {
+              <p class="text-xs text-[color:var(--ink-soft)]">
+                @if (guard.armed) {
+                  Scharf – schaltet ab, sobald die Sonne weg ist.
+                } @else {
+                  Für heute erledigt – wieder scharf, sobald die Sonne zurück ist.
+                }
+                @if (guard.lastTrippedAt) {
+                  Zuletzt abgeschaltet: {{ tag(guard.lastTrippedAt) }}.
+                }
+              </p>
+            }
+          </article>
+        }
+
         <!-- Steuerung -->
         <article class="glass-card space-y-5 p-5">
           <div>
@@ -218,10 +255,13 @@ export class BatteryPage {
 
   protected readonly autoApply = this.forecast.autoApply;
   protected readonly sessions = this.battery.chargingSessions;
+  protected readonly sunGuard = this.battery.sunGuard;
 
   constructor() {
     // Einmal beim Öffnen: Ein Eintrag entsteht erst, wenn ein Ladevorgang endet.
     this.battery.loadChargingSessions();
+    // Ebenso der Wächter – er ändert sich zweimal am Tag, nicht alle drei Sekunden.
+    this.battery.loadSunGuard();
   }
 
   /** «Heute 14:20», «Gestern 09:05» oder das kurze Datum. */
@@ -269,6 +309,10 @@ export class BatteryPage {
 
   protected autoApplyUmschalten(enabled: boolean): void {
     this.forecast.setAutoApply(enabled);
+  }
+
+  protected sunGuardUmschalten(enabled: boolean): void {
+    this.battery.setSunGuard(enabled);
   }
 
   protected readonly control = this.battery.control;

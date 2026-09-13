@@ -54,6 +54,18 @@ public class PanacheEnergySampleRepository
     }
 
     @Override
+    public OptionalDouble medianPvBetween(Instant fromInclusive, Instant toExclusive) {
+        Object result = getEntityManager()
+                .createNativeQuery(
+                        "select percentile_cont(0.5) within group (order by pv_watt) "
+                        + "from energy_sample where ts >= ?1 and ts < ?2")
+                .setParameter(1, fromInclusive)
+                .setParameter(2, toExclusive)
+                .getSingleResult();
+        return result == null ? OptionalDouble.empty() : OptionalDouble.of(((Number) result).doubleValue());
+    }
+
+    @Override
     public long total() {
         return count();
     }
