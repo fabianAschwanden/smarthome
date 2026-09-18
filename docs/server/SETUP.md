@@ -179,6 +179,26 @@ Ursache `dial tcp [fdaa:…]:8080: i/o timeout` → ufw blockt den Tunnel: `sudo
 on fly && sudo ufw reload`. Weiter prüfen: Handshake aktuell (`sudo wg show`), UPSTREAM =
 aktuelle 6PN-IP des Mini-PC, App lauscht (`sudo ss -tlnp | grep 8080`).
 
+**Wenn all das stimmt und der 502 bleibt (18.09.2026):** Dann ist die Fly-Maschine selbst
+das Problem – ihr Host hat die 6PN-Route zu den WireGuard-Peers verloren. Erkennungszeichen:
+Der Heimserver erreicht das Fly-Gateway (`ping6 fdaa:81:a834::3` antwortet), aber **nicht die
+Maschine** (`curl http://[<maschinen-6pn>]:4180/ping` bleibt stumm); auf dem Heimserver
+hängen die Verbindungsversuche der Maschine in `SYN-RECV` (`ss -tan | grep 8080`) – die
+Antwort kommt nie an. Gegenprobe: `fly ssh console -a smarthome-remote` hängt ebenfalls,
+`fly ssh console -a <andere-app>` nicht. **Ein `fly machine restart` hilft nicht** – die
+Maschine bleibt auf demselben Host. Was hilft: die Maschine auf einen anderen Host klonen
+und die alte entfernen:
+
+```bash
+fly machine clone <alte-id> -a smarthome-remote --region fra   # neue Maschine, anderer Host
+# vom Heimserver: curl http://[<neue-6pn>]:4180/ping  -> HTTP 200
+fly machine destroy <alte-id> -a smarthome-remote --force
+```
+
+Die 6PN-Adresse der Maschine ändert sich dabei – das ist egal, `UPSTREAM` zeigt in die
+andere Richtung (auf den Heimserver) und bleibt gültig. Den WireGuard-Peer neu anzulegen
+bringt nichts; auch ein frischer Peer erreicht die kaputte Maschine nicht.
+
 ---
 
 # Teil B — Referenz
