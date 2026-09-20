@@ -56,8 +56,12 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
   private readonly allowCriticalOff: boolean;
   /** UUID → Handler, für alle aktuell registrierten Accessories. */
   private readonly handlers = new Map<string, DeviceHandler>();
-  /** Aus dem Cache wiederhergestellte Accessories, bevor der erste Poll läuft. */
-  private readonly cached: PlatformAccessory[] = [];
+  /**
+   * UUID → Accessory, für alles, was Homebridge kennt: aus dem Cache wiederhergestellt
+   * oder zur Laufzeit angelegt. Aus dieser Liste wird entfernt, was im Snapshot fehlt –
+   * auch mitten im Betrieb, etwa wenn eine Anlage stillgelegt wird.
+   */
+  private readonly known = new Map<string, PlatformAccessory>();
   // ReturnType statt NodeJS.Timeout: so braucht das Plugin keine @types/node.
   private timer?: ReturnType<typeof setInterval>;
 
@@ -96,7 +100,7 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
 
   /** Homebridge reicht hier die aus seinem Cache wiederhergestellten Accessories herein. */
   configureAccessory(accessory: PlatformAccessory): void {
-    this.cached.push(accessory);
+    this.known.set(accessory.UUID, accessory);
   }
 
   /** Ein Zyklus: lesen, Bestand angleichen, Zustände verteilen. */
@@ -132,6 +136,11 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
       });
     }
     for (const device of snapshot.appliances) {
+      if (device.active === false) {
+        // Stillgelegt (z. B. ueber den Winter vom Strom): Fuer HomeKit gibt es die
+        // Anlage nicht. "Keine Antwort" waere falsch - sie ist nicht kaputt.
+        continue;
+      }
       result.push({
         device,
         kind: 'appliance',
@@ -160,6 +169,9 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
       });
     }
     for (const device of snapshot.climate) {
+      if (device.active === false) {
+        continue; // stillgelegt - siehe Anlagen
+      }
       result.push({
         device,
         kind: 'climate',
@@ -178,7 +190,7 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
       if (this.handlers.has(uuid)) {
         continue;
       }
-      const existing = this.cached.find((a) => a.UUID === uuid);
+      const existing = this.known.get(uuid);
       if (existing) {
         existing.displayName = item.device.name;
         this.handlers.set(uuid, item.create(existing));
@@ -188,19 +200,24 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
         accessory.context.id = item.device.id;
         accessory.context.kind = item.kind;
         this.handlers.set(uuid, item.create(accessory));
+        this.known.set(uuid, accessory);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         this.log.info(`Gerät hinzugefügt: ${item.device.name} (${item.device.room})`);
       }
     }
 
-    const stale = this.cached.filter((a) => !wanted.has(a.UUID));
+    // Was im Snapshot fehlt, fliegt raus - nicht nur beim ersten Abgleich nach dem
+    // Start, sondern in jedem Zyklus. Vorher wurde die Cache-Liste nach dem ersten
+    // Aufraeumen geleert, und ein spaeter verschwundenes Geraet blieb bis zum naechsten
+    // Neustart der Bruecke als "Keine Antwort" stehen.
+    const stale = [...this.known.values()].filter((a) => !wanted.has(a.UUID));
     if (stale.length > 0) {
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, stale);
       for (const accessory of stale) {
         this.handlers.delete(accessory.UUID);
+        this.known.delete(accessory.UUID);
         this.log.info(`Gerät entfernt: ${accessory.displayName}`);
       }
-      this.cached.length = 0;
     }
   }
 

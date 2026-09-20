@@ -37,6 +37,7 @@ class WellnessSurplusServiceTest {
     private FakeSurplus surplus;
     private FakeSchedules schedules;
     private FakeBatterySchedules batterySchedules;
+    private FakeAppliances appliances;
     private WellnessSurplusService service;
 
     @BeforeEach
@@ -45,7 +46,8 @@ class WellnessSurplusServiceTest {
         schedules = new FakeSchedules();
         batterySchedules = new FakeBatterySchedules();
         // Uhr in der Zone der Anlage: Die Kappung am Abend rechnet in Ortszeit.
-        service = new WellnessSurplusService(surplus, schedules, batterySchedules, new FakeConfig(),
+        appliances = new FakeAppliances();
+        service = new WellnessSurplusService(surplus, schedules, batterySchedules, appliances, new FakeConfig(),
                 java.time.Clock.fixed(VON, java.time.ZoneId.of("Europe/Zurich")));
     }
 
@@ -64,6 +66,19 @@ class WellnessSurplusServiceTest {
                 angelegt.stream()
                         .map(s -> s.applianceId() + ":" + s.targetTemp() + ":" + s.fireAt())
                         .toList());
+    }
+
+    @Test
+    void plant_eine_stillgelegte_anlage_nicht_ein() {
+        // Das Becken ist ueber den Winter vom Strom. Ein Heizauftrag dafuer wuerde beim
+        // Faelligwerden ohnehin verworfen und stuende bis dahin nur in der Liste.
+        surplus.recommendation = new ChargeRecommendation(FENSTER, Confidence.LEARNED);
+        appliances.deactivated.add("pool");
+
+        List<ApplianceSchedule> angelegt = service.applyWellnessSurplus();
+
+        assertEquals(2, angelegt.size());
+        assertTrue(angelegt.stream().allMatch(s -> s.applianceId().equals("whirlpool")));
     }
 
     @Test
@@ -105,7 +120,7 @@ class WellnessSurplusServiceTest {
         // Ohne Kappung hoebe der Auftrag am Fensterende die Temperatur nach der
         // Absenkung wieder an - und der Whirlpool heizte doch in den Abend hinein.
         WellnessSurplusService frueheAbsenkung = new WellnessSurplusService(
-                surplus, schedules, batterySchedules, new FakeConfig() {
+                surplus, schedules, batterySchedules, appliances, new FakeConfig() {
                     @Override
                     public java.time.LocalTime setbackTime() {
                         return java.time.LocalTime.of(15, 0);  // Ortszeit = 13:00 UTC, mitten im Fenster
@@ -247,6 +262,39 @@ class WellnessSurplusServiceTest {
         @Override
         public void delete(UUID id) {
             throw new UnsupportedOperationException();
+        }
+    }
+    /** Weiss nur, welche Anlagen stillgelegt sind - mehr braucht der Ueberschussplan nicht. */
+    private static final class FakeAppliances
+            implements fabianaschwanden.smarthome.domain.port.in.appliance.ControlAppliances {
+        private final java.util.Set<String> deactivated = new java.util.HashSet<>();
+
+        @Override public List<fabianaschwanden.smarthome.domain.model.appliance.Appliance> list() {
+            return List.of();
+        }
+
+        @Override public fabianaschwanden.smarthome.domain.model.appliance.Appliance switchFunction(
+                String id, fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction f,
+                fabianaschwanden.smarthome.domain.model.appliance.FunctionState s) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public fabianaschwanden.smarthome.domain.model.appliance.Appliance setTargetTemperature(
+                String id, int target) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public java.util.OptionalInt pendingTarget(String id) {
+            return java.util.OptionalInt.empty();
+        }
+
+        @Override public fabianaschwanden.smarthome.domain.model.appliance.Appliance setActive(
+                String id, boolean active) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public boolean isActive(String id) {
+            return !deactivated.contains(id);
         }
     }
 }

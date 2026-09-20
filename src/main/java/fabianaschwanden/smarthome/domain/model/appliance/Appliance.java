@@ -10,6 +10,10 @@ import java.util.Map;
  * schaltbaren Funktionen. {@code functions} enthält nur die tatsächlich
  * vorhandenen Funktionen mit ihrem aktuellen Zustand.
  *
+ * <p>{@code active} unterscheidet «nicht erreichbar» von «bewusst stillgelegt»: Eine
+ * Anlage, die über den Winter vom Strom ist, ist nicht kaputt – sie wird nur nicht
+ * mehr angesprochen. Eine deaktivierte Anlage ist nie {@code online}.
+ *
  * <p>Value Object: immutable {@code record} (defensive Kopie der Funktions-Map).
  */
 public record Appliance(
@@ -17,6 +21,7 @@ public record Appliance(
         String name,
         String room,
         boolean online,
+        boolean active,
         Instant observedAt,
         Map<ApplianceFunction, FunctionState> functions,
         Temperature temperature) {
@@ -33,6 +38,9 @@ public record Appliance(
         }
         if (observedAt == null) {
             throw new IllegalArgumentException("observedAt darf nicht null sein");
+        }
+        if (!active && online) {
+            throw new IllegalArgumentException("eine deaktivierte Anlage kann nicht online sein");
         }
         if (functions == null || functions.isEmpty()) {
             throw new IllegalArgumentException("eine Anlage braucht mindestens eine Funktion");

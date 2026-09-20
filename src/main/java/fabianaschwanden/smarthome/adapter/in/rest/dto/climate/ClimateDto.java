@@ -4,7 +4,8 @@ import fabianaschwanden.smarthome.domain.model.climate.Climate;
 
 /**
  * Transport-Objekt einer Klimaanlage. {@code currentTemp} bzw. {@code outdoorTemp}
- * = -1, wenn unbekannt.
+ * = -1, wenn unbekannt. {@code active = false} heisst bewusst stillgelegt (über den
+ * Winter) – die Oberfläche zeigt das anders als «nicht erreichbar».
  */
 public record ClimateDto(
         String id,
@@ -17,10 +18,12 @@ public record ClimateDto(
         int currentTemp,
         int outdoorTemp,
         boolean online,
+        boolean active,
         String observedAt) {
 
     public static ClimateDto from(Climate c) {
         return new ClimateDto(c.id(), c.name(), c.room(), c.power(), c.boost(), c.mode().name(),
-                c.targetTemp(), c.currentTemp(), c.outdoorTemp(), c.online(), c.observedAt().toString());
+                c.targetTemp(), c.currentTemp(), c.outdoorTemp(), c.online(), c.active(),
+                c.observedAt().toString());
     }
 }

@@ -70,20 +70,35 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                   <div>
                     <h3 class="text-lg font-semibold">{{ a.name }}</h3>
                     <p class="text-sm text-[color:var(--ink-soft)]">
-                      {{ a.online ? 'Online' : 'Offline' }}
+                      {{ !a.active ? 'Stillgelegt' : a.online ? 'Online' : 'Offline' }}
                       @if (a.room) {
                         · {{ a.room }}
                       }
                     </p>
                   </div>
+                  <!-- Grau statt rot: Stillgelegt ist kein Fehler. -->
                   <span
                     class="size-2.5 shrink-0 rounded-full"
-                    [class]="a.online ? 'bg-emerald-400' : 'bg-red-400'"
+                    [class]="!a.active ? 'bg-zinc-500' : a.online ? 'bg-emerald-400' : 'bg-red-400'"
                   ></span>
                 </header>
 
+                @if (!a.active) {
+                  <p class="text-sm text-[color:var(--ink-soft)]">
+                    Vom Strom genommen – wird nicht angesprochen, keine Zeitsteuerung, kein
+                    Überschussplan, nicht in HomeKit.
+                  </p>
+                  <button
+                    type="button"
+                    class="glass self-start rounded-full px-5 py-2 text-sm"
+                    (click)="setActive(a, true)"
+                  >
+                    Wieder in Betrieb nehmen
+                  </button>
+                }
+
                 <!-- Temperatur (nur bei beheizten Anlagen) -->
-                @if (a.temperature; as t) {
+                @if (a.active && a.temperature; as t) {
                   <div>
                     <app-temp-dial
                       [target]="soll(t)"
@@ -150,63 +165,81 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                   </div>
                 }
 
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  @for (fn of functionsOf(a); track fn.key) {
-                    <button
-                      type="button"
-                      [disabled]="!a.online"
-                      class="tile-toggle"
-                      [class.tile-toggle-active]="fn.on"
-                      [attr.aria-pressed]="fn.on"
-                      [attr.aria-label]="fn.label"
-                      (click)="onFunction(a.id, fn.key, !fn.on)"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                        @switch (fn.key) {
-                          @case ('PUMP') {
-                            <path
-                              d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"
-                              stroke-linejoin="round"
-                            />
+                @if (a.active) {
+                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @for (fn of functionsOf(a); track fn.key) {
+                      <button
+                        type="button"
+                        [disabled]="!a.online"
+                        class="tile-toggle"
+                        [class.tile-toggle-active]="fn.on"
+                        [attr.aria-pressed]="fn.on"
+                        [attr.aria-label]="fn.label"
+                        (click)="onFunction(a.id, fn.key, !fn.on)"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                        >
+                          @switch (fn.key) {
+                            @case ('PUMP') {
+                              <path
+                                d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('HEATER') {
+                              <path
+                                d="M12 3c1.6 2.6 4 4.2 4 7.2a4 4 0 0 1-8 0c0-1.3.6-2.2 1.4-3.2.3 1.1.9 1.6 1.4 1.9C10.4 8 11 6 12 3z"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('LIGHT') {
+                              <path
+                                d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.3 11c.5.4.8 1 .8 1.6h5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('MASSAGE') {
+                              <path
+                                d="M4 8c2-2.5 4-2.5 6 0s4 2.5 6 0M4 12c2-2.5 4-2.5 6 0s4 2.5 6 0M4 16c2-2.5 4-2.5 6 0s4 2.5 6 0"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('FILTER') {
+                              <path
+                                d="M4 5h16l-6 7v6l-4 2v-8z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            }
                           }
-                          @case ('HEATER') {
-                            <path
-                              d="M12 3c1.6 2.6 4 4.2 4 7.2a4 4 0 0 1-8 0c0-1.3.6-2.2 1.4-3.2.3 1.1.9 1.6 1.4 1.9C10.4 8 11 6 12 3z"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('LIGHT') {
-                            <path
-                              d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.3 11c.5.4.8 1 .8 1.6h5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('MASSAGE') {
-                            <path
-                              d="M4 8c2-2.5 4-2.5 6 0s4 2.5 6 0M4 12c2-2.5 4-2.5 6 0s4 2.5 6 0M4 16c2-2.5 4-2.5 6 0s4 2.5 6 0"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('FILTER') {
-                            <path
-                              d="M4 5h16l-6 7v6l-4 2v-8z"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          }
-                        }
-                      </svg>
-                      <span class="text-xs">{{ fn.label }}</span>
-                    </button>
-                  }
-                </div>
+                        </svg>
+                        <span class="text-xs">{{ fn.label }}</span>
+                      </button>
+                    }
+                  </div>
+                }
 
-                @if (!a.online) {
+                @if (a.active && !a.online) {
                   <p class="text-xs text-amber-300/90">
                     ⚠ Nicht erreichbar – Steuerschnittstelle noch nicht angebunden.
                   </p>
+                }
+
+                @if (a.active) {
+                  <button
+                    type="button"
+                    class="self-start text-xs text-[color:var(--ink-faint)] hover:text-[color:var(--ink)]"
+                    title="Über den Winter vom Strom? Dann hier stilllegen – die App lässt die Anlage in Ruhe."
+                    (click)="setActive(a, false)"
+                  >
+                    Stilllegen (z. B. über den Winter)
+                  </button>
                 }
               </div>
             </article>
@@ -263,6 +296,10 @@ export class AppliancePage {
         label: FUNCTION_LABELS[k as ApplianceFunction] ?? k,
         on: a.functions[k] === 'ON',
       }));
+  }
+
+  protected setActive(a: Appliance, active: boolean): void {
+    this.api.setActive(a.id, active);
   }
 
   protected onFunction(id: string, fn: ApplianceFunction, on: boolean): void {

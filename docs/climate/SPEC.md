@@ -39,6 +39,7 @@ Mode-Mapping Domäne ↔ msmart: `COOL`/`HEAT`/`AUTO` direkt, `FAN` ↔ `FAN_ONL
 | POST    | `/api/climate/{id}/mode`    | `{ "mode": "COOL"\|"HEAT"\|"AUTO"\|"FAN" }` |
 | POST    | `/api/climate/{id}/target`  | `{ "temperature": 16..30 }`                 |
 | POST    | `/api/climate/{id}/boost`   | `{ "on": true\|false }` (Turbo/maximale Leistung) |
+| PUT     | `/api/climate/{id}/active` | `{ "active": true \| false }` – stilllegen / wieder in Betrieb nehmen (stillgelegt: Befehle → 409) |
 
 404 unbekannte Anlage, 400 Temperatur ausserhalb 16–30 °C, 503 nicht erreichbar.
 
@@ -70,6 +71,19 @@ Application-Service `ClimateControlService` (`application/service/climate`), Ada
 `adapter/in/rest/climate` und `adapter/out/climate/{mock,local,pending}`. Der
 Sidecar-Client liegt geteilt in `support.tuya.TuyaSidecarClient` (kein Adapter, damit
 mehrere Adapter ihn nutzen dürfen).
+
+## Stilllegung (über den Winter)
+
+Die Klimaanlage wird über den Winter vom Strom genommen. Für die App ist sie dann **nicht
+kaputt, sondern stillgelegt** – derselbe Mechanismus wie bei den Wellness-Anlagen
+(`docs/appliance/SPEC.md` §3a): kein Gerätezugriff mehr (der Sidecar würde sonst bei jedem
+Aufruf vergeblich anklopfen), Befehle antworten mit `409`, HomeKit blendet das Gerät aus
+und legt es beim Reaktivieren wieder an, die Kachel zeigt «Stillgelegt» ohne Bedienelemente
+und mit «Wieder in Betrieb nehmen».
+
+`PUT /api/climate/{id}/active` mit `{ "active": false | true }`. Zustand in
+`device_deactivation` (`kind = CLIMATE`), Domäne `Climate.active`, Port
+`ControlClimate.setActive`, Exception `ClimateDeactivated`.
 
 ## 6. Offene Punkte / TODO
 

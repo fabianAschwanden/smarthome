@@ -83,4 +83,41 @@ class ApplianceResourceTest {
                 .when().post("/api/appliances/whirlpool/temperature")
                 .then().statusCode(400);
     }
+
+    @Test
+    void legt_eine_anlage_still_und_nimmt_sie_wieder_in_betrieb() {
+        // Stillgelegt: nicht online, nicht aktiv, Befehle werden mit 409 abgewiesen -
+        // kein Fehler, ein gewaehlter Zustand. Danach wieder normal.
+        given().contentType("application/json").body("{\"active\":false}")
+                .when().put("/api/appliances/pool/active")
+                .then().statusCode(200)
+                .body("active", is(false))
+                .body("online", is(false));
+
+        given().contentType("application/json").body("{\"state\":\"ON\"}")
+                .when().post("/api/appliances/pool/functions/PUMP")
+                .then().statusCode(409);
+
+        given()
+                .when().get("/api/appliances")
+                .then().statusCode(200)
+                .body("find { it.id == 'pool' }.active", is(false))
+                .body("find { it.id == 'whirlpool' }.active", is(true));
+
+        given().contentType("application/json").body("{\"active\":true}")
+                .when().put("/api/appliances/pool/active")
+                .then().statusCode(200)
+                .body("active", is(true));
+
+        given().contentType("application/json").body("{\"state\":\"ON\"}")
+                .when().post("/api/appliances/pool/functions/PUMP")
+                .then().statusCode(200);
+    }
+
+    @Test
+    void unbekannte_anlage_laesst_sich_nicht_stilllegen() {
+        given().contentType("application/json").body("{\"active\":false}")
+                .when().put("/api/appliances/gibtsnicht/active")
+                .then().statusCode(404);
+    }
 }

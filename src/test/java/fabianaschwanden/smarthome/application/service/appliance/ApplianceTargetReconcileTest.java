@@ -5,6 +5,7 @@ import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import org.junit.jupiter.api.BeforeEach;
+import fabianaschwanden.smarthome.testsupport.InMemoryActivation;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -34,7 +35,7 @@ class ApplianceTargetReconcileTest {
     @BeforeEach
     void setUp() {
         anlage = new TraegeAnlage();
-        service = new ApplianceControlService(List.of(anlage), UHR, 3);
+        service = new ApplianceControlService(List.of(anlage), new InMemoryActivation(), UHR, 3);
     }
 
     @Test

@@ -22,4 +22,13 @@ public interface ControlClimate {
 
     /** Boost-/Turbo-Modus (maximale Leistung) ein/aus. */
     Climate setBoost(String id, boolean on);
+
+    /**
+     * Legt die Anlage still oder nimmt sie wieder in Betrieb. Stillgelegt heisst: kein
+     * Gerätezugriff mehr, keine Befehle (409) – bis jemand sie wieder aktiviert. Gedacht
+     * für den Winter, wenn die Anlage vom Strom ist.
+     *
+     * @throws ClimateNotFound wenn keine Anlage mit der ID passt.
+     */
+    Climate setActive(String id, boolean active);
 }

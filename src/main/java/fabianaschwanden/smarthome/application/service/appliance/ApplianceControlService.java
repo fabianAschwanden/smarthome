@@ -4,10 +4,13 @@ import fabianaschwanden.smarthome.domain.model.appliance.Appliance;
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
+import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceDeactivated;
 import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceNotFound;
 import fabianaschwanden.smarthome.domain.port.in.appliance.ControlAppliances;
 import fabianaschwanden.smarthome.domain.port.in.appliance.FunctionNotSupported;
 import fabianaschwanden.smarthome.domain.port.in.appliance.TemperatureNotSupported;
+import fabianaschwanden.smarthome.domain.port.out.activation.DeviceActivationRepository;
+import fabianaschwanden.smarthome.domain.model.activation.DeviceKind;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDeviceFactory;
 import io.quarkus.scheduler.Scheduled;
@@ -21,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -38,6 +42,12 @@ import org.jboss.logging.Logger;
  * sieht den alten Wert – und der nächste Schritt rechnet wieder von dort. So kommt man
  * nie mehr als ein Grad weit. Deshalb merkt sich der Dienst den Wunsch und wiederholt
  * ihn, bis die Anlage ihn meldet oder die Versuche aufgebraucht sind.
+ *
+ * <p><b>Eine deaktivierte Anlage wird nicht angesprochen – gar nicht.</b> Das
+ * Schwimmbecken ist über den Winter vom Strom. Ohne diese Sperre suchte der Sidecar
+ * alle 30 Sekunden vergeblich 25 Sekunden lang das Spa, und aus einer stillgelegten
+ * Anlage würde eine dauernd «kaputte». Deaktiviert heisst: letzter bekannter Stand
+ * anzeigen, offline, Befehle abweisen, offene Temperaturwünsche verwerfen.
  */
 @ApplicationScoped
 public class ApplianceControlService implements ControlAppliances {
@@ -47,6 +57,7 @@ public class ApplianceControlService implements ControlAppliances {
     private final Map<String, Temperature> lastTemp = new ConcurrentHashMap<>();
     /** Gewünschte Soll-Temperaturen, die die Anlage noch nicht bestätigt hat. */
     private final Map<String, Desired> desired = new ConcurrentHashMap<>();
+    private final DeviceActivationRepository activation;
     private final Clock clock;
     private final int maxAttempts;
 
@@ -63,16 +74,19 @@ public class ApplianceControlService implements ControlAppliances {
     @Inject
     public ApplianceControlService(
             ApplianceDeviceFactory factory,
+            DeviceActivationRepository activation,
             @ConfigProperty(name = "appliance-target.max-attempts", defaultValue = "8") int maxAttempts) {
-        this(factory.devices(), Clock.systemUTC(), maxAttempts);
+        this(factory.devices(), activation, Clock.systemUTC(), maxAttempts);
     }
 
     // Sichtbar fürs Testen.
-    ApplianceControlService(List<ApplianceDevice> devices, Clock clock) {
-        this(devices, clock, 8);
+    ApplianceControlService(List<ApplianceDevice> devices, DeviceActivationRepository activation, Clock clock) {
+        this(devices, activation, clock, 8);
     }
 
-    ApplianceControlService(List<ApplianceDevice> devices, Clock clock, int maxAttempts) {
+    ApplianceControlService(
+            List<ApplianceDevice> devices, DeviceActivationRepository activation, Clock clock, int maxAttempts) {
+        this.activation = activation;
         this.maxAttempts = maxAttempts;
         for (ApplianceDevice device : devices) {
             this.devices.put(device.id(), device);
@@ -85,12 +99,37 @@ public class ApplianceControlService implements ControlAppliances {
 
     @Override
     public List<Appliance> list() {
-        return devices.values().stream().map(this::observe).toList();
+        Set<String> deactivated = activation.deactivated(DeviceKind.APPLIANCE);
+        return devices.values().stream()
+                .map(device -> deactivated.contains(device.id()) ? dormant(device) : observe(device))
+                .toList();
+    }
+
+    @Override
+    public Appliance setActive(String id, boolean active) {
+        ApplianceDevice device = require(id);
+        if (active) {
+            activation.reactivate(DeviceKind.APPLIANCE, id);
+            LOG.infof("Anlage '%s' wieder in Betrieb genommen", id);
+            return observe(device);
+        }
+        activation.deactivate(DeviceKind.APPLIANCE, id, clock.instant());
+        // Ein offener Temperaturwunsch würde sonst beim Reaktivieren - Monate später -
+        // unvermittelt gestellt.
+        desired.remove(id);
+        LOG.infof("Anlage '%s' stillgelegt - wird nicht mehr angesprochen", id);
+        return dormant(device);
+    }
+
+    @Override
+    public boolean isActive(String id) {
+        require(id);
+        return !activation.deactivated(DeviceKind.APPLIANCE).contains(id);
     }
 
     @Override
     public Appliance switchFunction(String id, ApplianceFunction function, FunctionState state) {
-        ApplianceDevice device = require(id);
+        ApplianceDevice device = requireActive(id);
         if (!device.functions().contains(function)) {
             throw new FunctionNotSupported(id, function);
         }
@@ -101,7 +140,7 @@ public class ApplianceControlService implements ControlAppliances {
 
     @Override
     public Appliance setTargetTemperature(String id, int target) {
-        ApplianceDevice device = require(id);
+        ApplianceDevice device = requireActive(id);
         if (!device.heated()) {
             throw new TemperatureNotSupported(id);
         }
@@ -137,7 +176,7 @@ public class ApplianceControlService implements ControlAppliances {
             String id = entry.getKey();
             Desired open = entry.getValue();
             ApplianceDevice device = devices.get(id);
-            if (device == null) {
+            if (device == null || activation.deactivated(DeviceKind.APPLIANCE).contains(id)) {
                 desired.remove(id);
                 continue;
             }
@@ -170,6 +209,21 @@ public class ApplianceControlService implements ControlAppliances {
         return device;
     }
 
+    private ApplianceDevice requireActive(String id) {
+        ApplianceDevice device = require(id);
+        if (activation.deactivated(DeviceKind.APPLIANCE).contains(id)) {
+            throw new ApplianceDeactivated(id);
+        }
+        return device;
+    }
+
+    /** Stillgelegte Anlage: letzter bekannter Stand, ohne das Gerät zu berühren. */
+    private Appliance dormant(ApplianceDevice device) {
+        return new Appliance(device.id(), device.name(), device.room(), false, false, clock.instant(),
+                lastKnown.getOrDefault(device.id(), new EnumMap<>(ApplianceFunction.class)),
+                lastTemp.get(device.id()));
+    }
+
     private Appliance observe(ApplianceDevice device) {
         Optional<ApplianceDevice.State> current = device.readState();
         Map<ApplianceFunction, FunctionState> states;
@@ -188,6 +242,6 @@ public class ApplianceControlService implements ControlAppliances {
             temperature = lastTemp.get(device.id());
             online = false;
         }
-        return new Appliance(device.id(), device.name(), device.room(), online, clock.instant(), states, temperature);
+        return new Appliance(device.id(), device.name(), device.room(), online, true, clock.instant(), states, temperature);
     }
 }

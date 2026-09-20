@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.application.config.WellnessConfig;
 import fabianaschwanden.smarthome.domain.model.applianceschedule.ApplianceSchedule;
 import fabianaschwanden.smarthome.domain.model.forecast.SurplusWindow;
 import fabianaschwanden.smarthome.domain.model.batteryschedule.BatterySchedule;
+import fabianaschwanden.smarthome.domain.port.in.appliance.ControlAppliances;
 import fabianaschwanden.smarthome.domain.port.in.applianceschedule.ManageApplianceSchedules;
 import fabianaschwanden.smarthome.domain.port.in.batteryschedule.ManageBatterySchedules;
 import fabianaschwanden.smarthome.domain.port.in.forecast.NoRecommendationAvailable;
@@ -59,6 +60,7 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
     private final SurplusQuery surplus;
     private final ManageApplianceSchedules schedules;
     private final ManageBatterySchedules batterySchedules;
+    private final ControlAppliances appliances;
     private final WellnessConfig config;
     private final Clock clock;
 
@@ -67,8 +69,9 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
             SurplusQuery surplus,
             ManageApplianceSchedules schedules,
             ManageBatterySchedules batterySchedules,
+            ControlAppliances appliances,
             WellnessConfig config) {
-        this(surplus, schedules, batterySchedules, config, Clock.systemDefaultZone());
+        this(surplus, schedules, batterySchedules, appliances, config, Clock.systemDefaultZone());
     }
 
     // Sichtbar fürs Testen: feste Uhr und Zone.
@@ -76,11 +79,13 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
             SurplusQuery surplus,
             ManageApplianceSchedules schedules,
             ManageBatterySchedules batterySchedules,
+            ControlAppliances appliances,
             WellnessConfig config,
             Clock clock) {
         this.surplus = surplus;
         this.schedules = schedules;
         this.batterySchedules = batterySchedules;
+        this.appliances = appliances;
         this.config = config;
         this.clock = clock;
     }
@@ -101,6 +106,12 @@ public class WellnessSurplusService implements WellnessSurplusPlan {
 
         List<ApplianceSchedule> created = new ArrayList<>();
         for (WellnessConfig.Entry entry : config.appliances()) {
+            if (!appliances.isActive(entry.id())) {
+                // Eine stillgelegte Anlage bekommt keinen Heizauftrag - er wuerde beim
+                // Faelligwerden ohnehin verworfen und stuende bis dahin nur in der Liste.
+                LOG.infof("Wellness-Ueberschuss: %s ist deaktiviert, nicht eingeplant", entry.id());
+                continue;
+            }
             int endTemp = cappedByEvening ? entry.nightTemp() : entry.baseTemp();
             created.add(schedules.save(
                     ApplianceSchedule.countdown(entry.id(), entry.surplusTemp(), window.from())));

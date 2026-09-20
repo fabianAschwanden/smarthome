@@ -48,6 +48,11 @@ export class ClimateService {
     this.apply(this.http.post<Climate>(`/api/climate/${id}/boost`, { on }));
   }
 
+  /** Stilllegen / wieder in Betrieb nehmen – ein seltener, bewusster Schritt. */
+  setActive(id: string, active: boolean): void {
+    this.apply(this.http.put<Climate>(`/api/climate/${id}/active`, { active }));
+  }
+
   private apply(request: Observable<Climate>): void {
     request.subscribe((updated) => {
       const current = this.climateState();

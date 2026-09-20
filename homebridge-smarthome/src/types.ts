@@ -33,6 +33,8 @@ export function hasPosition(cover: CoverDto): boolean {
 }
 
 export interface ClimateDto extends DeviceBase {
+  /** false = bewusst stillgelegt (ueber den Winter). Optional wie bei ApplianceDto. */
+  active?: boolean;
   power: boolean;
   /** COOL | HEAT | AUTO | FAN (Domaenen-Enum ClimateMode). */
   mode: string;
@@ -97,6 +99,11 @@ export function hasBattery(smoke: SmokeDto): boolean {
  * und keine festen Felder.
  */
 export interface ApplianceDto extends DeviceBase {
+  /**
+   * false = bewusst stillgelegt (z. B. ueber den Winter vom Strom). Optional, weil
+   * aeltere Backends das Feld nicht kennen - dann gilt die Anlage als aktiv.
+   */
+  active?: boolean;
   /** Funktionsname (PUMP, HEATER, LIGHT, MASSAGE, FILTER, ...) -> "ON" | "OFF". */
   functions: Record<string, string>;
   /** null bei Anlagen ohne Heizung. */

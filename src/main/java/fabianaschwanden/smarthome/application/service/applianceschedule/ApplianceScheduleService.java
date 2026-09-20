@@ -69,6 +69,14 @@ public class ApplianceScheduleService implements ManageApplianceSchedules {
             if (!schedule.isDue(now)) {
                 continue;
             }
+            if (!appliances.isActive(schedule.applianceId())) {
+                // Nicht nur ueberspringen, sondern erledigen: Ein liegengebliebener Auftrag
+                // wuerde sonst beim Reaktivieren - Monate spaeter - unvermittelt feuern.
+                LOG.infof("Wellness-Zeitsteuerung '%s' verworfen: Anlage %s ist deaktiviert",
+                        schedule.id(), schedule.applianceId());
+                repository.save(schedule.withEnabled(false));
+                continue;
+            }
             try {
                 appliances.setTargetTemperature(schedule.applianceId(), schedule.targetTemp());
                 LOG.infof("Wellness-Zeitsteuerung: %s -> Soll %d °C",

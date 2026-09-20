@@ -27,7 +27,7 @@ class ApplianceTest {
     @Test
     void gueltigeInstanzBautKorrekt() {
         Temperature t = new Temperature(36, 35, 20, 40);
-        Appliance a = new Appliance("a1", "Whirlpool", "Wellness", true, now, functions(), t);
+        Appliance a = new Appliance("a1", "Whirlpool", "Wellness", true, true, now, functions(), t);
         assertEquals("a1", a.id());
         assertEquals("Whirlpool", a.name());
         assertEquals("Wellness", a.room());
@@ -39,60 +39,68 @@ class ApplianceTest {
 
     @Test
     void nullRoomWirdLeererString() {
-        Appliance a = new Appliance("a1", "Pool", null, true, now, functions(), null);
+        Appliance a = new Appliance("a1", "Pool", null, true, true, now, functions(), null);
         assertEquals("", a.room());
     }
 
     @Test
     void temperaturDarfNullSein() {
-        Appliance a = new Appliance("a1", "Pool", "Raum", true, now, functions(), null);
+        Appliance a = new Appliance("a1", "Pool", "Raum", true, true, now, functions(), null);
         assertEquals(null, a.temperature());
     }
 
     @Test
     void idDarfNichtLeerSein() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance(null, "Pool", "Raum", true, now, functions(), null));
+                () -> new Appliance(null, "Pool", "Raum", true, true, now, functions(), null));
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance(" ", "Pool", "Raum", true, now, functions(), null));
+                () -> new Appliance(" ", "Pool", "Raum", true, true, now, functions(), null));
     }
 
     @Test
     void nameDarfNichtLeerSein() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance("a1", " ", "Raum", true, now, functions(), null));
+                () -> new Appliance("a1", " ", "Raum", true, true, now, functions(), null));
     }
 
     @Test
     void observedAtDarfNichtNullSein() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance("a1", "Pool", "Raum", true, null, functions(), null));
+                () -> new Appliance("a1", "Pool", "Raum", true, true, null, functions(), null));
     }
 
     @Test
     void functionsDarfNichtNullSein() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance("a1", "Pool", "Raum", true, now, null, null));
+                () -> new Appliance("a1", "Pool", "Raum", true, true, now, null, null));
     }
 
     @Test
     void functionsDarfNichtLeerSein() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Appliance("a1", "Pool", "Raum", true, now, Map.of(), null));
+                () -> new Appliance("a1", "Pool", "Raum", true, true, now, Map.of(), null));
     }
 
     @Test
     void functionsSindUnveraenderbar() {
-        Appliance a = new Appliance("a1", "Pool", "Raum", true, now, functions(), null);
+        Appliance a = new Appliance("a1", "Pool", "Raum", true, true, now, functions(), null);
         assertThrows(UnsupportedOperationException.class,
                 () -> a.functions().put(ApplianceFunction.LIGHT, FunctionState.ON));
     }
 
     @Test
     void hasPrueftVorhandeneFunktion() {
-        Appliance a = new Appliance("a1", "Pool", "Raum", true, now, functions(), null);
+        Appliance a = new Appliance("a1", "Pool", "Raum", true, true, now, functions(), null);
         assertTrue(a.has(ApplianceFunction.PUMP));
         assertTrue(a.has(ApplianceFunction.HEATER));
         assertFalse(a.has(ApplianceFunction.LIGHT));
+    }
+
+    @Test
+    void deaktivierteAnlageKannNichtOnlineSein() {
+        // "Stillgelegt" und "erreichbar" schliessen sich aus - sonst zeigte die
+        // Oberflaeche eine gruene Lampe an einer Anlage, die niemand mehr anspricht.
+        assertThrows(IllegalArgumentException.class,
+                () -> new Appliance("a1", "Pool", "Raum", true, false, Instant.now(), functions(), null));
     }
 }

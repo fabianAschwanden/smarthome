@@ -23,6 +23,11 @@ export interface Appliance {
   name: string;
   room: string;
   online: boolean;
+  /**
+   * false = bewusst stillgelegt (z. B. über den Winter vom Strom). Kein Fehler,
+   * ein gewählter Zustand – die Anlage wird nicht mehr angesprochen.
+   */
+  active: boolean;
   observedAt: string;
   /** Nur vorhandene Funktionen, je mit Zustand "ON"/"OFF". */
   functions: Record<string, FunctionState>;

@@ -58,10 +58,12 @@ MASSAGE→`massage-key`, LIGHT→`light-key`, HEATER über die Wasser-Soll-Tempe
 | GET     | `/api/appliances`                           | Liste (id, name, room, online, functions, temperature) |
 | POST    | `/api/appliances/{id}/functions/{function}` | `{ "state": "ON"\|"OFF" }`             |
 | POST    | `/api/appliances/{id}/temperature`          | `{ "target": <°C> }` (nur beheizte Anlagen) |
+| PUT     | `/api/appliances/{id}/active`               | `{ "active": true \| false }` – stilllegen / wieder in Betrieb nehmen |
 
 `{function}` ∈ `PUMP`/`HEATER`/`LIGHT`/`MASSAGE`. 404 bei unbekannter Anlage,
 400 wenn die Anlage die Funktion nicht hat (bzw. keine Heizung für `/temperature`
 oder Soll-Temp ausserhalb min/max), 503 wenn nicht erreichbar.
+**409** wenn die Anlage stillgelegt ist (§3a) – kein Fehler des Geräts, ein gewählter Zustand.
 
 `temperature` im DTO ist `null` bei Anlagen ohne Heizung, sonst:
 
@@ -70,6 +72,33 @@ oder Soll-Temp ausserhalb min/max), 503 wenn nicht erreichbar.
 ```
 
 (`current = -1` = Ist-Temperatur unbekannt.)
+
+## 3a. Stilllegung (z. B. über den Winter)
+
+Das Schwimmbecken wird über den Winter vom Strom genommen. Für die App ist eine solche
+Anlage **nicht kaputt, sondern stillgelegt** – und das ist ein anderer Zustand als
+«nicht erreichbar»:
+
+- **Kein Gerätezugriff mehr.** Ohne diese Sperre suchte der Sidecar alle 30 s
+  vergeblich 25 s lang das Spa (Discovery + Timeout) – den ganzen Winter, und aus einer
+  stillgelegten Anlage würde eine dauernd «kaputte» im Log.
+- **Befehle werden abgewiesen** (`409`), offene Temperaturwünsche verworfen. Sonst
+  würde ein Wunsch vom Herbst beim Reaktivieren im Frühling unvermittelt gestellt.
+- **Zeitsteuerung, Abendabsenkung und Überschussplan überspringen sie.** Ein fälliger
+  Auftrag wird nicht nur übersprungen, sondern erledigt (deaktiviert) – ein
+  liegengebliebener Auftrag feuerte sonst Monate später.
+- **HomeKit blendet sie aus.** «Keine Antwort» wäre falsch. Die Brücke entfernt das
+  Accessory im laufenden Betrieb und legt es beim Reaktivieren wieder an.
+- **Die Oberfläche** zeigt sie ausgegraut mit «Stillgelegt» (grauer Punkt, nicht rot),
+  ohne Bedienelemente, mit «Wieder in Betrieb nehmen». Jede aktive Anlage hat einen
+  unauffälligen Link «Stilllegen».
+
+Persistiert in `device_deactivation` (Migration `0019`, Schlüssel `(kind, device_id)` – die
+Tabelle teilen sich Wellness-Anlagen und Klimaanlage): eine Zeile je stillgelegtem Gerät,
+**keine** für aktive – ein neu konfiguriertes Gerät braucht keinen Datensatz, um zu
+funktionieren. Domäne: `Appliance.active` (Invariante: stillgelegt ist nie online), Port
+`ControlAppliances.setActive/isActive`, Exception `ApplianceDeactivated`, gemeinsamer
+Port `DeviceActivationRepository` (`domain/port/out/activation`).
 
 ## 4. Konfiguration
 

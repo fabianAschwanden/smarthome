@@ -80,6 +80,16 @@ export class ApplianceService {
     });
   }
 
+  /**
+   * Anlage stilllegen oder wieder in Betrieb nehmen. Nicht optimistisch: Das ist ein
+   * seltener, bewusster Schritt – die Antwort darf man abwarten.
+   */
+  setActive(id: string, active: boolean): void {
+    this.http
+      .put<Appliance>(`/api/appliances/${id}/active`, { active })
+      .subscribe((updated) => this.merge(updated));
+  }
+
   /** Setzt eine Funktion im lokalen Signal sofort (optimistisch). */
   private patchFunction(id: string, fn: ApplianceFunction, state: FunctionState): void {
     const current = this.appliancesState();

@@ -1,5 +1,6 @@
 package fabianaschwanden.smarthome.adapter.in.rest.appliance;
 
+import fabianaschwanden.smarthome.adapter.in.rest.dto.appliance.ActiveRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.appliance.ApplianceDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.appliance.FunctionCommandRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.appliance.TemperatureRequest;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -43,6 +45,16 @@ public class ApplianceResource {
             @Valid FunctionCommandRequest request) {
         return ApplianceDto.from(
                 appliances.switchFunction(id, function, request.state()), appliances.pendingTarget(id));
+    }
+
+    /**
+     * Anlage stilllegen oder wieder in Betrieb nehmen. Stillgelegt wird sie nicht mehr
+     * angesprochen; Schaltbefehle antworten dann mit 409.
+     */
+    @PUT
+    @Path("{id}/active")
+    public ApplianceDto setActive(@PathParam("id") String id, @Valid ActiveRequest request) {
+        return ApplianceDto.from(appliances.setActive(id, request.active()), appliances.pendingTarget(id));
     }
 
     @POST

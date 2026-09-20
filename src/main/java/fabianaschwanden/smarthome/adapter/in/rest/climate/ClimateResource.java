@@ -1,5 +1,6 @@
 package fabianaschwanden.smarthome.adapter.in.rest.climate;
 
+import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.ActiveRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.BoostRequest;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.ClimateDto;
 import fabianaschwanden.smarthome.adapter.in.rest.dto.climate.ModeRequest;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -32,6 +34,13 @@ public class ClimateResource {
     @GET
     public List<ClimateDto> list() {
         return climate.list().stream().map(ClimateDto::from).toList();
+    }
+
+    /** Anlage stilllegen oder wieder in Betrieb nehmen; stillgelegt antworten Befehle mit 409. */
+    @PUT
+    @Path("{id}/active")
+    public ClimateDto setActive(@PathParam("id") String id, @Valid ActiveRequest request) {
+        return ClimateDto.from(climate.setActive(id, request.active()));
     }
 
     @POST

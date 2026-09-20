@@ -42,4 +42,23 @@ public interface ControlAppliances {
      * weit.
      */
     OptionalInt pendingTarget(String id);
+
+    /**
+     * Legt eine Anlage still oder nimmt sie wieder in Betrieb.
+     *
+     * <p>Stillgelegt heisst: kein Gerätezugriff mehr, keine Befehle (409), keine
+     * Zeitsteuerung, kein Überschussplan – bis jemand sie wieder aktiviert. Gedacht
+     * für Anlagen, die über den Winter vom Strom sind.
+     *
+     * @throws ApplianceNotFound wenn keine Anlage mit der ID passt.
+     */
+    Appliance setActive(String id, boolean active);
+
+    /**
+     * Ob eine Anlage in Betrieb ist – ohne das Gerät anzusprechen. Für Dienste, die
+     * vor dem Schalten fragen wollen, ob sich das überhaupt lohnt.
+     *
+     * @throws ApplianceNotFound wenn keine Anlage mit der ID passt.
+     */
+    boolean isActive(String id);
 }
