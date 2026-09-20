@@ -125,6 +125,9 @@ export const HEATER_FUNCTION = 'HEATER';
 export const LIGHT_FUNCTION = 'LIGHT';
 
 /** Ein Abzug aller Geraete eines Poll-Zyklus. */
+/** Geraeteart eines Accessories - steht auch in accessory.context.kind. */
+export type DeviceKind = 'switch' | 'appliance' | 'cover' | 'climate' | 'sensor' | 'smoke';
+
 export interface Snapshot {
   switches: SwitchDto[];
   appliances: ApplianceDto[];
@@ -132,6 +135,12 @@ export interface Snapshot {
   climate: ClimateDto[];
   sensors: SensorDto[];
   smoke: SmokeDto[];
+  /**
+   * Geraetearten, deren Endpunkt in diesem Zyklus NICHT geantwortet hat. Ihre Liste ist
+   * leer, aber das heisst "unbekannt", nicht "keine Geraete" - ein Unterschied, an dem
+   * Raeume und Automationen in HomeKit haengen.
+   */
+  unavailable: DeviceKind[];
 }
 
 export const EMPTY_SNAPSHOT: Snapshot = {
@@ -141,4 +150,5 @@ export const EMPTY_SNAPSHOT: Snapshot = {
   climate: [],
   sensors: [],
   smoke: [],
+  unavailable: [],
 };

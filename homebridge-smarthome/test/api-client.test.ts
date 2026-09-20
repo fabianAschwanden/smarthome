@@ -39,6 +39,28 @@ describe('ApiClient', () => {
 
     expect(snapshot.switches).toHaveLength(1);
     expect(snapshot.covers).toEqual([]);
+    // ... und merkt sich, dass die leere Storen-Liste "unbekannt" heisst, nicht "keine".
+    expect(snapshot.unavailable).toEqual(['cover']);
+  });
+
+  it('meldet einen Endpunkt mit Fehlerstatus oder Nicht-Liste als nicht erreichbar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.endsWith('/api/climate')) {
+          return respond({ error: 'kaputt' }, false, 503);
+        }
+        if (url.endsWith('/api/sensors')) {
+          return respond('<html>SPA-Rueckfall</html>');
+        }
+        return respond([]);
+      }),
+    );
+
+    const snapshot = await new ApiClient('http://app', log).snapshot();
+
+    expect(snapshot.unavailable.sort()).toEqual(['climate', 'sensor']);
+    expect(snapshot.switches).toEqual([]);
   });
 
   it('verwirft eine 200er-Antwort, die keine Liste ist', async () => {
