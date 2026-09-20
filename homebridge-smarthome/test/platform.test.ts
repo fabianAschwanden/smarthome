@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
 import { SmarthomePlatform } from '../src/platform';
-import type { ApplianceDto, Snapshot, SwitchDto } from '../src/types';
+import type { ApplianceDto, ClimateDto, Snapshot, SwitchDto } from '../src/types';
 import { FakeAccessory } from './harness';
 
 /**
@@ -40,8 +40,22 @@ const BECKEN: ApplianceDto = {
   temperature: { current: 20, target: 15, min: 8, max: 41 },
 };
 
-function snapshot(appliances: ApplianceDto[]): Snapshot {
-  return { switches: [STEHLAMPE], appliances, covers: [], climate: [], sensors: [], smoke: [] };
+const KLIMA: ClimateDto = {
+  id: 'klima',
+  name: 'Klimaanlage',
+  room: 'Wohnzimmer',
+  online: true,
+  observedAt: '2026-09-20T09:00:00Z',
+  power: false,
+  boost: false,
+  mode: 'COOL',
+  targetTemp: 22,
+  currentTemp: 24,
+  outdoorTemp: 14,
+};
+
+function snapshot(appliances: ApplianceDto[], climate: ClimateDto[] = []): Snapshot {
+  return { switches: [STEHLAMPE], appliances, covers: [], climate, sensors: [], smoke: [] };
 }
 
 /**
@@ -139,6 +153,18 @@ describe('SmarthomePlatform: stillgelegte Anlagen', () => {
     await t.poll();
 
     expect(t.unregistered).toContain(alt);
+  });
+
+  it('blendet auch eine stillgelegte Klimaanlage aus', async () => {
+    const t = setup();
+    t.setSnapshot(snapshot([], [KLIMA]));
+    await t.poll();
+    expect(t.registered.map((a) => a.displayName)).toEqual(['Stehlampe', 'Klimaanlage']);
+
+    t.setSnapshot(snapshot([], [{ ...KLIMA, online: false, active: false }]));
+    await t.poll();
+
+    expect(t.unregistered.map((a) => a.displayName)).toEqual(['Klimaanlage']);
   });
 
   it('behaelt ein Accessory, wenn eine Anlage nur nicht erreichbar ist', async () => {

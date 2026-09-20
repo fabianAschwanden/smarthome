@@ -66,4 +66,22 @@ class ClimateResourceTest {
                 .when().post("/api/climate/gibtsnicht/power")
                 .then().statusCode(404);
     }
+
+    @Test
+    void legt_die_anlage_still_und_nimmt_sie_wieder_in_betrieb() {
+        given().contentType("application/json").body("{\"active\":false}")
+                .when().put("/api/climate/klima/active")
+                .then().statusCode(200)
+                .body("active", is(false))
+                .body("online", is(false));
+
+        given().contentType("application/json").body("{\"on\":true}")
+                .when().post("/api/climate/klima/power")
+                .then().statusCode(409);
+
+        given().contentType("application/json").body("{\"active\":true}")
+                .when().put("/api/climate/klima/active")
+                .then().statusCode(200)
+                .body("active", is(true));
+    }
 }

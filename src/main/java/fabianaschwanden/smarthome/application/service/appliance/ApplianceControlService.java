@@ -9,7 +9,8 @@ import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceNotFound;
 import fabianaschwanden.smarthome.domain.port.in.appliance.ControlAppliances;
 import fabianaschwanden.smarthome.domain.port.in.appliance.FunctionNotSupported;
 import fabianaschwanden.smarthome.domain.port.in.appliance.TemperatureNotSupported;
-import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceActivationRepository;
+import fabianaschwanden.smarthome.domain.port.out.activation.DeviceActivationRepository;
+import fabianaschwanden.smarthome.domain.model.activation.DeviceKind;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDeviceFactory;
 import io.quarkus.scheduler.Scheduled;
@@ -56,7 +57,7 @@ public class ApplianceControlService implements ControlAppliances {
     private final Map<String, Temperature> lastTemp = new ConcurrentHashMap<>();
     /** Gewünschte Soll-Temperaturen, die die Anlage noch nicht bestätigt hat. */
     private final Map<String, Desired> desired = new ConcurrentHashMap<>();
-    private final ApplianceActivationRepository activation;
+    private final DeviceActivationRepository activation;
     private final Clock clock;
     private final int maxAttempts;
 
@@ -73,18 +74,18 @@ public class ApplianceControlService implements ControlAppliances {
     @Inject
     public ApplianceControlService(
             ApplianceDeviceFactory factory,
-            ApplianceActivationRepository activation,
+            DeviceActivationRepository activation,
             @ConfigProperty(name = "appliance-target.max-attempts", defaultValue = "8") int maxAttempts) {
         this(factory.devices(), activation, Clock.systemUTC(), maxAttempts);
     }
 
     // Sichtbar fürs Testen.
-    ApplianceControlService(List<ApplianceDevice> devices, ApplianceActivationRepository activation, Clock clock) {
+    ApplianceControlService(List<ApplianceDevice> devices, DeviceActivationRepository activation, Clock clock) {
         this(devices, activation, clock, 8);
     }
 
     ApplianceControlService(
-            List<ApplianceDevice> devices, ApplianceActivationRepository activation, Clock clock, int maxAttempts) {
+            List<ApplianceDevice> devices, DeviceActivationRepository activation, Clock clock, int maxAttempts) {
         this.activation = activation;
         this.maxAttempts = maxAttempts;
         for (ApplianceDevice device : devices) {
@@ -98,7 +99,7 @@ public class ApplianceControlService implements ControlAppliances {
 
     @Override
     public List<Appliance> list() {
-        Set<String> deactivated = activation.deactivated();
+        Set<String> deactivated = activation.deactivated(DeviceKind.APPLIANCE);
         return devices.values().stream()
                 .map(device -> deactivated.contains(device.id()) ? dormant(device) : observe(device))
                 .toList();
@@ -108,11 +109,11 @@ public class ApplianceControlService implements ControlAppliances {
     public Appliance setActive(String id, boolean active) {
         ApplianceDevice device = require(id);
         if (active) {
-            activation.reactivate(id);
+            activation.reactivate(DeviceKind.APPLIANCE, id);
             LOG.infof("Anlage '%s' wieder in Betrieb genommen", id);
             return observe(device);
         }
-        activation.deactivate(id, clock.instant());
+        activation.deactivate(DeviceKind.APPLIANCE, id, clock.instant());
         // Ein offener Temperaturwunsch würde sonst beim Reaktivieren - Monate später -
         // unvermittelt gestellt.
         desired.remove(id);
@@ -123,7 +124,7 @@ public class ApplianceControlService implements ControlAppliances {
     @Override
     public boolean isActive(String id) {
         require(id);
-        return !activation.deactivated().contains(id);
+        return !activation.deactivated(DeviceKind.APPLIANCE).contains(id);
     }
 
     @Override
@@ -175,7 +176,7 @@ public class ApplianceControlService implements ControlAppliances {
             String id = entry.getKey();
             Desired open = entry.getValue();
             ApplianceDevice device = devices.get(id);
-            if (device == null || activation.deactivated().contains(id)) {
+            if (device == null || activation.deactivated(DeviceKind.APPLIANCE).contains(id)) {
                 desired.remove(id);
                 continue;
             }
@@ -210,7 +211,7 @@ public class ApplianceControlService implements ControlAppliances {
 
     private ApplianceDevice requireActive(String id) {
         ApplianceDevice device = require(id);
-        if (activation.deactivated().contains(id)) {
+        if (activation.deactivated(DeviceKind.APPLIANCE).contains(id)) {
             throw new ApplianceDeactivated(id);
         }
         return device;

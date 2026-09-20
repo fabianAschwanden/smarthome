@@ -8,6 +8,10 @@ import java.time.Instant;
  * wenn das Gerät die jeweilige Temperatur nicht meldet. {@code boost} = Turbo-Modus für
  * maximale Leistung. Soll-Temperatur muss im erlaubten Bereich liegen (Invariante).
  *
+ * <p>{@code active} unterscheidet «nicht erreichbar» von «bewusst stillgelegt»: Eine
+ * Anlage, die über den Winter vom Strom ist, ist nicht kaputt – sie wird nur nicht
+ * mehr angesprochen. Eine stillgelegte Anlage ist nie {@code online}.
+ *
  * <p>Value Object: immutable {@code record}.
  */
 public record Climate(
@@ -21,6 +25,7 @@ public record Climate(
         int currentTemp,
         int outdoorTemp,
         boolean online,
+        boolean active,
         Instant observedAt) {
 
     public static final int TEMP_UNKNOWN = -1;
@@ -46,6 +51,9 @@ public record Climate(
         }
         if (observedAt == null) {
             throw new IllegalArgumentException("observedAt darf nicht null sein");
+        }
+        if (!active && online) {
+            throw new IllegalArgumentException("eine stillgelegte Anlage kann nicht online sein");
         }
     }
 

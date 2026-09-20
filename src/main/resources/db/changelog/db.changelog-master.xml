@@ -24,6 +24,6 @@
     <include file="db/changelog/changes/0016-charging-session-verify.xml"/>
     <include file="db/changelog/changes/0017-charging-session-measured.xml"/>
     <include file="db/changelog/changes/0018-create-sun-guard.xml"/>
-    <include file="db/changelog/changes/0019-create-appliance-deactivation.xml"/>
+    <include file="db/changelog/changes/0019-create-device-deactivation.xml"/>
 
 </databaseChangeLog>

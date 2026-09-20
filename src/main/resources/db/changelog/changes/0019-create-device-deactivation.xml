@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Stillgelegte Geraete (Schwimmbecken und Klimaanlage ueber den Winter). Eine
+         Zeile je stillgelegtem Geraet; aktive Geraete haben keine Zeile. So braucht ein
+         neu konfiguriertes Geraet keinen Datensatz, um zu funktionieren, und ein
+         Neustart der App vergisst die Stilllegung nicht. Schluessel (kind, device_id),
+         damit sich die IDs verschiedener Geraetearten nicht in die Quere kommen. -->
+    <changeSet id="0019-create-device-deactivation" author="smarthome">
+        <createTable tableName="device_deactivation">
+            <column name="kind" type="varchar(32)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_id" type="varchar(64)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="deactivated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

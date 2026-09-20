@@ -33,6 +33,8 @@ export function hasPosition(cover: CoverDto): boolean {
 }
 
 export interface ClimateDto extends DeviceBase {
+  /** false = bewusst stillgelegt (ueber den Winter). Optional wie bei ApplianceDto. */
+  active?: boolean;
   power: boolean;
   /** COOL | HEAT | AUTO | FAN (Domaenen-Enum ClimateMode). */
   mode: string;

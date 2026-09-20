@@ -93,10 +93,12 @@ Anlage **nicht kaputt, sondern stillgelegt** – und das ist ein anderer Zustand
   ohne Bedienelemente, mit «Wieder in Betrieb nehmen». Jede aktive Anlage hat einen
   unauffälligen Link «Stilllegen».
 
-Persistiert in `appliance_deactivation` (Migration `0019`): eine Zeile je stillgelegter
-Anlage, **keine** für aktive – eine neu konfigurierte Anlage braucht keinen Datensatz,
-um zu funktionieren. Domäne: `Appliance.active` (Invariante: stillgelegt ist nie
-online), Port `ControlAppliances.setActive/isActive`, Exception `ApplianceDeactivated`.
+Persistiert in `device_deactivation` (Migration `0019`, Schlüssel `(kind, device_id)` – die
+Tabelle teilen sich Wellness-Anlagen und Klimaanlage): eine Zeile je stillgelegtem Gerät,
+**keine** für aktive – ein neu konfiguriertes Gerät braucht keinen Datensatz, um zu
+funktionieren. Domäne: `Appliance.active` (Invariante: stillgelegt ist nie online), Port
+`ControlAppliances.setActive/isActive`, Exception `ApplianceDeactivated`, gemeinsamer
+Port `DeviceActivationRepository` (`domain/port/out/activation`).
 
 ## 4. Konfiguration
 

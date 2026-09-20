@@ -5,6 +5,7 @@ import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import org.junit.jupiter.api.BeforeEach;
+import fabianaschwanden.smarthome.testsupport.InMemoryActivation;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;

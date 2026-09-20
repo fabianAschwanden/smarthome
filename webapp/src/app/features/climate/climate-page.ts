@@ -51,124 +51,153 @@ const MAX_TEMP = 30;
                     <h3 class="text-lg font-semibold">{{ c.name }}</h3>
                     <p class="text-sm text-[color:var(--ink-soft)]">
                       {{ c.room || 'Klimaanlage' }}
+                      @if (!c.active) {
+                        · Stillgelegt
+                      }
                     </p>
                   </div>
-                  <app-power-toggle
-                    [on]="c.power"
-                    [disabled]="!c.online"
-                    [label]="c.name"
-                    (onChange)="onPower(c, $event)"
-                  />
+                  @if (c.active) {
+                    <app-power-toggle
+                      [on]="c.power"
+                      [disabled]="!c.online"
+                      [label]="c.name"
+                      (onChange)="onPower(c, $event)"
+                    />
+                  }
                 </header>
 
-                <!-- Ring-Dial -->
-                <div class="my-4">
-                  <app-temp-dial
-                    [target]="c.targetTemp"
-                    [current]="c.currentTemp"
-                    [min]="minTemp"
-                    [max]="maxTemp"
-                    [label]="modeAction(c.mode)"
-                    emphasis="current"
-                  />
-                </div>
-
-                <!-- Soll-Temperatur einstellen -->
-                <div class="flex items-center justify-center gap-5">
-                  <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
-                    >{{ maxTemp }}°</span
-                  >
+                @if (!c.active) {
+                  <p class="mt-4 text-sm text-[color:var(--ink-soft)]">
+                    Vom Strom genommen – wird nicht angesprochen, nicht in HomeKit.
+                  </p>
                   <button
                     type="button"
-                    [disabled]="!c.online || c.targetTemp >= maxTemp"
-                    class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
-                    (click)="changeTarget(c, 1)"
-                    aria-label="Wärmer"
+                    class="glass mt-3 rounded-full px-5 py-2 text-sm"
+                    (click)="setActive(c, true)"
                   >
-                    +
+                    Wieder in Betrieb nehmen
                   </button>
-                  <button
-                    type="button"
-                    [disabled]="!c.online || c.targetTemp <= minTemp"
-                    class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
-                    (click)="changeTarget(c, -1)"
-                    aria-label="Kälter"
-                  >
-                    −
-                  </button>
-                  <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
-                    >{{ minTemp }}°</span
-                  >
-                </div>
+                }
 
-                <!-- Aktionen: Modi -->
-                <p class="mt-6 mb-3 text-sm font-medium text-[color:var(--ink-soft)]">Aktionen</p>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  @for (m of modes; track m.key) {
+                @if (c.active) {
+                  <!-- Ring-Dial -->
+                  <div class="my-4">
+                    <app-temp-dial
+                      [target]="c.targetTemp"
+                      [current]="c.currentTemp"
+                      [min]="minTemp"
+                      [max]="maxTemp"
+                      [label]="modeAction(c.mode)"
+                      emphasis="current"
+                    />
+                  </div>
+
+                  <!-- Soll-Temperatur einstellen -->
+                  <div class="flex items-center justify-center gap-5">
+                    <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
+                      >{{ maxTemp }}°</span
+                    >
                     <button
                       type="button"
-                      [disabled]="!c.online"
-                      class="tile-toggle"
-                      [class.tile-toggle-active]="c.mode === m.key"
-                      (click)="setMode(c, m.key)"
+                      [disabled]="!c.online || c.targetTemp >= maxTemp"
+                      class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
+                      (click)="changeTarget(c, 1)"
+                      aria-label="Wärmer"
                     >
-                      <svg
-                        class="size-6"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                      >
-                        @switch (m.key) {
-                          @case ('COOL') {
-                            <path
-                              d="M12 2v20M4.5 6.5 12 11l7.5-4.5M4.5 17.5 12 13l7.5 4.5M3 12h18M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('HEAT') {
-                            <path
-                              d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('AUTO') {
-                            <path
-                              d="M9 16V9l3 5 3-5v7"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          }
-                          @case ('FAN') {
-                            <path
-                              d="M12 12c0-3 .5-6 2.5-6S18 8 16 10c2 0 4 .5 4 2.5S16 15 14 13c0 2-.5 5-2.5 5S9 16 11 14c-2 0-5-.5-5-2.5S10 9 12 12z"
-                              stroke-linejoin="round"
-                            />
-                          }
-                        }
-                      </svg>
-                      <span class="text-xs">{{ m.label }}</span>
+                      +
                     </button>
+                    <button
+                      type="button"
+                      [disabled]="!c.online || c.targetTemp <= minTemp"
+                      class="glass flex size-12 items-center justify-center rounded-full text-2xl disabled:opacity-40"
+                      (click)="changeTarget(c, -1)"
+                      aria-label="Kälter"
+                    >
+                      −
+                    </button>
+                    <span class="text-sm text-[color:var(--ink-soft)] tabular-nums"
+                      >{{ minTemp }}°</span
+                    >
+                  </div>
+
+                  <!-- Aktionen: Modi -->
+                  <p class="mt-6 mb-3 text-sm font-medium text-[color:var(--ink-soft)]">Aktionen</p>
+                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @for (m of modes; track m.key) {
+                      <button
+                        type="button"
+                        [disabled]="!c.online"
+                        class="tile-toggle"
+                        [class.tile-toggle-active]="c.mode === m.key"
+                        (click)="setMode(c, m.key)"
+                      >
+                        <svg
+                          class="size-6"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                        >
+                          @switch (m.key) {
+                            @case ('COOL') {
+                              <path
+                                d="M12 2v20M4.5 6.5 12 11l7.5-4.5M4.5 17.5 12 13l7.5 4.5M3 12h18M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('HEAT') {
+                              <path
+                                d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('AUTO') {
+                              <path
+                                d="M9 16V9l3 5 3-5v7"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            }
+                            @case ('FAN') {
+                              <path
+                                d="M12 12c0-3 .5-6 2.5-6S18 8 16 10c2 0 4 .5 4 2.5S16 15 14 13c0 2-.5 5-2.5 5S9 16 11 14c-2 0-5-.5-5-2.5S10 9 12 12z"
+                                stroke-linejoin="round"
+                              />
+                            }
+                          }
+                        </svg>
+                        <span class="text-xs">{{ m.label }}</span>
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Boost / Turbo: maximale Leistung -->
+                  <button
+                    type="button"
+                    [disabled]="!c.online"
+                    class="tile-toggle mt-3 w-full flex-row justify-center gap-2"
+                    [class.tile-toggle-active]="c.boost"
+                    (click)="toggleBoost(c)"
+                  >
+                    <span class="text-base">🚀</span>
+                    <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
+                  </button>
+
+                  @if (!c.online) {
+                    <p class="mt-4 text-xs text-amber-300/90">
+                      ⚠ Gerade nicht erreichbar – Sidecar läuft? IP geprüft? (docs/climate/SPEC.md)
+                    </p>
                   }
-                </div>
 
-                <!-- Boost / Turbo: maximale Leistung -->
-                <button
-                  type="button"
-                  [disabled]="!c.online"
-                  class="tile-toggle mt-3 w-full flex-row justify-center gap-2"
-                  [class.tile-toggle-active]="c.boost"
-                  (click)="toggleBoost(c)"
-                >
-                  <span class="text-base">🚀</span>
-                  <span class="text-xs">Boost{{ c.boost ? ' · aktiv' : '' }}</span>
-                </button>
-
-                @if (!c.online) {
-                  <p class="mt-4 text-xs text-amber-300/90">
-                    ⚠ Gerade nicht erreichbar – Sidecar läuft? IP geprüft? (docs/climate/SPEC.md)
-                  </p>
+                  <button
+                    type="button"
+                    class="mt-4 text-xs text-[color:var(--ink-faint)] hover:text-[color:var(--ink)]"
+                    title="Über den Winter vom Strom? Dann hier stilllegen – die App lässt die Anlage in Ruhe."
+                    (click)="setActive(c, false)"
+                  >
+                    Stilllegen (z. B. über den Winter)
+                  </button>
                 }
               </div>
             </article>
@@ -187,6 +216,10 @@ export class ClimatePage {
   protected readonly modes = MODES;
   protected readonly minTemp = MIN_TEMP;
   protected readonly maxTemp = MAX_TEMP;
+
+  protected setActive(c: Climate, active: boolean): void {
+    this.api.setActive(c.id, active);
+  }
 
   protected onPower(c: Climate, on: boolean): void {
     this.api.setPower(c.id, on);

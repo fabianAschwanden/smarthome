@@ -169,6 +169,9 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
       });
     }
     for (const device of snapshot.climate) {
+      if (device.active === false) {
+        continue; // stillgelegt - siehe Anlagen
+      }
       result.push({
         device,
         kind: 'climate',

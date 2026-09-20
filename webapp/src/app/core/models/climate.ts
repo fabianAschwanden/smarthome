@@ -15,5 +15,7 @@ export interface Climate {
   /** Außentemperatur (vom Klima-Außengerät gemeldet); -1 = unbekannt. */
   outdoorTemp: number;
   online: boolean;
+  /** false = bewusst stillgelegt (über den Winter vom Strom) – kein Fehler. */
+  active: boolean;
   observedAt: string;
 }

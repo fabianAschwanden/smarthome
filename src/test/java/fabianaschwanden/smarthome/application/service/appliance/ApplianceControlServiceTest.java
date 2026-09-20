@@ -10,6 +10,7 @@ import fabianaschwanden.smarthome.domain.port.in.appliance.FunctionNotSupported;
 import fabianaschwanden.smarthome.domain.port.in.appliance.TemperatureNotSupported;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import io.quarkus.test.junit.QuarkusTest;
+import fabianaschwanden.smarthome.testsupport.InMemoryActivation;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
