@@ -2,6 +2,7 @@ package fabianaschwanden.smarthome.adapter.out.appliance.local;
 
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
+import fabianaschwanden.smarthome.domain.model.thermal.ThermalActivity;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import fabianaschwanden.smarthome.support.tuya.TuyaSidecarClient;
 import io.quarkus.test.junit.QuarkusTest;
@@ -87,6 +88,17 @@ class LocalGeckoApplianceDeviceTest {
         // Echte Geräte-Grenzen aus dem Snapshot (8.3/41.1 gerundet), nicht die Config (30/40).
         assertEquals(8, state.temperature().min());
         assertEquals(41, state.temperature().max());
+        assertEquals(ThermalActivity.HEATING, state.temperature().activity());  // operation=Heating
+    }
+
+    @Test
+    void geckos_cooling_ist_kein_kuehlen() {
+        // geckolib meldet "Cooling", sobald das Wasser ueber Soll liegt - das Spa tut dann
+        // nichts, es kuehlt von selbst. Eine kalte Einfaerbung waere gelogen.
+        assertEquals(ThermalActivity.IDLE, LocalGeckoApplianceDevice.activityOf("Cooling"));
+        assertEquals(ThermalActivity.IDLE, LocalGeckoApplianceDevice.activityOf("Idle"));
+        assertEquals(ThermalActivity.IDLE, LocalGeckoApplianceDevice.activityOf(null));
+        assertEquals(ThermalActivity.HEATING, LocalGeckoApplianceDevice.activityOf("heating"));
     }
 
     /** Sidecar, dessen Read „offline" (leer) meldet; Control seedet den Cache trotzdem. */

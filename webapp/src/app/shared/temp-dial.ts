@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ThermalTone } from '../core/models/thermal';
 
 const RING_CIRC = 2 * Math.PI * 70;
 
@@ -32,7 +33,7 @@ const RING_CIRC = 2 * Math.PI * 70;
           cy="90"
           r="70"
           fill="none"
-          stroke="var(--accent)"
+          [attr.stroke]="ringColor()"
           stroke-width="14"
           stroke-linecap="round"
           transform="rotate(-90 90 90)"
@@ -91,6 +92,19 @@ export class TempDial {
 
   /** 'sm' = halber Ring für die Dashboard-Kachel; 'md' = volle Grösse (Detailseite). */
   readonly size = input<'sm' | 'md'>('md');
+  /** Ringfarbe nach Tätigkeit: warm beim Heizen, kühl beim Kühlen, sonst Akzent. */
+  readonly tone = input<ThermalTone>('neutral');
+
+  protected readonly ringColor = computed(() => {
+    switch (this.tone()) {
+      case 'warm':
+        return 'var(--thermal-warm)';
+      case 'cool':
+        return 'var(--thermal-cool)';
+      default:
+        return 'var(--accent)';
+    }
+  });
 
   protected readonly compact = computed(() => this.size() === 'sm');
 

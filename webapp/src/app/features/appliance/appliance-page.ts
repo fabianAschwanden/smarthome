@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ApplianceService } from '../../core/services/appliance.service';
 import { ForecastService } from '../../core/services/forecast.service';
 import { Appliance, ApplianceFunction, ApplianceTemperature } from '../../core/models/appliance';
+import { ThermalTone, thermalLabel, thermalTone } from '../../core/models/thermal';
 import { TempDial } from '../../shared/temp-dial';
 import { ItemImage } from '../../shared/item-image';
 
@@ -61,7 +62,12 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
         }
         <div class="grid gap-4 sm:grid-cols-2">
           @for (a of list; track a.id) {
-            <article class="glass-card flex gap-4 p-5" [class.opacity-60]="!a.online">
+            <article
+              class="glass-card flex gap-4 p-5"
+              [class.opacity-60]="!a.online"
+              [class.thermal-warm]="a.active && tone(a) === 'warm'"
+              [class.thermal-cool]="a.active && tone(a) === 'cool'"
+            >
               <div class="w-24 shrink-0 sm:w-28">
                 <app-item-image [itemId]="a.id" [label]="a.name" />
               </div>
@@ -69,10 +75,18 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                 <header class="flex items-start justify-between gap-3">
                   <div>
                     <h3 class="text-lg font-semibold">{{ a.name }}</h3>
-                    <p class="text-sm text-[color:var(--ink-soft)]">
+                    <p class="flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)]">
                       {{ !a.active ? 'Stillgelegt' : a.online ? 'Online' : 'Offline' }}
                       @if (a.room) {
                         · {{ a.room }}
+                      }
+                      @if (a.active && activityLabel(a); as wort) {
+                        <span
+                          class="size-2 rounded-full"
+                          [class.dot-warm]="tone(a) === 'warm'"
+                          [class.dot-cool]="tone(a) === 'cool'"
+                        ></span>
+                        <span class="font-medium text-[color:var(--ink)]">{{ wort }}</span>
                       }
                     </p>
                   </div>
@@ -105,6 +119,7 @@ const FUNCTION_LABELS: Record<ApplianceFunction, string> = {
                       [current]="t.current"
                       [min]="t.min"
                       [max]="t.max"
+                      [tone]="tone(a)"
                       label="Wassertemperatur"
                       emphasis="current"
                     />
@@ -296,6 +311,14 @@ export class AppliancePage {
         label: FUNCTION_LABELS[k as ApplianceFunction] ?? k,
         on: a.functions[k] === 'ON',
       }));
+  }
+
+  protected tone(a: Appliance): ThermalTone {
+    return thermalTone(a.temperature?.activity);
+  }
+
+  protected activityLabel(a: Appliance): string | null {
+    return thermalLabel(a.temperature?.activity);
   }
 
   protected setActive(a: Appliance, active: boolean): void {

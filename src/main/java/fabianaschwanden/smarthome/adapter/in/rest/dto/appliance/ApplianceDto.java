@@ -11,7 +11,9 @@ import java.util.OptionalInt;
 
 /**
  * Transport-Objekt einer Anlage; {@code functions} bildet Funktion -> "ON"/"OFF" ab.
- * {@code temperature} ist {@code null} bei Anlagen ohne Heizung.
+ * {@code temperature} ist {@code null} bei Anlagen ohne Heizung; darin sagt
+ * {@code activity} (HEATING/COOLING/IDLE), was die Heizung gerade tut – die Oberfläche
+ * färbt danach ein.
  *
  * <p>{@code active = false} heisst bewusst stillgelegt (z. B. über den Winter) – die
  * Oberfläche zeigt das anders als «nicht erreichbar», denn es ist kein Fehler.
@@ -35,11 +37,13 @@ public record ApplianceDto(
      * ueberschriebener {@code target}: Die Oberflaeche soll den Unterschied zwischen
      * "eingestellt" und "wird gerade gestellt" zeigen koennen.
      */
-    public record TemperatureDto(int target, int current, int min, int max, Integer pending) {
+    public record TemperatureDto(
+            int target, int current, int min, int max, Integer pending, String activity) {
         static TemperatureDto from(Temperature t, OptionalInt pending) {
             return new TemperatureDto(
                     t.target(), t.current(), t.min(), t.max(),
-                    pending.isPresent() ? pending.getAsInt() : null);
+                    pending.isPresent() ? pending.getAsInt() : null,
+                    t.activity().name());
         }
     }
 

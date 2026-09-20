@@ -3,6 +3,8 @@ export type ApplianceFunction = 'PUMP' | 'HEATER' | 'LIGHT' | 'MASSAGE' | 'FILTE
 export type FunctionState = 'ON' | 'OFF';
 
 /** Temperatur-Steuerung einer beheizten Anlage (Whirlpool/Schwimmbecken). */
+import { ThermalActivity } from './thermal';
+
 export interface ApplianceTemperature {
   /** Soll-Temperatur in °C. */
   target: number;
@@ -16,6 +18,8 @@ export interface ApplianceTemperature {
    * Oberfläche den alten an, und der nächste Schritt rechnete wieder von dort.
    */
   pending?: number | null;
+  /** Was die Heizung gerade tut – kommt vom Gerät, nicht aus einem Temperaturvergleich. */
+  activity: ThermalActivity;
 }
 
 export interface Appliance {

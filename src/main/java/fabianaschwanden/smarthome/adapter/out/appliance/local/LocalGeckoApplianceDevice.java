@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.adapter.out.appliance.local;
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
+import fabianaschwanden.smarthome.domain.model.thermal.ThermalActivity;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceUnavailable;
 import fabianaschwanden.smarthome.support.tuya.TuyaSidecarClient;
@@ -217,7 +218,7 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
             int max = round(parseNumber(json, "max"), tempMax);
             min = Math.min(min, target);
             max = Math.max(max, target);
-            temp = new Temperature(target, current, min, max);
+            temp = new Temperature(target, current, min, max, activityOf(parseString(json, "operation")));
         }
         return Optional.of(new State(states, temp));
     }
@@ -235,6 +236,22 @@ public class LocalGeckoApplianceDevice implements ApplianceDevice {
     private static Boolean parseBool(String json, String field) {
         Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*(true|false)").matcher(json);
         return m.find() ? Boolean.valueOf(m.group(1)) : null;
+    }
+
+    /**
+     * geckolib meldet als {@code operation} «Heating», «Cooling» oder «Idle». «Cooling»
+     * heisst dabei nur «Wasser über Soll, Heizung aus» – ein Spa kühlt nicht aktiv. Für die
+     * Anzeige zählt deshalb allein, ob geheizt wird.
+     */
+    static ThermalActivity activityOf(String operation) {
+        return operation != null && operation.equalsIgnoreCase("Heating")
+                ? ThermalActivity.HEATING
+                : ThermalActivity.IDLE;
+    }
+
+    private static String parseString(String json, String field) {
+        Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*\"([^\"]*)\"").matcher(json);
+        return m.find() ? m.group(1) : null;
     }
 
     private static Double parseNumber(String json, String field) {

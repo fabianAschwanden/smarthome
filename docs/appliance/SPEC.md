@@ -68,10 +68,15 @@ oder Soll-Temp ausserhalb min/max), 503 wenn nicht erreichbar.
 `temperature` im DTO ist `null` bei Anlagen ohne Heizung, sonst:
 
 ```json
-{ "target": 36, "current": 35, "min": 30, "max": 40 }
+{ "target": 36, "current": 35, "min": 30, "max": 40, "activity": "HEATING" }
 ```
 
-(`current = -1` = Ist-Temperatur unbekannt.)
+(`current = -1` = Ist-Temperatur unbekannt.) `activity` ∈ `HEATING`/`COOLING`/`IDLE` sagt,
+was die Heizung **gerade tut** – gemeldet vom Gerät (geckolib `operation`), nicht aus einem
+Temperaturvergleich geraten. Achtung: geckolib meldet «Cooling», sobald das Wasser über
+Soll liegt; ein Spa kühlt aber nicht aktiv, das ist `IDLE`. Die Oberfläche färbt die Karte
+und den Ring danach ein (warm/kühl) und schreibt «heizt»/«kühlt» daneben – Farbe allein
+ist keine Information. HomeKit zeigt das Thermostat entsprechend orange oder grau.
 
 ## 3a. Stilllegung (z. B. über den Winter)
 

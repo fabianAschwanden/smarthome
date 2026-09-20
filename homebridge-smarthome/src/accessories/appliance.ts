@@ -148,11 +148,17 @@ export class ApplianceHandler implements DeviceHandler {
 
   /**
    * HomeKit unterscheidet im Thermostat nur AUS, HEIZEN und KUEHLEN - kein "wartet".
-   * Eine laufende Heizung meldet deshalb HEIZEN, auch wenn die Soll-Temperatur
-   * gerade erreicht ist.
+   * Meldet das Backend, was die Heizung tut (activity), zaehlt das: HEIZEN nur, wenn
+   * sie wirklich laeuft, sonst AUS - in der Home-App wird das Thermostat dann orange
+   * oder grau, und man sieht auf einen Blick, ob Energie ins Wasser fliesst. Ohne
+   * diese Angabe (aelteres Backend) gilt der HEATER-Funktionszustand wie bisher.
    */
   private heatingState(): number {
     const states = this.platform.Characteristic.CurrentHeatingCoolingState;
+    const activity = this.state.temperature?.activity;
+    if (activity !== undefined) {
+      return activity === 'HEATING' ? states.HEAT : states.OFF;
+    }
     return this.state.functions[HEATER_FUNCTION] === 'OFF' ? states.OFF : states.HEAT;
   }
 

@@ -116,6 +116,11 @@ export interface ApplianceTemperature {
   current: number;
   min: number;
   max: number;
+  /**
+   * HEATING | COOLING | IDLE - was die Heizung gerade tut, vom Geraet gemeldet. Optional,
+   * weil aeltere Backends es nicht kennen; dann gilt der HEATER-Funktionszustand.
+   */
+  activity?: string;
 }
 
 /** Die Funktion, die als Thermostat abgebildet wird; alle uebrigen werden Schalter. */

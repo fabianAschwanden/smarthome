@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ClimateService } from '../../core/services/climate.service';
 import { Climate, ClimateMode } from '../../core/models/climate';
+import { ThermalTone, thermalLabel, thermalTone } from '../../core/models/thermal';
 import { PowerToggle } from '../../shared/power-toggle';
 import { TempDial } from '../../shared/temp-dial';
 import { ItemImage } from '../../shared/item-image';
@@ -40,7 +41,12 @@ const MAX_TEMP = 30;
         }
         <div class="grid gap-4 lg:grid-cols-2">
           @for (c of list; track c.id) {
-            <article class="glass-card flex gap-5 p-6" [class.opacity-60]="!c.online">
+            <article
+              class="glass-card flex gap-5 p-6"
+              [class.opacity-60]="!c.online"
+              [class.thermal-warm]="c.active && tone(c) === 'warm'"
+              [class.thermal-cool]="c.active && tone(c) === 'cool'"
+            >
               <div class="w-28 shrink-0 sm:w-36">
                 <app-item-image [itemId]="c.id" [label]="c.name" />
               </div>
@@ -49,10 +55,18 @@ const MAX_TEMP = 30;
                 <header class="flex items-start justify-between gap-3">
                   <div>
                     <h3 class="text-lg font-semibold">{{ c.name }}</h3>
-                    <p class="text-sm text-[color:var(--ink-soft)]">
+                    <p class="flex items-center gap-1.5 text-sm text-[color:var(--ink-soft)]">
                       {{ c.room || 'Klimaanlage' }}
                       @if (!c.active) {
                         · Stillgelegt
+                      } @else if (activityLabel(c); as wort) {
+                        <!-- Wort neben der Farbe: Farbe allein ist keine Information. -->
+                        <span
+                          class="size-2 rounded-full"
+                          [class.dot-warm]="tone(c) === 'warm'"
+                          [class.dot-cool]="tone(c) === 'cool'"
+                        ></span>
+                        <span class="font-medium text-[color:var(--ink)]">{{ wort }}</span>
                       }
                     </p>
                   </div>
@@ -87,6 +101,7 @@ const MAX_TEMP = 30;
                       [current]="c.currentTemp"
                       [min]="minTemp"
                       [max]="maxTemp"
+                      [tone]="tone(c)"
                       [label]="modeAction(c.mode)"
                       emphasis="current"
                     />
@@ -216,6 +231,14 @@ export class ClimatePage {
   protected readonly modes = MODES;
   protected readonly minTemp = MIN_TEMP;
   protected readonly maxTemp = MAX_TEMP;
+
+  protected tone(c: Climate): ThermalTone {
+    return thermalTone(c.activity);
+  }
+
+  protected activityLabel(c: Climate): string | null {
+    return thermalLabel(c.activity);
+  }
 
   protected setActive(c: Climate, active: boolean): void {
     this.api.setActive(c.id, active);

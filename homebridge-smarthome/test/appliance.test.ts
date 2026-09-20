@@ -107,6 +107,22 @@ describe('ApplianceHandler – Thermostat', () => {
     expect(thermostat.getCharacteristic('CurrentHeatingCoolingState').getHandler!()).toBe(0);
   });
 
+  it('richtet sich nach der gemeldeten Taetigkeit, wenn das Backend sie kennt', () => {
+    // Heizung "an" (Thermostat-Funktion) heisst nicht "heizt gerade": Bei 31 Grad Wasser
+    // und Soll 20 tut sie nichts. Dann soll die Home-App grau zeigen, nicht orange.
+    const idle = setup({
+      ...WHIRLPOOL,
+      temperature: { current: 31, target: 20, min: 8, max: 41, activity: 'IDLE' },
+    });
+    expect(idle.thermostat.getCharacteristic('CurrentHeatingCoolingState').getHandler!()).toBe(0);
+
+    const heating = setup({
+      ...WHIRLPOOL,
+      temperature: { current: 29, target: 33, min: 8, max: 41, activity: 'HEATING' },
+    });
+    expect(heating.thermostat.getCharacteristic('CurrentHeatingCoolingState').getHandler!()).toBe(1);
+  });
+
   it('bietet gar keinen Schreibweg fuer den Modus an', async () => {
     const { thermostat, client } = setup();
     expect(thermostat.getCharacteristic('TargetHeatingCoolingState').setHandler).toBeUndefined();

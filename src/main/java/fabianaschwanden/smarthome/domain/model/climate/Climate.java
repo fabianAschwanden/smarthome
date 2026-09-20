@@ -1,5 +1,7 @@
 package fabianaschwanden.smarthome.domain.model.climate;
 
+import fabianaschwanden.smarthome.domain.model.thermal.ThermalActivity;
+
 import java.time.Instant;
 
 /**
@@ -55,6 +57,29 @@ public record Climate(
         if (!active && online) {
             throw new IllegalArgumentException("eine stillgelegte Anlage kann nicht online sein");
         }
+    }
+
+    /**
+     * Was die Anlage gerade tut. Die Midea-Steuerung meldet keinen Heiz-/Kühlindikator,
+     * also wird aus Betrieb, Modus und Temperaturen abgeleitet: Aus oder nur Lüften heisst
+     * nichts; Kühlen und Heizen sind eindeutig; im Automatikmodus entscheidet die Richtung
+     * von Ist nach Soll - und ohne Ist-Wert wird nichts behauptet.
+     */
+    public ThermalActivity activity() {
+        if (!power) {
+            return ThermalActivity.IDLE;
+        }
+        return switch (mode) {
+            case COOL -> ThermalActivity.COOLING;
+            case HEAT -> ThermalActivity.HEATING;
+            case AUTO -> {
+                if (currentTemp == TEMP_UNKNOWN || currentTemp == targetTemp) {
+                    yield ThermalActivity.IDLE;
+                }
+                yield currentTemp < targetTemp ? ThermalActivity.HEATING : ThermalActivity.COOLING;
+            }
+            case FAN -> ThermalActivity.IDLE;
+        };
     }
 
     /** Validiert eine Soll-Temperatur gegen den erlaubten Bereich. */

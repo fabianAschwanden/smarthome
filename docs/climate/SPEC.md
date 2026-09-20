@@ -72,6 +72,14 @@ Application-Service `ClimateControlService` (`application/service/climate`), Ada
 Sidecar-Client liegt geteilt in `support.tuya.TuyaSidecarClient` (kein Adapter, damit
 mehrere Adapter ihn nutzen dürfen).
 
+## Heizt oder kühlt? (`activity`)
+
+Die Midea-Steuerung meldet keinen Heiz-/Kühlindikator. `activity` (`HEATING`/`COOLING`/
+`IDLE`) wird deshalb im Domänenmodell abgeleitet: aus → `IDLE`; `COOL` → `COOLING`;
+`HEAT` → `HEATING`; `FAN` → `IDLE`; `AUTO` → Richtung von Ist nach Soll, ohne Ist-Wert
+`IDLE`. Die Oberfläche färbt Karte und Ring danach ein (warm/kühl) und schreibt
+«heizt»/«kühlt» daneben – auf der Klima-Seite wie auf dem Dashboard.
+
 ## Stilllegung (über den Winter)
 
 Die Klimaanlage wird über den Winter vom Strom genommen. Für die App ist sie dann **nicht

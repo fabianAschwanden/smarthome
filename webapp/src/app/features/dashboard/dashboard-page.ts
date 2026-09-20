@@ -13,6 +13,7 @@ import { ForecastService } from '../../core/services/forecast.service';
 import { RoomService } from '../../core/services/room.service';
 import { PowerReading } from '../../core/models/energy';
 import { ClimateMode } from '../../core/models/climate';
+import { thermalTone } from '../../core/models/thermal';
 import { PowerToggle } from '../../shared/power-toggle';
 import { ItemImage } from '../../shared/item-image';
 import { TempDial } from '../../shared/temp-dial';
@@ -243,6 +244,8 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
               <article
                 class="glass-card cursor-pointer space-y-2.5 p-4"
                 [class.opacity-60]="!c.online"
+                [class.thermal-warm]="c.active && tone(c.activity) === 'warm'"
+                [class.thermal-cool]="c.active && tone(c.activity) === 'cool'"
                 routerLink="/climate"
               >
                 <header class="flex items-center justify-between gap-2">
@@ -259,6 +262,7 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
                   [target]="c.targetTemp"
                   [current]="c.currentTemp"
                   [label]="modeLabel(c.mode)"
+                  [tone]="tone(c.activity)"
                   emphasis="current"
                   size="sm"
                 />
@@ -475,6 +479,8 @@ export class DashboardPage {
   protected readonly visibleCovers = computed(() =>
     (this.coverSvc.covers() ?? []).filter((cv) => this.room.shows(cv.room)),
   );
+
+  protected readonly tone = thermalTone;
 
   protected modeLabel(mode: ClimateMode): string {
     return CLIMATE_MODE_LABELS[mode] ?? mode;
