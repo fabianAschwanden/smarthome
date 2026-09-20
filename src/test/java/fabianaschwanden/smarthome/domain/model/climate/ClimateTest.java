@@ -3,6 +3,8 @@ package fabianaschwanden.smarthome.domain.model.climate;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
+import fabianaschwanden.smarthome.domain.model.thermal.ThermalActivity;
+
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -92,5 +94,27 @@ class ClimateTest {
         // "Stillgelegt" und "erreichbar" schliessen sich aus.
         assertThrows(IllegalArgumentException.class, () -> new Climate(
                 "ac1", "Klima", "Wohnzimmer", false, false, ClimateMode.AUTO, 22, 24, 12, true, false, Instant.now()));
+    }
+
+    private static Climate klima(boolean power, ClimateMode mode, int target, int current) {
+        return new Climate("ac1", "Klima", "Wohnzimmer", power, false, mode, target, current, 12, true, true, Instant.now());
+    }
+
+    @Test
+    void taetigkeitFolgtBetriebUndModus() {
+        // Aus heisst nichts, egal was der Modus sagt.
+        assertEquals(ThermalActivity.IDLE, klima(false, ClimateMode.COOL, 20, 26).activity());
+        assertEquals(ThermalActivity.COOLING, klima(true, ClimateMode.COOL, 20, 26).activity());
+        assertEquals(ThermalActivity.HEATING, klima(true, ClimateMode.HEAT, 24, 19).activity());
+        assertEquals(ThermalActivity.IDLE, klima(true, ClimateMode.FAN, 22, 22).activity());
+    }
+
+    @Test
+    void automatikLeitetDieRichtungAusDenTemperaturenAb() {
+        assertEquals(ThermalActivity.HEATING, klima(true, ClimateMode.AUTO, 24, 19).activity());
+        assertEquals(ThermalActivity.COOLING, klima(true, ClimateMode.AUTO, 20, 26).activity());
+        assertEquals(ThermalActivity.IDLE, klima(true, ClimateMode.AUTO, 22, 22).activity());
+        // Ohne Ist-Wert wird nichts behauptet.
+        assertEquals(ThermalActivity.IDLE, klima(true, ClimateMode.AUTO, 22, Climate.TEMP_UNKNOWN).activity());
     }
 }

@@ -33,6 +33,7 @@ describe('ClimatePage', () => {
         outdoorTemp: 14,
         online: true,
         active: true,
+        activity: 'COOLING',
         observedAt: 'x',
       },
     ];
@@ -43,6 +44,10 @@ describe('ClimatePage', () => {
     expect(el.textContent).toContain('Klimaanlage');
     expect(el.textContent).toContain('22°');
     expect(el.textContent).toContain('Kühlen');
+    // Kuehlt gerade: kuehle Karte plus das Wort dazu - Farbe allein ist keine Information.
+    expect(el.querySelector('article.thermal-cool')).not.toBeNull();
+    expect(el.querySelector('article.thermal-warm')).toBeNull();
+    expect(el.textContent).toContain('kühlt');
   });
 
   it('zeigt eine stillgelegte Klimaanlage ohne Bedienelemente und mit Reaktivieren', async () => {
@@ -64,6 +69,7 @@ describe('ClimatePage', () => {
         outdoorTemp: 14,
         online: false,
         active: false,
+        activity: 'IDLE',
         observedAt: 'x',
       },
     ];

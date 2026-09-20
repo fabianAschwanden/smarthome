@@ -16,6 +16,12 @@
   --ink-soft: rgba(245, 248, 252, 0.66);
   --ink-faint: rgba(245, 248, 252, 0.42);
 
+  /* Thermik: warm beim Heizen, kühl beim Kühlen – gedämpft, damit die Karte nicht schreit. */
+  --thermal-warm: #f0964b;
+  --thermal-warm-soft: rgba(240, 150, 75, 0.22);
+  --thermal-cool: #5cb8ff;
+  --thermal-cool-soft: rgba(92, 184, 255, 0.22);
+
   /* Glass */
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-bg-strong: rgba(255, 255, 255, 0.16);
@@ -120,6 +126,41 @@ button:not(:disabled):active {
 
 .glass-card:hover {
   background: var(--glass-bg-strong);
+}
+
+/*
+ * Thermische Einfärbung einer Karte: ein Farbverlauf von der Kante her und ein leicht
+ * getönter Rahmen. Bewusst kein Vollton – die Karte bleibt Glas, sie bekommt nur einen
+ * Schimmer. Zusätzlich steht immer ein Wort («heizt», «kühlt») daneben; Farbe allein
+ * ist für Farbfehlsichtige keine Information.
+ */
+.thermal-warm {
+  background: linear-gradient(135deg, var(--thermal-warm-soft), var(--glass-bg) 55%);
+  border-color: rgba(240, 150, 75, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(240, 150, 75, 0.12),
+    var(--glass-shadow);
+}
+
+.thermal-cool {
+  background: linear-gradient(135deg, var(--thermal-cool-soft), var(--glass-bg) 55%);
+  border-color: rgba(92, 184, 255, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(92, 184, 255, 0.12),
+    var(--glass-shadow);
+}
+
+.thermal-warm:hover,
+.thermal-cool:hover {
+  filter: brightness(1.06);
+}
+
+.dot-warm {
+  background: var(--thermal-warm);
+}
+
+.dot-cool {
+  background: var(--thermal-cool);
 }
 
 /* --- Icon-Button (rund, hell) --- */

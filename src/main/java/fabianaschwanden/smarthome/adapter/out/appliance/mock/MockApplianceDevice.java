@@ -3,6 +3,7 @@ package fabianaschwanden.smarthome.adapter.out.appliance.mock;
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
+import fabianaschwanden.smarthome.domain.model.thermal.ThermalActivity;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceUnavailable;
 import fabianaschwanden.smarthome.domain.port.out.appliance.ApplianceDevice;
 import org.jboss.logging.Logger;
@@ -98,8 +99,10 @@ public class MockApplianceDevice implements ApplianceDevice {
 
     @Override
     public Optional<State> readState() {
+        // Simulierte Ist-Temp knapp unter Soll - und weil sie darunter liegt, "heizt" der
+        // Mock: So sieht man die warme Einfaerbung schon in der Entwicklung.
         Temperature temp = heated
-                ? new Temperature(target, target - 1, tempMin, tempMax)  // simulierte Ist-Temp nahe Soll
+                ? new Temperature(target, target - 1, tempMin, tempMax, ThermalActivity.HEATING)
                 : null;
         EnumMap<ApplianceFunction, FunctionState> reported = new EnumMap<>(states);
         if (reported.containsKey(ApplianceFunction.HEATER)) {

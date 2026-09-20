@@ -1,3 +1,5 @@
+import { ThermalActivity } from './thermal';
+
 /** Spiegelt die REST-DTOs des Backends (publizierte Sprache). */
 export type ClimateMode = 'COOL' | 'HEAT' | 'AUTO' | 'FAN';
 
@@ -17,5 +19,7 @@ export interface Climate {
   online: boolean;
   /** false = bewusst stillgelegt (über den Winter vom Strom) – kein Fehler. */
   active: boolean;
+  /** Heizt, kühlt oder nichts – aus Betrieb, Modus und Temperaturen abgeleitet. */
+  activity: ThermalActivity;
   observedAt: string;
 }

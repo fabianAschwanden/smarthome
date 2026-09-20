@@ -84,7 +84,7 @@ describe('AppliancePage', () => {
         active: false,
         observedAt: 'x',
         functions: { PUMP: 'OFF', HEATER: 'OFF' },
-        temperature: { target: 15, current: 20, min: 8, max: 41 },
+        temperature: { target: 15, current: 20, min: 8, max: 41, activity: 'IDLE' },
       },
     ];
     httpMock.expectOne('/api/appliances').flush(list);
@@ -109,5 +109,31 @@ describe('AppliancePage', () => {
 
     expect(el.textContent).toContain('Online');
     expect(el.querySelector('.tile-toggle')).not.toBeNull();
+  });
+
+  it('faerbt eine heizende Anlage warm ein und sagt es dazu', async () => {
+    const fixture = TestBed.createComponent(AppliancePage);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const list: Appliance[] = [
+      {
+        id: 'whirlpool',
+        name: 'Whirlpool',
+        room: 'Wellness',
+        online: true,
+        active: true,
+        observedAt: 'x',
+        functions: { PUMP: 'OFF', HEATER: 'ON' },
+        temperature: { target: 33, current: 29, min: 8, max: 41, activity: 'HEATING' },
+      },
+    ];
+    httpMock.expectOne('/api/appliances').flush(list);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('article.thermal-warm')).not.toBeNull();
+    expect(el.textContent).toContain('heizt');
   });
 });

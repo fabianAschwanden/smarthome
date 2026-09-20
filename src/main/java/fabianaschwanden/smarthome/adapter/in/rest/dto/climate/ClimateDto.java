@@ -19,11 +19,13 @@ public record ClimateDto(
         int outdoorTemp,
         boolean online,
         boolean active,
+        /** HEATING, COOLING oder IDLE – wonach die Oberfläche einfärbt. */
+        String activity,
         String observedAt) {
 
     public static ClimateDto from(Climate c) {
         return new ClimateDto(c.id(), c.name(), c.room(), c.power(), c.boost(), c.mode().name(),
                 c.targetTemp(), c.currentTemp(), c.outdoorTemp(), c.online(), c.active(),
-                c.observedAt().toString());
+                c.activity().name(), c.observedAt().toString());
     }
 }
