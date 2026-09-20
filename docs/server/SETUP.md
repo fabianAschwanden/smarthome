@@ -179,6 +179,32 @@ Ursache `dial tcp [fdaa:…]:8080: i/o timeout` → ufw blockt den Tunnel: `sudo
 on fly && sudo ufw reload`. Weiter prüfen: Handshake aktuell (`sudo wg show`), UPSTREAM =
 aktuelle 6PN-IP des Mini-PC, App lauscht (`sudo ss -tlnp | grep 8080`).
 
+**Wenn all das stimmt und der 502 bleibt (18.09.2026):** Dann ist die Fly-Maschine selbst
+über 6PN nicht mehr erreichbar. Erkennungszeichen: Der Heimserver erreicht das Fly-Gateway
+(`ping6 fdaa:81:a834::3` antwortet) und andere Maschinen des Orgs, aber **nicht die
+Proxy-Maschine** (`curl http://[<maschinen-6pn>]:4180/ping` bleibt stumm); auf dem Heimserver
+hängen ihre Verbindungsversuche in `SYN-RECV` (`ss -tan | grep 8080`) – die Antwort kommt nie
+an. Gegenprobe vom Mac: `fly ssh console -a smarthome-remote` hängt, `-a <andere-app>` nicht.
+
+Beobachtet an zwei Maschinen: Beide waren **mehrere Stunden bis Tage gestoppt** (`auto_stop`),
+bevor sie taub wurden. Ein frischer Klon war sofort erreichbar, ein sofortiger `stop`/`start`
+schadete nicht – erst das lange Stehen. Der Mechanismus auf Flys Seite ist nicht bekannt; das
+Muster ist es. Deshalb schläft die Maschine seither nicht mehr (`auto_stop_machines = "off"`,
+`min_machines_running = 1` in `deploy/fly-remote/fly.toml`).
+
+Taube Maschine ersetzen – **`fly machine restart` reicht nicht**, es braucht eine neue:
+
+```bash
+fly machine clone <alte-id> -a smarthome-remote --region fra
+# vom Heimserver: curl http://[<neue-6pn>]:4180/ping  -> HTTP 200
+fly machine destroy <alte-id> -a smarthome-remote --force
+fly machine update <neue-id> -a smarthome-remote --autostop=off -y   # falls vom alten Stand geklont
+```
+
+Die 6PN-Adresse der Maschine ändert sich dabei – das ist egal, `UPSTREAM` zeigt in die
+andere Richtung (auf den Heimserver) und bleibt gültig. Den WireGuard-Peer neu anzulegen
+bringt nichts; auch ein frischer Peer erreicht eine taube Maschine nicht.
+
 ---
 
 # Teil B — Referenz
