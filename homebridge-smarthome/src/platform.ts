@@ -15,7 +15,7 @@ import { SensorHandler } from './accessories/sensor';
 import { SmokeHandler } from './accessories/smoke';
 import { SwitchHandler } from './accessories/switch';
 import { DEFAULT_POLL_SECONDS, MIN_POLL_SECONDS, PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { DeviceBase, Snapshot } from './types';
+import { DeviceBase, DeviceKind, Snapshot } from './types';
 
 /** Was die Plattform aus der Homebridge-Konfiguration liest. */
 export interface SmarthomeConfig extends PlatformConfig {
@@ -115,7 +115,7 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
         this.log.debug('Keine Geräte im Snapshot – Bestand bleibt unverändert.');
         return;
       }
-      this.sync(discovered);
+      this.sync(discovered, snapshot.unavailable);
       for (const item of discovered) {
         this.handlers.get(this.uuidFor(item))?.update(item.device);
       }
@@ -181,9 +181,14 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
     return result;
   }
 
-  /** Legt fehlende Accessories an und entfernt verschwundene. */
-  private sync(discovered: Discovered[]): void {
+  /**
+   * Legt fehlende Accessories an und entfernt verschwundene - aber nur solche, deren
+   * Endpunkt geantwortet hat. Eine leere Liste von einem Endpunkt, der die Zeitgrenze
+   * riss, heisst "unbekannt", nicht "weg".
+   */
+  private sync(discovered: Discovered[], unavailable: DeviceKind[]): void {
     const wanted = new Set(discovered.map((item) => this.uuidFor(item)));
+    const unknown = new Set<string>(unavailable);
 
     for (const item of discovered) {
       const uuid = this.uuidFor(item);
@@ -210,7 +215,9 @@ export class SmarthomePlatform implements DynamicPlatformPlugin {
     // Start, sondern in jedem Zyklus. Vorher wurde die Cache-Liste nach dem ersten
     // Aufraeumen geleert, und ein spaeter verschwundenes Geraet blieb bis zum naechsten
     // Neustart der Bruecke als "Keine Antwort" stehen.
-    const stale = [...this.known.values()].filter((a) => !wanted.has(a.UUID));
+    const stale = [...this.known.values()].filter(
+      (a) => !wanted.has(a.UUID) && !unknown.has(String(a.context.kind)),
+    );
     if (stale.length > 0) {
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, stale);
       for (const accessory of stale) {

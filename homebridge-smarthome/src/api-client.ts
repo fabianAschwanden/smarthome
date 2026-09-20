@@ -2,7 +2,7 @@ import {
   ApplianceDto,
   ClimateDto,
   CoverDto,
-  EMPTY_SNAPSHOT,
+  DeviceKind,
   SensorDto,
   SmokeDto,
   Snapshot,
@@ -30,7 +30,12 @@ export class ApiClient {
     private readonly timeoutMs = 8000,
   ) {}
 
-  /** Alle Geräte in einem Zug. Fehlerhafte Endpunkte liefern eine leere Liste. */
+  /**
+   * Alle Geräte in einem Zug. Ein Endpunkt, der nicht antwortet, liefert eine leere
+   * Liste UND steht in {@code unavailable} - denn "keine Antwort" ist nicht "keine
+   * Geräte". Am 20.09.2026 hat die Brücke die Klimaanlage zweimal aus HomeKit geworfen
+   * und wieder angelegt, nur weil /api/climate beim App-Start die 8 Sekunden riss.
+   */
   async snapshot(): Promise<Snapshot> {
     const [switches, appliances, covers, climate, sensors, smoke] = await Promise.all([
       this.getList<SwitchDto>('/api/switches'),
@@ -40,7 +45,23 @@ export class ApiClient {
       this.getList<SensorDto>('/api/sensors'),
       this.getList<SmokeDto>('/api/safety/smoke'),
     ]);
-    return { ...EMPTY_SNAPSHOT, switches, appliances, covers, climate, sensors, smoke };
+    const unavailable: DeviceKind[] = [];
+    const listOrEmpty = <T>(list: T[] | null, kind: DeviceKind): T[] => {
+      if (list === null) {
+        unavailable.push(kind);
+        return [];
+      }
+      return list;
+    };
+    return {
+      switches: listOrEmpty(switches, 'switch'),
+      appliances: listOrEmpty(appliances, 'appliance'),
+      covers: listOrEmpty(covers, 'cover'),
+      climate: listOrEmpty(climate, 'climate'),
+      sensors: listOrEmpty(sensors, 'sensor'),
+      smoke: listOrEmpty(smoke, 'smoke'),
+      unavailable,
+    };
   }
 
   /**
@@ -97,24 +118,25 @@ export class ApiClient {
     await this.post(`/api/climate/${encodeURIComponent(id)}/target`, { targetTemp });
   }
 
-  private async getList<T>(path: string): Promise<T[]> {
+  /** null = keine brauchbare Antwort; die leere Liste bleibt "wirklich keine Geraete". */
+  private async getList<T>(path: string): Promise<T[] | null> {
     try {
       const response = await this.fetchWithTimeout(path, { method: 'GET' });
       if (!response.ok) {
         this.log.warn(`${path}: HTTP ${response.status}`);
-        return [];
+        return null;
       }
       const body = (await response.json()) as unknown;
       if (!Array.isArray(body)) {
         // Die SPA-Rueckfallebene der App lieferte frueher HTML mit Status 200 – ein
         // Typcheck ist deshalb billiger als das Vertrauen auf den Statuscode.
         this.log.warn(`${path}: unerwartete Antwort (keine Liste)`);
-        return [];
+        return null;
       }
       return body as T[];
     } catch (error) {
       this.log.warn(`${path}: ${(error as Error).message}`);
-      return [];
+      return null;
     }
   }
 

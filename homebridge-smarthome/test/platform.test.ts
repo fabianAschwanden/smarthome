@@ -55,7 +55,15 @@ const KLIMA: ClimateDto = {
 };
 
 function snapshot(appliances: ApplianceDto[], climate: ClimateDto[] = []): Snapshot {
-  return { switches: [STEHLAMPE], appliances, covers: [], climate, sensors: [], smoke: [] };
+  return {
+    switches: [STEHLAMPE],
+    appliances,
+    covers: [],
+    climate,
+    sensors: [],
+    smoke: [],
+    unavailable: [],
+  };
 }
 
 /**
@@ -165,6 +173,21 @@ describe('SmarthomePlatform: stillgelegte Anlagen', () => {
     await t.poll();
 
     expect(t.unregistered.map((a) => a.displayName)).toEqual(['Klimaanlage']);
+  });
+
+  it('wirft kein Geraet raus, nur weil sein Endpunkt nicht geantwortet hat', async () => {
+    // 20.09.2026: /api/climate riss beim App-Start die Zeitgrenze, die Liste kam leer -
+    // und die Bruecke hat die Klimaanlage zweimal entfernt und wieder angelegt. In
+    // HomeKit gehen dabei Raum und Automationen verloren. Leer + nicht erreichbar
+    // heisst "unbekannt", nicht "weg".
+    const t = setup();
+    t.setSnapshot(snapshot([], [KLIMA]));
+    await t.poll();
+
+    t.setSnapshot({ ...snapshot([], []), unavailable: ['climate', 'appliance'] });
+    await t.poll();
+
+    expect(t.unregistered).toEqual([]);
   });
 
   it('behaelt ein Accessory, wenn eine Anlage nur nicht erreichbar ist', async () => {
