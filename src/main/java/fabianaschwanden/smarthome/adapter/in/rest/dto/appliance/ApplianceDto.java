@@ -12,12 +12,16 @@ import java.util.OptionalInt;
 /**
  * Transport-Objekt einer Anlage; {@code functions} bildet Funktion -> "ON"/"OFF" ab.
  * {@code temperature} ist {@code null} bei Anlagen ohne Heizung.
+ *
+ * <p>{@code active = false} heisst bewusst stillgelegt (z. B. über den Winter) – die
+ * Oberfläche zeigt das anders als «nicht erreichbar», denn es ist kein Fehler.
  */
 public record ApplianceDto(
         String id,
         String name,
         String room,
         boolean online,
+        boolean active,
         String observedAt,
         Map<String, String> functions,
         TemperatureDto temperature) {
@@ -50,6 +54,7 @@ public record ApplianceDto(
         }
         TemperatureDto temp =
                 a.temperature() == null ? null : TemperatureDto.from(a.temperature(), pendingTarget);
-        return new ApplianceDto(a.id(), a.name(), a.room(), a.online(), a.observedAt().toString(), fns, temp);
+        return new ApplianceDto(
+                a.id(), a.name(), a.room(), a.online(), a.active(), a.observedAt().toString(), fns, temp);
     }
 }

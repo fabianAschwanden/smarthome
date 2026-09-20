@@ -57,6 +57,10 @@ public class WellnessSetbackService {
         }
         lastSetback = today;
         for (WellnessConfig.Entry entry : config.appliances()) {
+            if (!appliances.isActive(entry.id())) {
+                LOG.debugf("Abendabsenkung: %s ist deaktiviert, uebersprungen", entry.id());
+                continue;
+            }
             try {
                 appliances.setTargetTemperature(entry.id(), entry.nightTemp());
                 LOG.infof("Abendabsenkung: %s -> %d °C", entry.id(), entry.nightTemp());

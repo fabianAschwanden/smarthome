@@ -97,6 +97,11 @@ export function hasBattery(smoke: SmokeDto): boolean {
  * und keine festen Felder.
  */
 export interface ApplianceDto extends DeviceBase {
+  /**
+   * false = bewusst stillgelegt (z. B. ueber den Winter vom Strom). Optional, weil
+   * aeltere Backends das Feld nicht kennen - dann gilt die Anlage als aktiv.
+   */
+  active?: boolean;
   /** Funktionsname (PUMP, HEATER, LIGHT, MASSAGE, FILTER, ...) -> "ON" | "OFF". */
   functions: Record<string, string>;
   /** null bei Anlagen ohne Heizung. */

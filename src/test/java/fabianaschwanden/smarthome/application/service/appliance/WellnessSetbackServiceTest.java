@@ -85,6 +85,16 @@ class WellnessSetbackServiceTest {
         assertEquals(1, appliances.calls.size());
     }
 
+    @Test
+    void ueberspringt_eine_stillgelegte_anlage() {
+        WellnessSetbackService service = service("18:00");
+        appliances.deactivated.add("whirlpool");
+
+        service.tick();
+
+        assertTrue(appliances.calls.isEmpty());
+    }
+
     /** Whirlpool: tags 25, Ueberschuss 33, ab 16:00 dann 20 °C. */
     private static final class FakeConfig implements WellnessConfig {
 
@@ -126,6 +136,7 @@ class WellnessSetbackServiceTest {
 
     private static final class FakeAppliances implements ControlAppliances {
         private final List<String> calls = new ArrayList<>();
+        private final java.util.Set<String> deactivated = new java.util.HashSet<>();
         private boolean fail;
 
         @Override
@@ -144,12 +155,21 @@ class WellnessSetbackServiceTest {
             if (fail) {
                 throw new IllegalStateException("Anlage nicht erreichbar");
             }
-            return new Appliance(id, id, "", true, Instant.EPOCH, new java.util.EnumMap<>(ApplianceFunction.class), null);
+            return new Appliance(id, id, "", true, true, Instant.EPOCH, new java.util.EnumMap<>(ApplianceFunction.class), null);
         }
 
         @Override
         public OptionalInt pendingTarget(String id) {
             return OptionalInt.empty();
+        }
+        @Override
+        public Appliance setActive(String id, boolean active) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isActive(String id) {
+            return !deactivated.contains(id);
         }
     }
 }

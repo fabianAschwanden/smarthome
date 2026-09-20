@@ -4,6 +4,7 @@ import fabianaschwanden.smarthome.domain.model.appliance.Appliance;
 import fabianaschwanden.smarthome.domain.model.appliance.ApplianceFunction;
 import fabianaschwanden.smarthome.domain.model.appliance.FunctionState;
 import fabianaschwanden.smarthome.domain.model.appliance.Temperature;
+import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceDeactivated;
 import fabianaschwanden.smarthome.domain.port.in.appliance.ApplianceNotFound;
 import fabianaschwanden.smarthome.domain.port.in.appliance.FunctionNotSupported;
 import fabianaschwanden.smarthome.domain.port.in.appliance.TemperatureNotSupported;
@@ -23,6 +24,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -35,7 +37,7 @@ class ApplianceControlServiceTest {
     void schaltetFunktionUndLiestZurueck() {
         FakeAppliance wp = new FakeAppliance("whirlpool",
                 EnumSet.of(ApplianceFunction.PUMP, ApplianceFunction.HEATER), true);
-        ApplianceControlService service = new ApplianceControlService(List.of(wp), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(wp), new InMemoryActivation(), clock);
 
         Appliance result = service.switchFunction("whirlpool", ApplianceFunction.HEATER, FunctionState.ON);
 
@@ -46,7 +48,7 @@ class ApplianceControlServiceTest {
     @Test
     void nichtVorhandeneFunktionWirdAbgelehnt() {
         FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.PUMP), false);
-        ApplianceControlService service = new ApplianceControlService(List.of(pool), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
 
         assertThrows(FunctionNotSupported.class,
                 () -> service.switchFunction("pool", ApplianceFunction.MASSAGE, FunctionState.ON));
@@ -55,7 +57,8 @@ class ApplianceControlServiceTest {
     @Test
     void unbekannteAnlageWirftNotFound() {
         ApplianceControlService service = new ApplianceControlService(
-                List.of(new FakeAppliance("a", EnumSet.of(ApplianceFunction.PUMP), false)), clock);
+                List.of(new FakeAppliance("a", EnumSet.of(ApplianceFunction.PUMP), false)),
+                new InMemoryActivation(), clock);
         assertThrows(ApplianceNotFound.class,
                 () -> service.switchFunction("x", ApplianceFunction.PUMP, FunctionState.ON));
     }
@@ -63,7 +66,7 @@ class ApplianceControlServiceTest {
     @Test
     void offlineMeldetLetztenZustand() {
         FakeAppliance wp = new FakeAppliance("whirlpool", EnumSet.of(ApplianceFunction.LIGHT), false);
-        ApplianceControlService service = new ApplianceControlService(List.of(wp), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(wp), new InMemoryActivation(), clock);
         service.switchFunction("whirlpool", ApplianceFunction.LIGHT, FunctionState.ON);
 
         wp.reachable = false;
@@ -76,7 +79,7 @@ class ApplianceControlServiceTest {
     @Test
     void beheizteAnlageSetztSollTemperatur() {
         FakeAppliance wp = new FakeAppliance("whirlpool", EnumSet.of(ApplianceFunction.HEATER), true);
-        ApplianceControlService service = new ApplianceControlService(List.of(wp), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(wp), new InMemoryActivation(), clock);
 
         Appliance result = service.setTargetTemperature("whirlpool", 36);
 
@@ -87,7 +90,7 @@ class ApplianceControlServiceTest {
     @Test
     void sollTemperaturAusserhalbDesBereichsWirdAbgelehnt() {
         FakeAppliance wp = new FakeAppliance("whirlpool", EnumSet.of(ApplianceFunction.HEATER), true);
-        ApplianceControlService service = new ApplianceControlService(List.of(wp), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(wp), new InMemoryActivation(), clock);
 
         // Erst lesen, damit der bekannte Temperaturbereich (30..40) gefüllt ist.
         service.list();
@@ -98,10 +101,76 @@ class ApplianceControlServiceTest {
     @Test
     void temperaturAufNichtBeheizterAnlageWirdAbgelehnt() {
         FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.PUMP), false);
-        ApplianceControlService service = new ApplianceControlService(List.of(pool), clock);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
 
         assertThrows(TemperatureNotSupported.class, () -> service.setTargetTemperature("pool", 25));
         assertNull(service.list().get(0).temperature());
+    }
+
+    @Test
+    void stillgelegteAnlageWirdNichtMehrAngesprochen() {
+        // Das Becken ist ueber den Winter vom Strom. Ohne diese Sperre suchte der Sidecar
+        // alle 30 Sekunden vergeblich 25 Sekunden lang das Spa.
+        FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.PUMP, ApplianceFunction.HEATER), true);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
+        service.list();
+        int vorher = pool.reads;
+
+        Appliance stillgelegt = service.setActive("pool", false);
+        service.list();
+        service.list();
+
+        assertFalse(stillgelegt.active());
+        assertFalse(stillgelegt.online());
+        assertEquals(vorher, pool.reads, "eine stillgelegte Anlage wird nicht gelesen");
+        assertFalse(service.isActive("pool"));
+    }
+
+    @Test
+    void stillgelegteAnlageNimmtKeineBefehleAn() {
+        FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.PUMP, ApplianceFunction.HEATER), true);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
+        service.setActive("pool", false);
+
+        assertThrows(ApplianceDeactivated.class,
+                () -> service.switchFunction("pool", ApplianceFunction.PUMP, FunctionState.ON));
+        assertThrows(ApplianceDeactivated.class, () -> service.setTargetTemperature("pool", 28));
+    }
+
+    @Test
+    void stilllegungVerwirftOffenenTemperaturwunsch() {
+        // Sonst wuerde der Wunsch beim Reaktivieren - Monate spaeter - unvermittelt gestellt.
+        FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.HEATER), true);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
+        service.list();
+        service.setTargetTemperature("pool", 32);
+        assertTrue(service.pendingTarget("pool").isPresent());
+
+        service.setActive("pool", false);
+
+        assertTrue(service.pendingTarget("pool").isEmpty());
+    }
+
+    @Test
+    void reaktivierteAnlageWirdWiederGelesen() {
+        FakeAppliance pool = new FakeAppliance("pool", EnumSet.of(ApplianceFunction.PUMP), false);
+        ApplianceControlService service = new ApplianceControlService(List.of(pool), new InMemoryActivation(), clock);
+        service.setActive("pool", false);
+        int vorher = pool.reads;
+
+        Appliance zurueck = service.setActive("pool", true);
+
+        assertTrue(zurueck.active());
+        assertTrue(zurueck.online());
+        assertTrue(pool.reads > vorher);
+    }
+
+    @Test
+    void unbekannteAnlageKannNichtStillgelegtWerden() {
+        ApplianceControlService service = new ApplianceControlService(
+                List.of(new FakeAppliance("a", EnumSet.of(ApplianceFunction.PUMP), false)),
+                new InMemoryActivation(), clock);
+        assertThrows(ApplianceNotFound.class, () -> service.setActive("x", false));
     }
 
     private static final class FakeAppliance implements ApplianceDevice {
@@ -110,6 +179,7 @@ class ApplianceControlServiceTest {
         private final boolean heated;
         private int target = 35;
         private boolean reachable = true;
+        private int reads;
 
         FakeAppliance(String id, Set<ApplianceFunction> functions, boolean heated) {
             this.id = id;
@@ -127,6 +197,7 @@ class ApplianceControlServiceTest {
         }
         @Override public void applyTargetTemp(int target) { this.target = target; }
         @Override public Optional<State> readState() {
+            reads++;
             if (!reachable) {
                 return Optional.empty();
             }

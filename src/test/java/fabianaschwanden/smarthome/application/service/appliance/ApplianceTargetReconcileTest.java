@@ -34,7 +34,7 @@ class ApplianceTargetReconcileTest {
     @BeforeEach
     void setUp() {
         anlage = new TraegeAnlage();
-        service = new ApplianceControlService(List.of(anlage), UHR, 3);
+        service = new ApplianceControlService(List.of(anlage), new InMemoryActivation(), UHR, 3);
     }
 
     @Test

@@ -49,6 +49,19 @@ class ApplianceScheduleServiceTest {
     }
 
     @Test
+    void verwirft_einen_auftrag_fuer_eine_stillgelegte_anlage() {
+        // Nicht nur ueberspringen, sondern erledigen: Ein liegengebliebener Auftrag
+        // wuerde sonst beim Reaktivieren - Monate spaeter - unvermittelt feuern.
+        appliances.deactivated.add("pool");
+        service.save(ApplianceSchedule.countdown("pool", 28, JETZT.minusSeconds(60)));
+
+        service.tick();
+
+        assertTrue(appliances.calls.isEmpty());
+        assertFalse(repository.all().get(0).enabled());
+    }
+
+    @Test
     void laesst_einen_zukuenftigen_auftrag_liegen() {
         service.save(ApplianceSchedule.countdown("whirlpool", 38, JETZT.plusSeconds(3600)));
 
@@ -110,6 +123,7 @@ class ApplianceScheduleServiceTest {
 
     private static final class FakeAppliances implements ControlAppliances {
         private final List<String> calls = new ArrayList<>();
+        private final java.util.Set<String> deactivated = new java.util.HashSet<>();
         private boolean fail;
 
         @Override
@@ -135,6 +149,16 @@ class ApplianceScheduleServiceTest {
         public java.util.OptionalInt pendingTarget(String id) {
             // Kein offener Temperaturwunsch - dieser Test dreht sich um Schaltauftraege.
             return java.util.OptionalInt.empty();
+        }
+
+        @Override
+        public Appliance setActive(String id, boolean active) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isActive(String id) {
+            return !deactivated.contains(id);
         }
     }
 }

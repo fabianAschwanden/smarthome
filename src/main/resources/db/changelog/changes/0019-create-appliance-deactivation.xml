@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Use Case 6: stillgelegte Wellness-Anlagen (z. B. Schwimmbecken ueber den Winter).
+         Eine Zeile je deaktivierter Anlage; aktive Anlagen haben keine Zeile. So braucht
+         eine neu konfigurierte Anlage keinen Datensatz, um zu funktionieren, und ein
+         Neustart der App vergisst die Stilllegung nicht. -->
+    <changeSet id="0019-create-appliance-deactivation" author="smarthome">
+        <createTable tableName="appliance_deactivation">
+            <column name="appliance_id" type="varchar(64)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="deactivated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
