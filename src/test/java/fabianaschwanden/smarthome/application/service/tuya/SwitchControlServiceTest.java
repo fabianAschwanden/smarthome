@@ -93,6 +93,25 @@ class SwitchControlServiceTest {
         assertTrue(service.list().get(0).critical());
     }
 
+    @Test
+    void liestDieGeraeteGleichzeitigNichtNacheinander() {
+        // Drei Geraete, die je 300 ms brauchen: nacheinander waeren das 900 ms. Ein nicht
+        // erreichbarer Schalter kostet in echt 4 s - sechs davon summierten sich am
+        // 26.09.2026 auf 9 s, und die Oberflaeche zeigte keine Schalter mehr.
+        List<SwitchDevice> traege = List.of(
+                new FakeDevice("a", "A", false).mitVerzoegerung(300),
+                new FakeDevice("b", "B", false).mitVerzoegerung(300),
+                new FakeDevice("c", "C", false).mitVerzoegerung(300));
+        SwitchControlService service = new SwitchControlService(traege, clock);
+
+        long start = System.nanoTime();
+        List<String> ids = service.list().stream().map(TuyaSwitch::id).toList();
+        long millis = (System.nanoTime() - start) / 1_000_000;
+
+        assertEquals(List.of("a", "b", "c"), ids, "Reihenfolge bleibt die der Konfiguration");
+        assertTrue(millis < 700, "gleichzeitig gelesen, nicht nacheinander: " + millis + " ms");
+    }
+
     private static final class FakeDevice implements SwitchDevice {
         private final String id;
         private final String name;
@@ -111,7 +130,21 @@ class SwitchControlServiceTest {
         @Override public String room() { return ""; }
         @Override public boolean critical() { return critical; }
         @Override public void apply(SwitchState state) { applied = state; }
+        private long delayMs;
+
+        FakeDevice mitVerzoegerung(long ms) {
+            this.delayMs = ms;
+            return this;
+        }
+
         @Override public Optional<SwitchState> readState() {
+            if (delayMs > 0) {
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             return reachable ? Optional.of(applied) : Optional.empty();
         }
     }

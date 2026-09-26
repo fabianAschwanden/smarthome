@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, startWith, switchMap } from 'rxjs';
+import { Observable, exhaustMap, startWith } from 'rxjs';
 import { pollingTimer } from '../polling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Climate, ClimateMode } from '../models/climate';
@@ -21,7 +21,10 @@ export class ClimateService {
   constructor() {
     pollingTimer(this.intervalMs)
       .pipe(
-        switchMap(() => this.http.get<Climate[]>('/api/climate')),
+        // exhaustMap statt switchMap: ein laufender Abruf wird nicht abgebrochen, der Tick
+        // dazwischen faellt aus. Mit switchMap kam bei einem Abruf ueber 3 s NIE eine Antwort
+        // durch - die Liste blieb leer (26.09.2026, ein nicht erreichbarer Tuya-Schalter).
+        exhaustMap(() => this.http.get<Climate[]>('/api/climate')),
         startWith(null),
         takeUntilDestroyed(),
       )
