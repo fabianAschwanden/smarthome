@@ -14,6 +14,7 @@ const DEFAULT_DEVICE_IMAGES: Record<string, string> = {
   carport: '/devices/carport.svg',
   foehn: '/devices/foehn.svg',
   homecinema: '/devices/homecinema.svg',
+  'whirlpool-heizung': '/devices/whirlpool-heizung.svg',
   'store-links': '/devices/store.svg',
   'store-mitte': '/devices/store.svg',
   whirlpool: '/devices/whirlpool.svg',
