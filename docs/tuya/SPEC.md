@@ -114,8 +114,11 @@ Session-Key-Handshake) – Version je Gerät konfigurierbar.
       `tinytuya`), den der Java-Adapter per HTTP aufruft.
 - [x] **Auto-Discovery:** `TuyaDiscovery` hört UDP-Broadcasts (6666/6667) und löst
       gewanderte DHCP-IPs auf (device-id → aktuelle IP).
-- [x] Fünf Schalter real angebunden (Stehlampe, Palmenbeleuchtung, Carport, Föhn,
-      Homecinema); kritische Schalter (WLAN-versorgend) mit Bestätigung vor AUS.
+- [x] Sechs Schalter real angebunden (Stehlampe, Palmenbeleuchtung, Carport, Föhn,
+      Homecinema, Whirlpool-Heizung); kritische Schalter (WLAN-versorgend) mit
+      Bestätigung vor AUS. Die Whirlpool-Heizung (seit 26.09.2026) ist ein Steckdosen-
+      schalter vor der Heizung – auf der Startseite als eigene Kachel, warm getönt,
+      solange sie Strom gibt.
 - Geräte-Daten (`device-id`/`local-key`/`version`/IP) liegen nur in gitignored
   `config/` (§2.1) – nie im Repo.
 - [ ] `dp`-ID bzw. Protokollversion bei neuen Geräten verifizieren (meist `dp 1`, v3.3).

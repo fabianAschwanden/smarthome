@@ -43,6 +43,12 @@
 %dev.tuya.devices[4].device-id=<device-id>
 %dev.tuya.devices[4].local-key=<local-key>
 %dev.tuya.devices[4].address=<lan-ip>
+%dev.tuya.devices[5].device-id=<device-id>
+%dev.tuya.devices[5].local-key=<local-key>
+%dev.tuya.devices[5].address=<lan-ip>
+%dev.tuya.devices[4].device-id=<device-id>
+%dev.tuya.devices[4].local-key=<local-key>
+%dev.tuya.devices[4].address=<lan-ip>
 # local-keys werden auch im %live-Profil benötigt:
 %live.tuya.devices[0].local-key=<local-key>
 %live.tuya.devices[1].local-key=<local-key>

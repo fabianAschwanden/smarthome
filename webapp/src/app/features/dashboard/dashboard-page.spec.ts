@@ -57,6 +57,15 @@ describe('DashboardPage', () => {
         critical: false,
         observedAt: 'x',
       },
+      {
+        id: 'whirlpool-heizung',
+        name: 'Whirlpool-Heizung',
+        room: 'Wellness',
+        state: 'ON',
+        online: true,
+        critical: false,
+        observedAt: 'x',
+      },
     ]);
     httpMock.expectOne('/api/climate').flush([
       {
@@ -111,6 +120,10 @@ describe('DashboardPage', () => {
     expect(el.textContent).toContain('Erzeugung'); // Energiefluss-Karte
     expect(el.textContent).toContain('Verbrauch');
     expect(el.textContent).toContain('Stehlampe');
+    // Whirlpool-Heizung: eigene Kachel, und weil sie Strom gibt, warm getoent mit Wort dazu.
+    expect(el.textContent).toContain('Whirlpool-Heizung');
+    expect(el.textContent).toContain('heizt');
+    expect(el.querySelector('article.thermal-warm')).not.toBeNull();
     expect(el.textContent).toContain('Klimaanlage');
     expect(el.textContent).toContain('Store 1');
     expect(el.textContent).toContain('4.00 kW'); // Fronius-Produktion (4000 W, nicht SMARTFOX 3900)
