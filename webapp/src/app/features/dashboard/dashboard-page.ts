@@ -167,6 +167,45 @@ const CLIMATE_MODE_LABELS: Record<ClimateMode, string> = {
             }
           }
 
+          <!-- Whirlpool-Heizung: Steckdosenschalter vor der Heizung. Warm getoent, solange
+               Strom fliesst - dieselbe Sprache wie bei Klima und Wellness: warm = heizt. -->
+          @if (whirlpoolHeizung(); as s) {
+            @if (room.shows(s.room)) {
+              <article
+                class="glass-card flex cursor-pointer items-center justify-between gap-4 p-5"
+                [class.thermal-warm]="s.online && s.state === 'ON'"
+                routerLink="/switch"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <app-item-image [itemId]="s.id" [label]="s.name" variant="avatar" />
+                  <div class="min-w-0">
+                    <h3 class="truncate font-medium">{{ s.name }}</h3>
+                    <p
+                      class="mt-0.5 flex items-center gap-1.5 text-xs text-[color:var(--ink-soft)]"
+                    >
+                      @if (!s.online) {
+                        Offline
+                      } @else if (s.state === 'ON') {
+                        <span class="dot-warm size-2 rounded-full"></span>
+                        <span class="font-medium text-[color:var(--ink)]">heizt</span>
+                      } @else {
+                        Aus
+                      }
+                    </p>
+                  </div>
+                </div>
+                <app-power-toggle
+                  [on]="s.state === 'ON'"
+                  [disabled]="!s.online"
+                  size="lg"
+                  [label]="s.name"
+                  (onChange)="switchToggle(s.id, $event)"
+                  (click)="$event.stopPropagation()"
+                />
+              </article>
+            }
+          }
+
           <!-- Sicherheit (Rauchmelder) -->
           @for (sm of smoke(); track sm.id) {
             <article
@@ -426,6 +465,10 @@ export class DashboardPage {
 
   protected readonly carport = computed(() =>
     (this.tuya.switches() ?? []).find((s) => s.id === 'carport'),
+  );
+
+  protected readonly whirlpoolHeizung = computed(() =>
+    (this.tuya.switches() ?? []).find((s) => s.id === 'whirlpool-heizung'),
   );
 
   protected readonly climate = computed(() => (this.climateSvc.climate() ?? [])[0]);
