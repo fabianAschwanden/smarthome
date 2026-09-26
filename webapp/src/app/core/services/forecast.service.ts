@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, startWith, switchMap } from 'rxjs';
+import { Observable, exhaustMap, startWith } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { pollingTimer } from '../polling';
 import { BatterySchedule } from '../models/battery-schedule';
@@ -42,7 +42,10 @@ export class ForecastService {
   constructor() {
     pollingTimer(this.intervalMs)
       .pipe(
-        switchMap(() => this.http.get<PvForecast>('/api/forecast/pv')),
+        // exhaustMap statt switchMap: ein laufender Abruf wird nicht abgebrochen, der Tick
+        // dazwischen faellt aus. Mit switchMap kam bei einem Abruf ueber 3 s NIE eine Antwort
+        // durch - die Liste blieb leer (26.09.2026, ein nicht erreichbarer Tuya-Schalter).
+        exhaustMap(() => this.http.get<PvForecast>('/api/forecast/pv')),
         startWith(null),
         takeUntilDestroyed(),
       )
@@ -50,7 +53,7 @@ export class ForecastService {
 
     pollingTimer(this.intervalMs)
       .pipe(
-        switchMap(() => this.http.get<Surplus>('/api/forecast/surplus')),
+        exhaustMap(() => this.http.get<Surplus>('/api/forecast/surplus')),
         startWith(null),
         takeUntilDestroyed(),
       )

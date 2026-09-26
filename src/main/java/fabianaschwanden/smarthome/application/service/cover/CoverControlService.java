@@ -45,7 +45,27 @@ public class CoverControlService implements ControlCovers {
 
     @Override
     public List<Cover> list() {
-        return devices.values().stream().map(this::observe).toList();
+        // Alle Geraete gleichzeitig lesen, nicht nacheinander: Jedes nicht erreichbare Geraet
+        // kostet einen vollen Verbindungs-Timeout (4 s). Nacheinander summierte sich das -
+        // am 26.09.2026 auf 9 s fuer sechs Schalter, und die Oberflaeche zeigte gar nichts
+        // mehr. Gleichzeitig ist die Liste hoechstens so langsam wie das langsamste Geraet.
+        // Reihenfolge bleibt die der Konfiguration.
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            return devices.values().stream()
+                    .map(device -> executor.submit(() -> observe(device)))
+                    .toList().stream()
+                    .map(future -> {
+                        try {
+                            return future.get();
+                        } catch (java.util.concurrent.ExecutionException e) {
+                            throw new IllegalStateException(e.getCause());
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(e);
+                        }
+                    })
+                    .toList();
+        }
     }
 
     @Override
